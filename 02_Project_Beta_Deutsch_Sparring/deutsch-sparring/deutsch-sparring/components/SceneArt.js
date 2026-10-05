@@ -1,7 +1,8 @@
-// Simple line illustrations for the role-play scenario card ("Theme / scenario").
-// The scene is picked from words in the scenario name; unknown scenarios get two speech bubbles.
+// Simple line illustrations for the topic card ("At a glance").
+// The drawing is picked from words in the topic name; unknown topics get two speech bubbles.
 
 const SCENES = [
+  { kind: 'prepositions', words: /präposition|praeposition|dativ|akkusativ|wo\/wohin|wechsel/i },
   { kind: 'move', words: /umzug|umziehen|wohnung|möbel|moebel|zimmer|einzug|haus|wg/i },
   { kind: 'cafe', words: /café|cafe|kaffee|restaurant|bestell|bäckerei|baeckerei|essen|beiz/i },
   { kind: 'shop', words: /einkauf|laden|markt|shop|migros|coop|kleider|kaufen|supermarkt/i },
@@ -9,8 +10,8 @@ const SCENES = [
   { kind: 'doctor', words: /arzt|ärztin|aerztin|apotheke|praxis|spital|krank|gesund/i },
 ];
 
-export function sceneKind(scenario) {
-  return SCENES.find((s) => s.words.test(scenario || ''))?.kind || 'talk';
+export function sceneKind(subject) {
+  return SCENES.find((s) => s.words.test(subject || ''))?.kind || 'talk';
 }
 
 const props = {
@@ -22,6 +23,19 @@ const props = {
 };
 
 const DRAWINGS = {
+  // Wo? a ball resting on the box · Wohin? a ball moving into the box
+  prepositions: (
+    <g {...props}>
+      <path d="M140 104h168" opacity=".5" />
+      <rect x="166" y="62" width="52" height="42" rx="3" />
+      <circle cx="192" cy="50" r="11" />
+      <path d="M175 40l-6-8M209 40l6-8" opacity=".6" />
+      <rect x="242" y="62" width="52" height="42" rx="3" />
+      <path d="M242 62l10-12h32l10 12" opacity=".8" />
+      <circle cx="268" cy="20" r="9" />
+      <path d="M268 32v22m-6-6 6 6 6-6" />
+    </g>
+  ),
   move: (
     <g {...props}>
       <path d="M140 104h168" opacity=".5" />
@@ -98,10 +112,10 @@ const DRAWINGS = {
   ),
 };
 
-export default function SceneArt({ scenario }) {
+export default function SceneArt({ subject }) {
   return (
     <svg className="scene-art" viewBox="0 0 316 126" preserveAspectRatio="xMaxYMid meet" aria-hidden="true" focusable="false">
-      {DRAWINGS[sceneKind(scenario)]}
+      {DRAWINGS[sceneKind(subject)]}
     </svg>
   );
 }

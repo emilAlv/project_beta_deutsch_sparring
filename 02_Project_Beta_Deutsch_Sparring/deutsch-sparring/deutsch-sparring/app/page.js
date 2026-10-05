@@ -1,11 +1,14 @@
 'use client';
 
 // The whole app is this one screen. The chat is the control panel:
-//   stage 'name'  → the tutor asks for the name (no AI)
-//   stage 'code'  → asks for the class code, checked by /api/code (no AI)
-//   stage 'topic' → the student picks a topic by tapping or typing
-//   stage 'practice' → role-play / exercises with the AI tutor (/api/chat)
-// Short commands ("harder", "show me progress", "change topic" …) are understood by the app
+//   stage 'name'     → the tutor asks for the name (no AI)
+//   stage 'code'     → asks for the class code, checked by /api/code (no AI)
+//   stage 'topic'    → no topic yet: the student picks one by tapping or typing
+//   stage 'practice' → a topic is chosen: questions with the AI tutor (/api/chat)
+//
+// The APP owns the session: it counts the questions (10–50), decides when the session is over,
+// stops when the student wants to stop and switches topics. The tutor only writes the content.
+// Short commands ("stop", "20 questions", "harder", "change topic" …) are understood by the app
 // itself (lib/intents.js); everything else goes to the tutor.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -13,9 +16,9 @@ import Header from '../components/Header';
 import OptionsPanel from '../components/OptionsPanel';
 import Chat from '../components/Chat';
 import SessionPanel from '../components/SessionPanel';
-import { t } from '../lib/ui-text';
-import { detectIntent, extractName } from '../lib/intents';
-import { score, taskStates } from '../lib/stats';
+import { t, dirKey } from '../lib/ui-text';
+import { detectIntent, detectTopicWish, extractName, QUESTION_MIN, QUESTION_MAX } from '../lib/intents';
+import { score, summaryOf } from '../lib/stats';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
   recordSession, recentMistakes, currentStreak,
@@ -24,29 +27,36 @@ import {
 const LEVELS = ['A1', 'A2', 'B1'];
 const DIFFS = ['easy', 'medium', 'hard'];
 const VIEWS = ['glance', 'progress', 'grammar'];
+const DIRECTIONS = ['en-de', 'de-en', 'mixed'];
 const DIFF_DE = { easy: 'Leicht', medium: 'Mittel', hard: 'Schwer' };
-const DEFAULT_PREFS = { level: 'B1', difficulty: 'medium', view: 'glance', optionsHidden: false };
+const DIR_DE = { 'en-de': 'Englisch → Deutsch', 'de-en': 'Deutsch → Englisch', mixed: 'gemischt' };
+const DEFAULT_PREFS = {
+  level: 'B1', difficulty: 'medium', view: 'glance', optionsHidden: false,
+  questions: QUESTION_MIN, direction: 'en-de', sentences: false,
+};
+const CHAT_VERSION = 2; // saved conversations from older versions are not restored
 const RESTORE_HOURS = 18; // a conversation from earlier today comes back after a reload
 const RESUME_GREETING_MIN = 30; // …with a "welcome back" line if the break was longer than this
 
 let seq = 0;
 const uid = () => `${Date.now().toString(36)}${(seq++).toString(36)}`;
 const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const isVocab = (s) => s.topicType === 'Wortschatz';
 
-function newSession(topicId = null) {
+function newSession(topic = null, total = QUESTION_MIN) {
   return {
     id: uid(),
-    topicId,
-    topicName: null,
-    scenario: null,
-    theme: null,
-    exerciseType: null,
-    exercise: null, // the task waiting for an answer
-    total: 8,
-    answers: [], // { n, correct, studentAnswer, corrected, changedWords, explanation, rule, errorType }
+    topicId: topic?.id || null,
+    topicName: topic?.short || null,
+    topicType: topic ? (topic.id === 'free' ? 'free' : topic.type) : null,
+    total,
+    answers: [], // { n, correct, skipped, studentAnswer, corrected, changedWords, explanation, rule, errorType }
+    exercise: null, // the open question (its number is always answers.length + 1)
+    lastType: null,
     grammarFocus: null,
+    started: false, // the first question has arrived
     finished: false,
-    started: false,
+    endedEarly: false,
   };
 }
 
@@ -54,17 +64,21 @@ const EMPTY_CONVO = {
   stage: 'loading',
   messages: [],
   session: newSession(),
-  modelOptions: [], // situational options from the tutor
+  modelOptions: [], // situational options from the tutor (e.g. answer choices on Easy)
   localOptions: null, // { label, chips } e.g. the grammar topics after tapping "Grammar"
   historyFrom: 0, // the AI only sees messages from this moment on
 };
 
 function sanitizePrefs(p) {
+  const q = Math.round(Number(p.questions));
   return {
     level: LEVELS.includes(p.level) ? p.level : DEFAULT_PREFS.level,
     difficulty: DIFFS.includes(p.difficulty) ? p.difficulty : DEFAULT_PREFS.difficulty,
     view: VIEWS.includes(p.view) ? p.view : DEFAULT_PREFS.view,
     optionsHidden: Boolean(p.optionsHidden),
+    questions: q >= QUESTION_MIN && q <= QUESTION_MAX ? q : DEFAULT_PREFS.questions,
+    direction: DIRECTIONS.includes(p.direction) ? p.direction : DEFAULT_PREFS.direction,
+    sentences: p.sentences === true,
   };
 }
 
@@ -98,10 +112,11 @@ export default function Home() {
     convoRef.current = fn(convoRef.current);
     setConvo(convoRef.current);
   }, []);
+  const updateSession = useCallback((fn) => update((c) => ({ ...c, session: fn(c.session) })), [update]);
 
   const [prefs, setPrefsState] = useState(DEFAULT_PREFS);
   const prefsRef = useRef(DEFAULT_PREFS);
-  const prefsLoaded = useRef(false); // don't overwrite the saved settings before they are read
+  const prefsLoaded = useRef(false);
   const setPrefs = useCallback((patch) => {
     prefsRef.current = { ...prefsRef.current, ...patch };
     setPrefsState(prefsRef.current);
@@ -122,6 +137,8 @@ export default function Home() {
   const [topics, setTopics] = useState([]);
   const topicsRef = useRef([]);
   const needsCodeRef = useRef(false);
+  const topicById = (id) => topicsRef.current.find((x) => x.id === id)
+    || (id === 'free' ? { id: 'free', short: 'Freies Üben', type: 'Gemischt' } : null);
 
   const [busy, setBusyState] = useState(false);
   const busyRef = useRef(false);
@@ -141,7 +158,7 @@ export default function Home() {
     return m;
   }, [update]);
 
-  // a short line like "Difficulty: Hard"; several clicks in a row only keep the last one
+  // a short line like "Difficulty: Hard"; several changes in a row only keep the last one
   const addSystem = useCallback((kind, text) => {
     update((c) => {
       const last = c.messages[c.messages.length - 1];
@@ -153,10 +170,10 @@ export default function Home() {
   }, [update]);
 
   // local tutor lines appear after a tiny pause, like a real reply
-  const tutorSay = useCallback((...lines) => new Promise((resolve) => {
+  const tutorSay = useCallback((lines, extra = {}) => new Promise((resolve) => {
     setBusy(true);
     setTimeout(() => {
-      lines.filter(Boolean).forEach((text) => add({ role: 'tutor', text }));
+      [].concat(lines).filter(Boolean).forEach((text, i, all) => add({ role: 'tutor', text, ...(i === all.length - 1 ? extra : {}) }));
       setBusy(false);
       resolve();
     }, 450);
@@ -189,7 +206,10 @@ export default function Home() {
   function begin(p) {
     const saved = loadChat();
     const codeOk = !needsCodeRef.current || p.classCode;
-    if (p.name && codeOk && saved?.messages?.length && Date.now() - (saved.savedAt || 0) < RESTORE_HOURS * 3600_000) {
+    if (
+      p.name && codeOk && saved?.version === CHAT_VERSION && saved.messages?.length
+      && Date.now() - (saved.savedAt || 0) < RESTORE_HOURS * 3600_000
+    ) {
       const restored = { ...EMPTY_CONVO, ...saved, session: { ...newSession(), ...saved.session } };
       convoRef.current = restored;
       setConvo(restored);
@@ -206,17 +226,17 @@ export default function Home() {
     } else {
       update(() => ({ ...start, stage: 'topic' }));
       const last = loadHistory().sessions[0];
-      tutorSay(
+      tutorSay([
         t('tutorWelcomeBack', { name: p.name }),
-        last && last.answered ? t('tutorLastTime', { topic: last.topicName || last.scenario, score: `${last.correct}/${last.answered}` }) : null,
-      );
+        last && last.answered ? t('tutorLastTime', { topic: last.topicName, score: `${last.correct}/${last.answered}` }) : null,
+      ]);
     }
   }
 
   // ---------- remember things ----------
   useEffect(() => {
     if (convo.stage === 'topic' || convo.stage === 'practice') {
-      saveChat({ ...convo, messages: convo.messages.slice(-80), savedAt: Date.now() });
+      saveChat({ ...convo, version: CHAT_VERSION, messages: convo.messages.slice(-80), savedAt: Date.now() });
     }
   }, [convo]);
 
@@ -235,6 +255,35 @@ export default function Home() {
     const timer = setTimeout(() => setSlow(true), 9000);
     return () => clearTimeout(timer);
   }, [busy]);
+
+  // ---------- the session record (last 5 sessions + streak) ----------
+  function remember(s) {
+    if (!s.answers.length) return;
+    const sc = score(s.answers);
+    setHistory(recordSession({
+      id: s.id,
+      topicId: s.topicId,
+      topicName: s.topicName || '',
+      level: prefsRef.current.level,
+      difficulty: prefsRef.current.difficulty,
+      ...sc,
+      total: s.total,
+      endedEarly: s.endedEarly,
+      updatedAt: Date.now(),
+      mistakes: s.answers.filter((a) => !a.correct && !a.skipped).slice(-5)
+        .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule })),
+    }));
+  }
+
+  // closing a running session because the student goes elsewhere (topic change, restart)
+  function closeSession(withLine = true) {
+    const s = convoRef.current.session;
+    if (!s.started || s.finished) return;
+    const ended = { ...s, finished: true, endedEarly: true, exercise: null };
+    remember(ended);
+    const sc = score(s.answers);
+    if (withLine && sc.answered) addSystem('prev', t('sysPrevSession', sc));
+  }
 
   // ---------- settings (buttons and chat do the same) ----------
   function changeLevel(level, { tellTutor = true } = {}) {
@@ -255,6 +304,54 @@ export default function Home() {
     if (!VIEWS.includes(view)) return;
     if (view !== prefsRef.current.view) addSystem('view', t('sysView', { value: t(`view_${view}`) }));
     setPrefs({ view });
+  }
+
+  function changeDirection(direction) {
+    if (!DIRECTIONS.includes(direction) || direction === prefsRef.current.direction) return;
+    setPrefs({ direction });
+    addSystem('direction', t('sysDirection', { value: t(`dir_${dirKey(direction)}`) }));
+    notesRef.current.direction = `Karteikarten → ${DIR_DE[direction]}`;
+  }
+
+  function changeSentences(sentences) {
+    if (sentences === prefsRef.current.sentences) return;
+    setPrefs({ sentences });
+    addSystem('sentences', t(sentences ? 'sysSentencesOn' : 'sysSentencesOff'));
+    notesRef.current.sentences = `Sätze mit dem Wort → ${sentences ? 'an' : 'aus'}`;
+  }
+
+  // questions per session: also changes the running session; if it is already reached, it ends
+  function changeQuestions(value) {
+    const n = Math.max(QUESTION_MIN, Math.min(QUESTION_MAX, Math.round(Number(value) || QUESTION_MIN)));
+    if (n !== prefsRef.current.questions) {
+      setPrefs({ questions: n });
+      addSystem('questions', t('sysQuestions', { value: n }));
+    }
+    const s = convoRef.current.session;
+    if (!s.topicId || s.finished || s.total === n) return;
+    if (s.started && s.answers.length >= n) {
+      finishSession({ early: false, line: t('tutorFinishedByCount', { n }), total: s.answers.length });
+      return;
+    }
+    updateSession((x) => ({ ...x, total: n }));
+    notesRef.current.questions = `Fragen pro Sitzung → ${n}`;
+  }
+
+  // ---------- ending a session (no AI): summary card in the chat ----------
+  function finishSession({ early = true, line, total } = {}) {
+    const s = convoRef.current.session;
+    if (!s.started) {
+      tutorSay(t('tutorStopIdle'));
+      return;
+    }
+    if (s.finished) {
+      tutorSay(t('tutorAlreadyFinished', { again: t('chipAgain') }));
+      return;
+    }
+    const done = { ...s, total: total || s.total, finished: true, endedEarly: early && s.answers.length < s.total, exercise: null };
+    update((c) => ({ ...c, session: done, modelOptions: [], localOptions: null }));
+    remember(done);
+    tutorSay(line || t('tutorStopped', { name: profileRef.current.name }), { summary: summaryOf(done) });
   }
 
   // ---------- onboarding (no AI) ----------
@@ -283,7 +380,7 @@ export default function Home() {
       const { data } = await postJson('/api/code', { classCode: text }, 15000);
       if (data.ok) {
         setProfile({ ...profileRef.current, classCode: text });
-        const resume = convoRef.current.session.started;
+        const resume = Boolean(convoRef.current.session.topicId);
         update((c) => ({ ...c, stage: resume ? 'practice' : 'topic', historyFrom: resume ? c.historyFrom : Date.now() }));
         reply = resume ? t('tutorCodeThanks') : t('tutorCodeOk');
       } else {
@@ -296,17 +393,34 @@ export default function Home() {
     tutorSay(reply);
   }
 
-  // ---------- navigation by talking (no AI) ----------
+  // ---------- topics (no AI until the topic starts) ----------
   function goToTopics(lineKey) {
+    closeSession();
     update((c) => ({ ...c, stage: 'topic', session: newSession(), modelOptions: [], localOptions: null, historyFrom: Date.now() }));
     const forLevel = topicsRef.current.filter((x) => x.levels.includes(prefsRef.current.level));
-    tutorSay(
+    tutorSay([
       t(lineKey, { name: profileRef.current.name }),
       topicsRef.current.length && !forLevel.length ? t('tutorNoTopicsForLevel', { level: prefsRef.current.level }) : null,
-    );
+    ]);
+  }
+
+  // start a topic: new session, fresh conversation for the tutor, first question from the tutor
+  function startTopic(topic, msg) {
+    closeSession();
+    const s = newSession(topic, prefsRef.current.questions);
+    let start = msg;
+    if (!start) {
+      // started by the app (the tutor switched topic): a hidden message opens the conversation
+      start = { id: uid(), at: Date.now(), role: 'user', text: t('tutorStartTopic', { topic: topic.short }), hidden: true, ai: true };
+      update((c) => ({ ...c, messages: [...c.messages, start] }));
+    }
+    update((c) => ({ ...c, stage: 'practice', session: s, modelOptions: [], localOptions: null, historyFrom: start.at }));
+    addSystem('topic', t('sysTopic', { value: topic.short }));
+    askTutor(start.text, { msg: start });
   }
 
   function restart() {
+    closeSession(false);
     const fresh = { ...EMPTY_CONVO, stage: 'topic', session: newSession(), historyFrom: Date.now() };
     convoRef.current = fresh;
     setConvo(fresh);
@@ -317,6 +431,7 @@ export default function Home() {
 
   function changeName() {
     if (typeof window !== 'undefined' && !window.confirm(t('confirmChangeName'))) return;
+    closeSession(false);
     setProfile({ ...profileRef.current, name: '' });
     saveChat(null);
     const fresh = { ...EMPTY_CONVO, stage: 'name', session: newSession(), historyFrom: Date.now() };
@@ -328,18 +443,36 @@ export default function Home() {
 
   function listTopicGroup(group, msg) {
     const list = topicsRef.current.filter((x) => x.type === group);
-    if (list.length === 1) {
-      const c = convoRef.current;
-      if (list[0].id !== c.session.topicId) askTutor(msg.text, { msg, topicId: list[0].id, fresh: c.stage === 'practice' });
-      else tutorSay(t('tutorChooseGrammar'));
-      return;
-    }
+    const s = convoRef.current.session;
     if (!list.length) {
       tutorSay(t('tutorNoTopicsOfType'));
       return;
     }
-    update((c) => ({ ...c, localOptions: { label: t(`type_${group}`), chips: list.map((x) => ({ text: x.short, style: 'outline' })) } }));
+    if (list.length === 1) {
+      const only = list[0];
+      if (only.id === s.topicId && s.started && !s.finished) tutorSay(t('tutorAlreadyOnTopic', { topic: only.short }));
+      else startTopic(only, msg);
+      return;
+    }
+    update((c) => ({ ...c, localOptions: { label: t(`type_${group}`), chips: list.map((x) => x.short) } }));
     tutorSay(t(group === 'Grammatik' ? 'tutorChooseGrammar' : 'tutorChooseVocab'));
+  }
+
+  function again(msg) {
+    const s = convoRef.current.session;
+    const id = s.topicId || historyRef.current.sessions[0]?.topicId;
+    const topic = id && topicById(id);
+    if (topic) startTopic(topic, msg);
+    else goToTopics('tutorAskTopicAgain');
+  }
+
+  // the open question is skipped: counted at once, the tutor gives the solution + the next one
+  function skipOpen() {
+    updateSession((s) => ({
+      ...s,
+      answers: [...s.answers, { n: s.answers.length + 1, skipped: true, correct: false, studentAnswer: '', corrected: '', changedWords: [], explanation: '', rule: '', skippedLine: s.exercise?.line || '' }],
+      exercise: null,
+    }));
   }
 
   // ---------- the router: every message (typed or tapped) comes through here ----------
@@ -354,12 +487,23 @@ export default function Home() {
 
     const msg = add({ role: 'user', text });
     update((x) => ({ ...x, localOptions: null }));
+    const s = c.session;
+    const running = s.started && !s.finished;
+    const open = running && Boolean(s.exercise);
     const intent = detectIntent(text);
-    const practising = c.stage === 'practice' && c.session.exercise && !c.session.finished;
 
     switch (intent?.type) {
-      case 'view':
-        changeView(intent.view);
+      case 'stop':
+        if (s.topicId && !s.started) {
+          // nothing answered yet: just go back to the topic list
+          goToTopics('tutorAskTopicAgain');
+          return true;
+        }
+        finishSession({ early: true });
+        return true;
+      case 'again':
+        if (running) break; // "nochmal" during a question = "say it again": the tutor answers
+        again(msg);
         return true;
       case 'restart':
         restart();
@@ -370,28 +514,51 @@ export default function Home() {
       case 'topicGroup':
         listTopicGroup(intent.group, msg);
         return true;
+      case 'view':
+        changeView(intent.view);
+        return true;
+      case 'questions':
+        changeQuestions(intent.value);
+        return true;
+      case 'direction':
+        changeDirection(intent.value);
+        if (open && isVocab(s)) askTutor(text, { msg });
+        return true;
+      case 'sentences':
+        changeSentences(intent.value);
+        return true;
       case 'difficulty': {
         const cur = DIFFS.indexOf(prefsRef.current.difficulty);
-        const next = intent.value || DIFFS[Math.max(0, Math.min(2, cur + intent.step))];
-        changeDifficulty(next);
-        if (practising) askTutor(text, { msg });
+        changeDifficulty(intent.value || DIFFS[Math.max(0, Math.min(2, cur + intent.step))]);
+        if (open) askTutor(text, { msg });
         return true;
       }
       case 'level':
         changeLevel(intent.value);
-        if (practising) askTutor(text, { msg });
+        if (open) askTutor(text, { msg });
         return true;
       case 'rule':
         changeView('grammar');
         askTutor(text, { msg });
         return true;
+      case 'skip':
+        if (open) skipOpen();
+        askTutor(text, { msg });
+        return true;
       default:
     }
 
-    // a topic name (tapped chip or typed exactly) starts that topic
-    const topic = topicsRef.current.find((x) => same(x.short, text) || same(x.title, text));
-    if (topic && topic.id !== c.session.topicId) {
-      askTutor(text, { msg, topicId: topic.id, fresh: c.stage === 'practice' });
+    // a topic: tapped chip, its exact name, or a short wish ("Ich möchte jetzt Wohnen üben")
+    const exact = topicsRef.current.find((x) => same(x.short, text) || same(x.title, text));
+    const wish = exact ? null : detectTopicWish(text, topicsRef.current, { open });
+    if (wish?.group) {
+      listTopicGroup(wish.group, msg);
+      return true;
+    }
+    const topic = exact || (wish?.topicId && topicById(wish.topicId));
+    if (topic && !(topic.id === s.topicId && open)) {
+      if (topic.id === s.topicId && running && !exact) tutorSay(t('tutorAlreadyOnTopic', { topic: topic.short }));
+      else startTopic(topic, msg);
       return true;
     }
     askTutor(text, { msg });
@@ -399,42 +566,45 @@ export default function Home() {
   }
 
   // ---------- talking to the AI tutor ----------
-  function aiHistory(c, from) {
+  function aiHistory(c) {
     return c.messages
-      .filter((m) => m.at >= from && ((m.role === 'user' && m.ai) || (m.role === 'tutor' && m.modelText)))
-      .map((m) => (m.role === 'user' ? { role: 'user', text: m.text } : { role: 'assistant', text: m.modelText }));
+      .filter((m) => m.at >= c.historyFrom && ((m.role === 'user' && m.ai) || (m.role === 'tutor' && m.modelText)))
+      .map((m) => (m.role === 'user' ? { role: 'user', text: m.text } : { role: 'assistant', text: m.modelText }))
+      .slice(-40);
   }
 
-  async function askTutor(text, { msg, topicId, fresh = false } = {}) {
+  async function askTutor(text, { msg } = {}) {
     // mark the student's message as part of the AI conversation
-    if (msg) update((c) => ({ ...c, messages: c.messages.map((m) => (m.id === msg.id ? { ...m, ai: true } : m)) }));
-    if (fresh && msg) update((c) => ({ ...c, historyFrom: msg.at }));
+    if (msg && !msg.ai) update((c) => ({ ...c, messages: c.messages.map((m) => (m.id === msg.id ? { ...m, ai: true } : m)) }));
 
     const c = convoRef.current;
     const p = prefsRef.current;
-    const s = fresh ? newSession(topicId) : c.session;
-    const sent = { level: p.level, difficulty: p.difficulty };
+    const s = c.session;
+    const sent = { level: p.level, difficulty: p.difficulty, topicId: s.topicId };
     const sentNotes = notesRef.current;
-    const notes = Object.values(sentNotes);
+    const lastSkipped = s.answers[s.answers.length - 1]?.skipped ? s.answers[s.answers.length - 1] : null;
     const body = {
       name: profileRef.current.name,
       classCode: profileRef.current.classCode,
-      settings: sent,
+      settings: { level: p.level, difficulty: p.difficulty, direction: p.direction, sentences: p.sentences },
       session: {
-        topicId: topicId || s.topicId,
-        scenario: s.scenario,
-        exerciseNumber: s.finished ? 0 : s.exercise?.number || 0,
-        exerciseLine: s.exercise?.line || '',
+        topicId: s.topicId,
         total: s.total,
-        started: s.started,
+        openNumber: s.exercise && !s.finished ? s.answers.length + 1 : 0,
+        openLine: s.exercise?.line || '',
+        openDirection: s.exercise?.direction || null,
+        finished: s.finished,
+        skippedNumber: lastSkipped && !s.exercise ? lastSkipped.n : 0,
+        skippedLine: lastSkipped && !s.exercise ? lastSkipped.skippedLine : '',
       },
       progress: score(s.answers),
-      mistakes: recentMistakes(c.session.answers, historyRef.current.sessions),
-      notes,
-      messages: aiHistory(c, c.historyFrom).slice(-40),
+      mistakes: recentMistakes(s.answers, historyRef.current.sessions),
+      notes: Object.values(sentNotes),
+      messages: aiHistory(c),
     };
 
     setBusy(true);
+    let then = null;
     try {
       const { res, data } = await postJson('/api/chat', body, 70000);
       if (!res.ok || data.error) {
@@ -449,85 +619,90 @@ export default function Home() {
       }
       if (notesRef.current === sentNotes) notesRef.current = {}; // (a click during the request keeps its note)
       if (!data.reply) {
-        // not valid JSON: show the text, keep the panel as it is
+        // not valid JSON: show the text, keep the session and the panel as they are
         add({ role: 'tutor', text: data.text || '…', modelText: data.text || '' });
       } else {
-        applyReply(data.reply, data.modelText, sent);
+        then = applyReply(data.reply, data.modelText, sent);
       }
     } catch (e) {
       const text2 = e instanceof UiError ? e.message : e?.name === 'TimeoutError' ? t('errorTimeout') : t('errorNetwork');
       const canRetry = !(e instanceof UiError) || e.retry;
-      setError({ text: text2, retry: canRetry ? () => { setError(null); askTutor(text, { topicId, fresh }); } : null });
+      setError({ text: text2, retry: canRetry ? () => { setError(null); askTutor(text); } : null });
     } finally {
       setBusy(false);
     }
+    if (then) then();
   }
 
+  // The tutor's answer → chat message + session. Returns a follow-up action (or null).
   function applyReply(reply, modelText, sent) {
     const rs = reply.session;
-    let answered = false;
-    update((c) => {
-      let s = c.session;
-      const newTopic = Boolean(rs.topicId) && rs.topicId !== s.topicId;
-      const newRound = !newTopic && reply.exercise?.number === 1 && !reply.feedback && (s.finished || s.answers.length > 0);
-      if (newTopic || newRound) s = newSession(rs.topicId || s.topicId);
-      s = { ...s };
-      if (rs.topicName) s.topicName = rs.topicName;
-      if (rs.scenario || newTopic || newRound) s.scenario = rs.scenario || s.scenario;
-      if (rs.theme || newTopic || newRound) s.theme = rs.theme || s.theme;
+    const before = convoRef.current.session;
 
-      if (reply.feedback) {
-        const f = reply.feedback;
-        const n = f.forNumber || c.session.exercise?.number || s.answers.length + 1;
-        if (!s.answers.some((a) => a.n === n)) {
-          s.answers = [...s.answers, { ...f, n }];
-          answered = true;
-        }
-      }
-      if (reply.exercise) {
-        s.exercise = reply.exercise;
-        s.total = reply.exercise.total;
-        s.exerciseType = reply.exercise.type;
-        s.started = true;
-      } else if (reply.feedback || rs.finished) {
-        s.exercise = null;
-      }
-      if (reply.grammarFocus) s.grammarFocus = reply.grammarFocus;
-      s.finished = rs.finished || (s.finished && !reply.exercise);
+    // 1) the tutor switched topic because the student asked in their own words
+    //    (only during a running session – at the start of a topic the app's choice wins)
+    if (before.started && before.topicId && rs.topicId && rs.topicId !== before.topicId && sent.topicId === before.topicId && topicById(rs.topicId)) {
+      add({ role: 'tutor', reply: { ...reply, feedback: null, exercise: null }, modelText });
+      const topic = topicById(rs.topicId);
+      return () => startTopic(topic, null);
+    }
 
-      const summary = rs.finished && s.answers.length ? { ...score(s.answers), total: s.total, states: taskStates(s) } : null;
-      const message = { id: uid(), at: Date.now(), role: 'tutor', reply, modelText, summary };
-      return {
-        ...c,
-        session: s,
-        stage: s.topicId && s.started ? 'practice' : 'topic',
-        modelOptions: reply.options,
-        messages: [...c.messages, message],
-      };
-    });
+    let s = { ...before };
+    // 2) no topic yet: the tutor picked one (or the server guessed it)
+    if (!s.topicId && rs.topicId) {
+      const topic = topicById(rs.topicId) || { id: rs.topicId, short: rs.topicName || rs.topicId, type: 'Gemischt' };
+      s = { ...newSession(topic, prefsRef.current.questions), id: s.id };
+      if (topic.id === 'free' && rs.topicName) s.topicName = rs.topicName;
+    }
+
+    // 3) feedback for the open question. (Also counted if the tutor asked its question only in
+    //    the text, without a question card – but never twice for a question that was skipped.)
+    let feedback = null;
+    const lastAnswer = s.answers[s.answers.length - 1];
+    const forSkipped = lastAnswer?.skipped && !s.exercise && reply.feedback?.forNumber === lastAnswer.n;
+    if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
+      feedback = reply.feedback;
+      s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false }];
+      s.exercise = null;
+      s.started = true;
+    }
+    // 4) the app ends the session: all questions done, or the student said they want to stop
+    const wasFinished = s.finished;
+    if (s.started && s.answers.length >= s.total) {
+      s.finished = true;
+      s.exercise = null;
+    } else if (rs.finished && s.started && !s.finished) {
+      s.finished = true;
+      s.endedEarly = true;
+      s.exercise = null;
+    }
+    // 5) the next (or repeated) question – its number is counted by the app
+    let exercise = null;
+    if (reply.exercise && !s.finished) {
+      exercise = { ...reply.exercise, number: s.answers.length + 1, total: s.total };
+      s.exercise = exercise;
+      s.started = true;
+      s.lastType = exercise.type;
+    }
+    if (reply.grammarFocus) s.grammarFocus = reply.grammarFocus;
+
+    const justFinished = s.finished && !wasFinished;
+    const shown = { ...reply, feedback, exercise };
+    const message = { id: uid(), at: Date.now(), role: 'tutor', reply: shown, modelText, summary: justFinished ? summaryOf(s) : null };
+    update((c) => ({
+      ...c,
+      session: s,
+      stage: s.topicId ? 'practice' : 'topic',
+      modelOptions: s.finished ? [] : reply.options,
+      messages: [...c.messages, message],
+    }));
 
     // the tutor changed a setting because the student asked in the chat
     if (rs.level !== sent.level) changeLevel(rs.level, { tellTutor: false });
     if (rs.difficulty !== sent.difficulty) changeDifficulty(rs.difficulty, { tellTutor: false });
     if (reply.panelView) changeView(reply.panelView);
-
-    if (answered) {
-      const s = convoRef.current.session;
-      const topic = topicsRef.current.find((x) => x.id === s.topicId);
-      setHistory(recordSession({
-        id: s.id,
-        topicId: s.topicId,
-        topicName: s.topicName || topic?.short || '',
-        scenario: s.scenario,
-        level: prefsRef.current.level,
-        difficulty: prefsRef.current.difficulty,
-        ...score(s.answers),
-        total: s.total,
-        updatedAt: Date.now(),
-        mistakes: s.answers.filter((a) => !a.correct).slice(-5)
-          .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule })),
-      }));
-    }
+    if (feedback || justFinished) remember(s);
+    return null;
   }
 
   // ---------- what the screen shows ----------
@@ -537,14 +712,16 @@ export default function Home() {
     if (stage === 'loading' || stage === 'name' || stage === 'code') return [];
     const groups = [];
     const taken = new Set();
-    const chips = (list, style) => list.filter((x) => !taken.has(x.toLowerCase()) && taken.add(x.toLowerCase())).map((text) => ({ text, style }));
+    const chips = (list, style) => list
+      .filter((x) => x && !taken.has(x.toLowerCase()) && taken.add(x.toLowerCase()))
+      .map((text) => ({ text, style }));
 
-    if (localOptions) groups.push({ label: localOptions.label, chips: chips(localOptions.chips.map((c) => c.text), 'outline') });
-    if (modelOptions.length) groups.push({ label: t('groupNow'), chips: chips(modelOptions, 'soft') });
+    if (localOptions) groups.push({ label: localOptions.label, chips: chips(localOptions.chips, 'outline') });
 
     if (stage === 'topic') {
       const forLevel = topics.filter((x) => x.levels.includes(prefs.level));
       const list = forLevel.length ? forLevel : topics;
+      if (modelOptions.length) groups.push({ label: t('groupNow'), chips: chips(modelOptions, 'soft') });
       if (list.length) {
         groups.push({
           label: forLevel.length ? t('groupTopics', { level: prefs.level }) : t('groupTopicsAll'),
@@ -552,24 +729,37 @@ export default function Home() {
         });
       }
       groups.push({ label: t('groupTopic'), chips: chips([t('chipGrammar'), t('chipVocab')], 'outline') });
+    } else if (session.finished) {
+      groups.push({ label: t('groupNext'), chips: chips([t('chipAgain'), t('chipChangeTopic')], 'soft') });
+      groups.push({ label: t('groupTopic'), chips: chips([t('chipGrammar'), t('chipVocab')], 'outline') });
     } else {
-      const practising = session.finished
-        ? [t('chipRepeat')]
-        : [t('chipHint'), t('chipRule'), t('chipSkip'), t('chipRepeat')];
-      groups.push({ label: t('groupPractising'), chips: chips(practising, 'soft') });
+      if (modelOptions.length) groups.push({ label: t('groupNow'), chips: chips(modelOptions, 'soft') });
+      const vocab = isVocab(session);
       groups.push({
-        label: t('groupTopic'),
-        chips: chips([t('chipGrammar'), t('chipVocab'), t('chipRoleplay'), t('chipChangeTopic')], 'outline'),
+        label: t('groupPractising'),
+        chips: chips([t('chipHint'), vocab ? null : t('chipRule'), t('chipSkip'), t('chipRepeat'), t('chipEndSession')], 'soft'),
       });
+      if (vocab) {
+        const dirs = { 'en-de': t('chipEnDe'), 'de-en': t('chipDeEn'), mixed: t('chipMixed') };
+        groups.push({
+          label: t('groupFlashcards'),
+          chips: chips([
+            ...DIRECTIONS.filter((d) => d !== prefs.direction).map((d) => dirs[d]),
+            prefs.sentences ? t('chipSentencesOff') : t('chipSentencesOn'),
+          ], 'outline'),
+        });
+      }
+      groups.push({ label: t('groupTopic'), chips: chips([t('chipGrammar'), t('chipVocab'), t('chipChangeTopic')], 'outline') });
     }
     return groups.filter((g) => g.chips.length);
-  }, [stage, session.finished, modelOptions, localOptions, topics, prefs.level]);
+  }, [stage, session, modelOptions, localOptions, topics, prefs.level, prefs.direction, prefs.sentences]);
 
   const status = stage === 'topic' ? t('statusChoosing')
-    : stage === 'practice' ? (session.finished ? t('statusFinished') : session.exerciseType === 'roleplay' ? t('statusRoleplay') : t('statusLesson'))
+    : stage === 'practice'
+      ? (session.finished ? t('statusFinished') : !session.started ? t('statusStarting') : isVocab(session) ? t('statusFlashcards') : t('statusLesson'))
       : t('statusStarting');
 
-  const topic = topics.find((x) => x.id === session.topicId);
+  const topic = topicById(session.topicId);
   const recent = history.sessions.filter((x) => x.id !== session.id && x.answered > 0).slice(0, 4);
 
   // put the cursor back into the input after each answer
@@ -605,11 +795,12 @@ export default function Home() {
           inputRef={inputRef}
         />
         <SessionPanel
-          level={prefs.level}
-          difficulty={prefs.difficulty}
-          view={prefs.view}
+          prefs={prefs}
           onLevel={(v) => changeLevel(v)}
           onDifficulty={(v) => changeDifficulty(v)}
+          onQuestions={(v) => changeQuestions(v)}
+          onDirection={(v) => changeDirection(v)}
+          onSentences={(v) => changeSentences(v)}
           onView={changeView}
           session={session}
           topic={topic}

@@ -21,11 +21,12 @@
 |---|---|---|
 
 ## Wortschatz
-For every noun: article, plural, Genitiv, one typical adjective,
-and the verb or preposition that often decides its case.
+For every noun: article, the English meaning (reference language for the flashcards),
+plural, Genitiv, one typical adjective, and the verb or preposition that often decides its case.
+Swiss words: write "das Wohnzimmer / (CH) die Stube"; both are accepted.
 
-| Nomen | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
-|---|---|---|---|---|
+| Nomen | Englisch | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
+|---|---|---|---|---|---|
 
 Verben (Infinitiv – Perfekt – Kasus/Präposition):
 

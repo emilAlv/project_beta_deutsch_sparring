@@ -5,7 +5,7 @@
 export const DIFFICULTY = { Leicht: 'easy', Mittel: 'medium', Schwer: 'hard' };
 export const DIFFICULTY_DE = { easy: 'Leicht', medium: 'Mittel', hard: 'Schwer' };
 export const EXERCISE_TYPE = {
-  Rollenspiel: 'roleplay',
+  Karteikarte: 'flashcard',
   'Lückentext': 'gapfill',
   'Nomen-Drill': 'noundrill',
   'Übersetzung': 'translation',
@@ -57,14 +57,13 @@ export const RESPONSE_SCHEMA = {
       nullable: true,
       properties: {
         number: { type: 'INTEGER' },
-        total: { type: 'INTEGER' },
-        speaker: nullableStr('Role-play character, e.g. "Dein Freund Marco". null for classic exercises.'),
-        line: str('What the character says / the task. No quotation marks.'),
-        hint: nullableStr('Depends on difficulty. null on Schwer.'),
         type: enumOf(Object.keys(EXERCISE_TYPE)),
+        direction: enumOf(['en-de', 'de-en'], { nullable: true, description: 'Flashcards only: English → German or German → English.' }),
+        line: str('The task: a sentence with ___, the word on the flashcard, words to build a sentence … No quotation marks.'),
+        hint: nullableStr('Depends on difficulty. null on Schwer.'),
       },
-      required: ['number', 'total', 'line', 'type'],
-      propertyOrdering: ['number', 'total', 'speaker', 'line', 'hint', 'type'],
+      required: ['number', 'type', 'line'],
+      propertyOrdering: ['number', 'type', 'direction', 'line', 'hint'],
     },
     options: { type: 'ARRAY', items: { type: 'STRING' } },
     panelView: enumOf(VIEWS, { nullable: true }),
@@ -91,11 +90,9 @@ export const RESPONSE_SCHEMA = {
       properties: {
         topicId: nullableStr('Id from the TOPIC CATALOG, "free" for free practice, null while not chosen.'),
         topicName: nullableStr('Short topic name, max 4 words.'),
-        scenario: nullableStr('Short name of the role-play scenario, e.g. "Umzug".'),
-        theme: nullableStr('One short sentence: who you play and who the student is.'),
         level: enumOf(LEVELS),
         difficulty: enumOf(Object.keys(DIFFICULTY)),
-        finished: { type: 'BOOLEAN' },
+        finished: { type: 'BOOLEAN', description: 'true only when the student wants to stop now.' },
       },
       required: ['level', 'difficulty', 'finished'],
     },
@@ -104,6 +101,7 @@ export const RESPONSE_SCHEMA = {
   propertyOrdering: ['message', 'feedback', 'exercise', 'options', 'panelView', 'grammarFocus', 'session'],
 };
 
+const ARTICLE = /^(der|die|das)\s/i;
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 const orNull = (v, n) => clip(v, n) || null;
 const int = (v, min, max) => {
@@ -161,18 +159,19 @@ export function normalizeReply(raw, ctx) {
     if (feedback.correct) feedback.errorType = null;
   }
 
+  // the number is only a hint: the app counts the questions itself
   let exercise = null;
   const e = raw.exercise;
   if (e && typeof e === 'object' && clip(e.line, 500)) {
-    const total = int(e.total, 1, 30) || 8;
+    const type = EXERCISE_TYPE[e.type] || 'gapfill';
     exercise = {
-      number: Math.min(int(e.number, 1, 30) || 1, total),
-      total,
-      speaker: orNull(e.speaker, 60),
+      number: int(e.number, 1, 99),
+      type,
+      direction: type === 'flashcard' && ['en-de', 'de-en'].includes(e.direction) ? e.direction : null,
       line: clip(e.line, 500).replace(/^[„"“»«]+|[“"”«»]+$/g, ''),
       hint: orNull(e.hint, 200),
-      type: EXERCISE_TYPE[e.type] || (e.speaker ? 'roleplay' : 'gapfill'),
     };
+    if (type === 'flashcard' && !exercise.direction) exercise.direction = ARTICLE.test(exercise.line) ? 'de-en' : 'en-de';
   }
 
   const options = Array.isArray(raw.options)
@@ -198,8 +197,6 @@ export function normalizeReply(raw, ctx) {
   const session = {
     topicId: topicId && ctx.topicIds.has(topicId) ? topicId : ctx.topicId || null,
     topicName: orNull(s.topicName, 60),
-    scenario: orNull(s.scenario, 60),
-    theme: orNull(s.theme, 160),
     level: LEVELS.includes(s.level) ? s.level : ctx.level,
     difficulty: DIFFICULTY[s.difficulty] || ctx.difficulty,
     finished: s.finished === true,

@@ -6,6 +6,7 @@ import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
 } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit, clientKey } from '../../../lib/guard';
+import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -43,36 +44,45 @@ async function handle(req) {
   }
 
   // --- what the browser says about the current state (all values checked) ---
+  // The browser owns the session: it counts the questions and decides when it ends.
   const s = body.settings || {};
   const settings = {
     level: LEVELS.includes(s.level) ? s.level : 'B1',
     difficulty: DIFFICULTY_DE[s.difficulty] ? s.difficulty : 'medium',
+    direction: ['en-de', 'de-en', 'mixed'].includes(s.direction) ? s.direction : 'en-de',
+    sentences: s.sentences === true,
   };
   const ses = body.session || {};
   const lessons = listLessons();
   const catalog = [...lessons, FREE_TOPIC];
   const topicIds = new Set(catalog.map((t) => t.id));
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.text || '';
+  const count = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
 
-  let topicId = topicIds.has(ses.topicId) ? ses.topicId : null;
-  let guessed = false;
-  if (!topicId && !(Number(ses.exerciseNumber) > 0)) {
-    topicId = guessTopic(lastUser, lessons);
-    guessed = Boolean(topicId);
-  }
-  const session = {
-    topicId,
-    scenario: String(ses.scenario || '').slice(0, 60) || null,
-    exerciseNumber: Number(ses.exerciseNumber) > 0 ? Math.min(Number(ses.exerciseNumber), 30) : 0,
-    exerciseLine: String(ses.exerciseLine || '').slice(0, 300),
-    total: Number(ses.total) > 0 ? Math.min(Number(ses.total), 30) : 8,
-    started: Boolean(ses.started),
-  };
   const p = body.progress || {};
   const progress = {
-    answered: Math.max(0, Number(p.answered) || 0),
-    correct: Math.max(0, Number(p.correct) || 0),
+    done: count(p.done, 60),
+    answered: count(p.answered, 60),
+    correct: count(p.correct, 60),
+    skipped: count(p.skipped, 60),
   };
+  const session = {
+    topicId: topicIds.has(ses.topicId) ? ses.topicId : null,
+    total: Math.max(QUESTION_MIN, Math.min(QUESTION_MAX, count(ses.total, 99) || QUESTION_MIN)),
+    openNumber: count(ses.openNumber, 60),
+    openLine: String(ses.openLine || '').slice(0, 300),
+    openDirection: ['en-de', 'de-en'].includes(ses.openDirection) ? ses.openDirection : null,
+    finished: ses.finished === true,
+    skippedNumber: count(ses.skippedNumber, 60),
+    skippedLine: String(ses.skippedLine || '').slice(0, 300),
+  };
+  // nothing chosen yet: guess the lesson from the wish ("Dativ und Akkusativ, Stufe mittel")
+  let guessed = false;
+  if (!session.topicId && !session.openNumber && !progress.done) {
+    session.topicId = guessTopic(lastUser, lessons);
+    guessed = Boolean(session.topicId);
+  }
+  const topicId = session.topicId;
   const mistakes = (Array.isArray(body.mistakes) ? body.mistakes : []).slice(0, 8).map((m) => ({
     studentAnswer: String(m?.studentAnswer || '').slice(0, 200),
     corrected: String(m?.corrected || '').slice(0, 200),
@@ -85,7 +95,7 @@ async function handle(req) {
   let text;
   try {
     text = process.env.MOCK === '1'
-      ? await mockReply({ text: lastUser, settings, session, progress, topicId })
+      ? await mockReply({ text: lastUser, settings, session, progress, topic: catalog.find((t) => t.id === topicId) || null })
       : await askGemini();
   } catch (e) {
     console.error('Tutor failed:', e.status, e.message);
@@ -112,7 +122,7 @@ async function handle(req) {
       lesson: getLesson(topicId),
       knownGrammar: getKnownGrammar(),
       catalog,
-      settings: { level: settings.level, difficulty: DIFFICULTY_DE[settings.difficulty] },
+      settings: { ...settings, difficulty: DIFFICULTY_DE[settings.difficulty] },
       session,
       progress,
       mistakes,

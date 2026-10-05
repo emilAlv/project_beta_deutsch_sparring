@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { t, LOCALE } from '../lib/ui-text';
+import { t, LOCALE, dirKey } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
 import Rich, { Marked } from './Rich';
 import { ArrowUp, Check, Refresh } from './icons';
@@ -39,8 +39,8 @@ export default function Chat({ status, messages, busy, slow, error, onRetry, sta
 
       <div className="chat-scroll" ref={scrollRef} onScroll={onScroll}>
         <div className="chat-log" role="log" aria-live="polite" aria-relevant="additions">
-          {messages.map((m, i) => {
-            const prev = messages[i - 1];
+          {messages.filter((m) => !m.hidden).map((m, i, shown) => {
+            const prev = shown[i - 1];
             const marker = !prev || !sameDay(prev.at, m.at);
             return (
               <div key={m.id} className="chat-item">
@@ -108,27 +108,30 @@ function TutorMessage({ m }) {
   );
 }
 
-const quoted = (ex) => (ex.speaker || ex.type === 'roleplay' ? `„${ex.line}“` : ex.line);
+// "ENGLISH → GERMAN · CARD 3 OF 20" or "GAP FILL · QUESTION 3 OF 20"
+function exLabel(ex) {
+  return ex.type === 'flashcard'
+    ? `${t(`dir_${dirKey(ex.direction)}`)} · ${t('cardOf', { n: ex.number, total: ex.total })}`
+    : `${t(`ex_${ex.type}`)} · ${t('questionOf', { n: ex.number, total: ex.total })}`;
+}
 
 function ExerciseCard({ ex }) {
-  const who = ex.speaker || t(`ex_${ex.type}`);
   return (
-    <div className="exercise-card">
-      <p className="caps">{who} · {t('taskOf', { n: ex.number, total: ex.total })}</p>
-      <p className="exercise-line">{quoted(ex)}</p>
+    <div className={`exercise-card${ex.type === 'flashcard' ? ' is-flashcard' : ''}`}>
+      <p className="caps">{exLabel(ex)}</p>
+      <p className="exercise-line">{ex.line}</p>
       {ex.hint && <p className="exercise-hint">{ex.hint}</p>}
     </div>
   );
 }
 
+// the next question right under a correction: same content, lighter (no card)
 function NextLine({ ex }) {
   return (
-    <div className="next-line">
-      <p className="exercise-line">{quoted(ex)}</p>
-      <p className="exercise-hint">
-        {ex.speaker ? `${ex.speaker} · ` : ''}{t('taskOf', { n: ex.number, total: ex.total })}
-        {ex.hint && <> · <span className="hint-accent">{ex.hint}</span></>}
-      </p>
+    <div className={`next-line${ex.type === 'flashcard' ? ' is-flashcard' : ''}`}>
+      <p className="caps">{exLabel(ex)}</p>
+      <p className="exercise-line">{ex.line}</p>
+      {ex.hint && <p className="exercise-hint"><span className="hint-accent">{ex.hint}</span></p>}
     </div>
   );
 }
@@ -150,19 +153,24 @@ function FeedbackCard({ f }) {
 function SummaryCard({ s }) {
   return (
     <div className="summary-card">
-      <p className="caps">{t('summaryTitle')}</p>
+      <p className="caps">{s.ended ? t('summaryEnded') : t('summaryTitle')}</p>
       <p className="summary-score">
         <span className="big">{s.correct}</span><span className="of"> / {s.answered}</span>
       </p>
-      <p className="summary-caption">{t('summaryScore', s)}</p>
+      <p className="summary-caption">
+        {t('summaryScore', s)} · {t('summaryDetail', { done: s.done, total: s.total })}
+        {s.skipped > 0 && ` · ${t('summarySkipped', { n: s.skipped })}`}
+      </p>
       <ProgressTrack states={s.states} />
     </div>
   );
 }
 
 export function ProgressTrack({ states }) {
+  // many questions → thinner gaps, so 50 segments still fit
+  const gap = states.length > 30 ? 1 : states.length > 15 ? 3 : 5;
   return (
-    <div className="track" aria-hidden="true">
+    <div className="track" style={{ gap }} aria-hidden="true">
       {states.map((st, i) => <span key={i} className={`seg seg-${st}`} />)}
     </div>
   );

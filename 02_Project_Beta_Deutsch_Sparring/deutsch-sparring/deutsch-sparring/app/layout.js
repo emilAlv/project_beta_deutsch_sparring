@@ -1,7 +1,7 @@
 import { Inter, Lora } from 'next/font/google';
 import './globals.css';
 
-// Fonts from the Figma file: Lora (headings, role-play lines, level), Inter (everything else).
+// Fonts from the Figma file: Lora (headings, exercise lines, level), Inter (everything else).
 // next/font serves them from our own domain, so the browser never contacts Google.
 const lora = Lora({ subsets: ['latin'], style: ['normal', 'italic'], variable: '--font-serif' });
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });

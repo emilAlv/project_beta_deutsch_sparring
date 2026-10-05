@@ -68,7 +68,7 @@ export function recordSession(entry) {
 
 // Mistakes for "Repeat my mistakes": the current session first, then older ones.
 export function recentMistakes(currentAnswers, sessions) {
-  const now = currentAnswers.filter((a) => !a.correct);
+  const now = currentAnswers.filter((a) => !a.correct && !a.skipped);
   const older = sessions.flatMap((s) => s.mistakes || []);
   const seen = new Set();
   return [...now.reverse(), ...older]

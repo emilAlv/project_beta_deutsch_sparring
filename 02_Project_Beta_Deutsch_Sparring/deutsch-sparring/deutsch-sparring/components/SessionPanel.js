@@ -1,8 +1,8 @@
 'use client';
 
-import { t, LOCALE } from '../lib/ui-text';
+import { t, LOCALE, dirKey } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
-import { score, taskStates, tasksDone, headlineKey, ruleRows } from '../lib/stats';
+import { score, taskStates, headlineKey, ruleRows } from '../lib/stats';
 import { ProgressTrack } from './Chat';
 import { Marked } from './Rich';
 import SceneArt from './SceneArt';
@@ -23,13 +23,28 @@ function arrowKeys(options, value, onChange) {
 
 const LEVELS = ['A1', 'A2', 'B1'];
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
+const QUESTIONS = [10, 20, 30, 40, 50];
+const DIRECTIONS = ['en-de', 'de-en', 'mixed'];
 const VIEWS = ['glance', 'progress', 'grammar'];
+const isVocab = (session) => session.topicType === 'Wortschatz';
 
 // Right column: "Your session". Buttons here do the same as asking in the chat.
-export default function SessionPanel({ level, difficulty, view, onLevel, onDifficulty, onView, session, topic, recent }) {
+export default function SessionPanel({
+  prefs, onLevel, onDifficulty, onQuestions, onDirection, onSentences, onView, session, topic, recent,
+}) {
+  const { view } = prefs;
   return (
     <aside className="session-panel" aria-label={t('panelTitle')}>
-      <SettingsCard level={level} difficulty={difficulty} onLevel={onLevel} onDifficulty={onDifficulty} session={session} topic={topic} />
+      <SettingsCard
+        prefs={prefs}
+        onLevel={onLevel}
+        onDifficulty={onDifficulty}
+        onQuestions={onQuestions}
+        onDirection={onDirection}
+        onSentences={onSentences}
+        session={session}
+        topic={topic}
+      />
 
       <div className="segmented tabs" role="tablist" aria-label={t('views')} onKeyDown={arrowKeys(VIEWS, view, onView)}>
         {VIEWS.map((v) => (
@@ -50,7 +65,7 @@ export default function SessionPanel({ level, difficulty, view, onLevel, onDiffi
       </div>
 
       <div id="panel-view" role="tabpanel" aria-labelledby={`tab-${view}`} className="view">
-        {view === 'glance' && <GlanceView level={level} session={session} topic={topic} recent={recent} />}
+        {view === 'glance' && <GlanceView prefs={prefs} session={session} topic={topic} recent={recent} />}
         {view === 'progress' && <ProgressView session={session} />}
         {view === 'grammar' && <GrammarView session={session} />}
       </div>
@@ -60,16 +75,16 @@ export default function SessionPanel({ level, difficulty, view, onLevel, onDiffi
   );
 }
 
-function Segmented({ label, options, value, onChange, render }) {
+function Segmented({ label, options, value, onChange, render, small }) {
   return (
-    <div className="segmented" role="radiogroup" aria-label={label} onKeyDown={arrowKeys(options, value, onChange)}>
-      {options.map((o) => (
+    <div className={`segmented${small ? ' small' : ''}`} role="radiogroup" aria-label={label} onKeyDown={arrowKeys(options, value, onChange)}>
+      {options.map((o, i) => (
         <button
           key={o}
           type="button"
           role="radio"
           aria-checked={value === o}
-          tabIndex={value === o ? 0 : -1}
+          tabIndex={value === o || (!options.includes(value) && i === 0) ? 0 : -1}
           className={value === o ? 'on' : ''}
           onClick={() => value !== o && onChange(o)}
         >
@@ -80,6 +95,15 @@ function Segmented({ label, options, value, onChange, render }) {
   );
 }
 
+function Switch({ label, on, onChange }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} className={`switch${on ? ' on' : ''}`} onClick={() => onChange(!on)}>
+      <span className="switch-track" aria-hidden="true"><span className="switch-thumb" /></span>
+      <span className="switch-label">{label}</span>
+    </button>
+  );
+}
+
 function topicLine(session, topic) {
   if (!session.topicId) return null;
   const type = session.topicId === 'free' ? t('type_free') : t(`type_${topic?.type || 'Gemischt'}`);
@@ -87,17 +111,38 @@ function topicLine(session, topic) {
   return { type, name };
 }
 
-function SettingsCard({ level, difficulty, onLevel, onDifficulty, session, topic }) {
+// "Flashcards · EN → DE + sentences" or "Exercises · gap fill"
+function modeLine(session, prefs) {
+  if (!session.topicId) return null;
+  if (isVocab(session)) {
+    return { name: t('flashcards'), detail: `${t(`dirShort_${dirKey(prefs.direction)}`)}${prefs.sentences ? ` ${t('withSentences')}` : ''}` };
+  }
+  return { name: t('modeExercises'), detail: session.lastType ? t(`ex_${session.lastType}`) : '' };
+}
+
+function SettingsCard({ prefs, onLevel, onDifficulty, onQuestions, onDirection, onSentences, session, topic }) {
   const tl = topicLine(session, topic);
-  const exType = session.exerciseType ? t(`ex_${session.exerciseType}`) : '';
+  const ml = modeLine(session, prefs);
+  const showCards = isVocab(session) || !session.topicId;
   return (
     <section className="card settings">
       <p className="caps">{t('level')}</p>
-      <Segmented label={t('level')} options={LEVELS} value={level} onChange={onLevel} />
+      <Segmented label={t('level')} options={LEVELS} value={prefs.level} onChange={onLevel} />
 
       <p className="caps">{t('difficulty')}</p>
-      <Segmented label={t('difficulty')} options={DIFFICULTIES} value={difficulty} onChange={onDifficulty} render={(d) => t(`diff_${d}`)} />
-      <p className="settings-help">{t(`diffHelp_${difficulty}`)}</p>
+      <Segmented label={t('difficulty')} options={DIFFICULTIES} value={prefs.difficulty} onChange={onDifficulty} render={(d) => t(`diff_${d}`)} />
+      <p className="settings-help">{t(`diffHelp_${prefs.difficulty}`)}</p>
+
+      <p className="caps">{t('questions')}</p>
+      <Segmented label={t('questions')} options={QUESTIONS} value={prefs.questions} onChange={onQuestions} small />
+
+      {showCards && (
+        <>
+          <p className="caps caps-row"><span>{t('flashcards')}</span><span className="ref-lang">{t('refLang')}</span></p>
+          <Segmented label={t('flashcards')} options={DIRECTIONS} value={prefs.direction} onChange={onDirection} render={(d) => t(`dirShort_${dirKey(d)}`)} small />
+          <Switch label={t('sentencesToggle')} on={prefs.sentences} onChange={onSentences} />
+        </>
+      )}
 
       <dl className="facts">
         <div>
@@ -105,12 +150,8 @@ function SettingsCard({ level, difficulty, onLevel, onDifficulty, session, topic
           <dd>{tl ? <><strong>{tl.type}</strong>{tl.name && ` · ${tl.name}`}</> : <span className="muted">{t('notChosen')}</span>}</dd>
         </div>
         <div>
-          <dt>{t('theme')}</dt>
-          <dd>
-            {session.scenario || exType
-              ? <>{session.scenario && <strong>{session.scenario}</strong>}{session.scenario && exType && ' · '}{exType}</>
-              : <span className="muted">{t('notChosen')}</span>}
-          </dd>
+          <dt>{t('mode')}</dt>
+          <dd>{ml ? <><strong>{ml.name}</strong>{ml.detail && ` · ${ml.detail}`}</> : <span className="muted">{t('notChosen')}</span>}</dd>
         </div>
       </dl>
       <p className="settings-note">{t('settingsNote')}</p>
@@ -123,17 +164,19 @@ function LessonProgress({ session }) {
     <div className="lesson-progress">
       <p className="progress-label">
         <span>{t('lessonProgress')}</span>
-        <span className="muted">{t('tasksOf', { n: tasksDone(session), total: session.total || 8 })}</span>
+        <span className="muted">{t('questionsOf', { n: session.answers.length, total: session.total })}</span>
       </p>
       <ProgressTrack states={taskStates(session)} />
     </div>
   );
 }
 
-function GlanceView({ level, session, topic, recent }) {
+function GlanceView({ prefs, session, topic, recent }) {
   const tl = topicLine(session, topic);
+  const ml = modeLine(session, prefs);
   const sc = score(session.answers);
   const rows = ruleRows(session.answers);
+  const level = prefs.level;
   return (
     <>
       <section className="card lesson">
@@ -151,29 +194,25 @@ function GlanceView({ level, session, topic, recent }) {
         <hr />
         <div className="indicator">
           <p className="caps">{t('topic')}</p>
-          <p className="value">{tl ? tl.name || tl.type : t('notChosen')}</p>
-          {tl && (
-            <p className="detail">
-              {session.grammarFocus ? t('grammarFocusLine', { rule: session.grammarFocus.title }) : tl.type}
-            </p>
-          )}
-        </div>
-        <div className="indicator">
-          <p className="caps">{t('scenarioLabel')}</p>
-          {session.scenario ? (
-            <div className="scene">
-              <SceneArt scenario={session.scenario} />
-              <p className="scene-name">{session.scenario}</p>
-            </div>
+          {tl ? (
+            <>
+              <div className="scene">
+                <SceneArt subject={`${tl.name} ${topic?.title || ''}`} />
+                <p className="scene-name">{tl.name || tl.type}</p>
+              </div>
+              <p className="detail">
+                {tl.type}{session.grammarFocus ? ` · ${t('grammarFocusLine', { rule: session.grammarFocus.title })}` : ''}
+              </p>
+            </>
           ) : (
-            <p className="scene-empty">{t('scenarioEmpty')}</p>
+            <p className="scene-empty">{t('topicEmpty')}</p>
           )}
         </div>
-        {session.exerciseType && (
+        {ml && (
           <div className="indicator">
-            <p className="caps">{t('exerciseType')}</p>
-            <p className="value capitalize">{t(`ex_${session.exerciseType}`)}</p>
-            {session.theme && <p className="detail">{session.theme}</p>}
+            <p className="caps">{t('mode')}</p>
+            <p className="value">{ml.name}</p>
+            <p className="detail capitalize">{[ml.detail, t('questionsOf', { n: session.answers.length, total: session.total })].filter(Boolean).join(' · ')}</p>
           </div>
         )}
       </section>
@@ -217,7 +256,7 @@ function GlanceView({ level, session, topic, recent }) {
             {recent.map((r) => (
               <li key={r.id}>
                 <span>
-                  <span className="recent-topic">{r.topicName || r.scenario || '—'}</span>
+                  <span className="recent-topic">{r.topicName || '—'}</span>
                   <span className="muted"> · {new Date(r.updatedAt).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}</span>
                 </span>
                 <span className="recent-score">{r.correct}/{r.answered}</span>
@@ -232,7 +271,7 @@ function GlanceView({ level, session, topic, recent }) {
 
 function ProgressView({ session }) {
   const sc = score(session.answers);
-  const lastGap = [...session.answers].reverse().find((a) => !a.correct);
+  const lastGap = [...session.answers].reverse().find((a) => !a.correct && !a.skipped);
   return (
     <>
       {lastGap ? <GapCard a={lastGap} /> : sc.answered > 0 && (
@@ -253,6 +292,14 @@ function ProgressView({ session }) {
         ) : (
           <ol className="answer-list">
             {session.answers.map((a) => {
+              if (a.skipped) {
+                return (
+                  <li key={a.n} className="skipped">
+                    <span className="mark" aria-hidden="true">–</span>
+                    <span>{a.skippedLine || '…'} <span className="you-wrote">({t('skipped')})</span></span>
+                  </li>
+                );
+              }
               const d = compareAnswer(a.studentAnswer, a.corrected, a.changedWords);
               return (
                 <li key={a.n} className={a.correct ? 'right' : 'wrong'}>
@@ -304,7 +351,7 @@ function GrammarView({ session }) {
     );
   }
   // two examples from this conversation: a corrected mistake first, then a right answer
-  const wrong = [...session.answers].reverse().find((a) => !a.correct);
+  const wrong = [...session.answers].reverse().find((a) => !a.correct && !a.skipped);
   const right = [...session.answers].reverse().find((a) => a.correct);
   const examples = [wrong, right].filter(Boolean).slice(0, 2);
   return (

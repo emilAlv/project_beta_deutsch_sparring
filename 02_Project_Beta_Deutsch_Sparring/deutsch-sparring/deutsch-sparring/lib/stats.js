@@ -1,28 +1,27 @@
 // Numbers for the panel and the end-of-session card. Always computed by the app from the
 // answers it saw – never taken from the model.
 
+// done = questions used (incl. skipped) · answered = really answered · correct · skipped
 export function score(answers) {
-  return { answered: answers.length, correct: answers.filter((a) => a.correct).length };
+  const skipped = answers.filter((a) => a.skipped).length;
+  return {
+    done: answers.length,
+    answered: answers.length - skipped,
+    correct: answers.filter((a) => a.correct).length,
+    skipped,
+  };
 }
 
-// One entry per task: 'right' | 'wrong' | 'skipped' | 'current' | 'todo'
+// One entry per question: 'right' | 'wrong' | 'skipped' | 'current' | 'todo'
 export function taskStates(session) {
-  const total = session.total || 8;
-  const current = session.exercise?.number || null;
-  const byNumber = new Map(session.answers.map((a) => [a.n, a]));
-  const reached = Math.max(current || 0, ...session.answers.map((a) => a.n), 0);
+  const total = session.total || 10;
+  const open = session.exercise && !session.finished ? session.answers.length + 1 : null;
   return Array.from({ length: total }, (_, i) => {
-    const n = i + 1;
-    const a = byNumber.get(n);
-    if (a) return a.correct ? 'right' : 'wrong';
-    if (n === current && !session.finished) return 'current';
-    if (n < reached || session.finished) return 'skipped';
+    const a = session.answers[i];
+    if (a) return a.skipped ? 'skipped' : a.correct ? 'right' : 'wrong';
+    if (i + 1 === open) return 'current';
     return 'todo';
   });
-}
-
-export function tasksDone(session) {
-  return taskStates(session).filter((s) => s === 'right' || s === 'wrong' || s === 'skipped').length;
 }
 
 export function headlineKey({ answered, correct }) {
@@ -34,11 +33,11 @@ export function headlineKey({ answered, correct }) {
   return 'headline_keep';
 }
 
-// "How you're doing": one row per grammar rule the tutor named, newest first.
+// "How you're doing": one row per grammar rule / word the tutor named, newest first.
 export function ruleRows(answers, max = 4) {
   const rows = new Map();
   for (const a of [...answers].reverse()) {
-    const rule = a.rule || '';
+    const rule = a.skipped ? '' : a.rule || '';
     if (!rule) continue;
     const row = rows.get(rule) || { rule, ok: true, count: 0 };
     row.ok = row.ok && a.correct;
@@ -46,4 +45,8 @@ export function ruleRows(answers, max = 4) {
     rows.set(rule, row);
   }
   return [...rows.values()].slice(0, max);
+}
+
+export function summaryOf(session) {
+  return { ...score(session.answers), total: session.total, ended: session.endedEarly, states: taskStates({ ...session, exercise: null, finished: true }) };
 }
