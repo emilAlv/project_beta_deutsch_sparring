@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { t } from '../lib/ui-text';
+import { t, LOCALE } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
 import Rich, { Marked } from './Rich';
 import { ArrowUp, Check, Refresh } from './icons';
 
-const time = (at) => new Date(at).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+const time = (at) => new Date(at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
 const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
 const dayLabel = (at) => (sameDay(at, Date.now())
   ? t('today')
-  : new Date(at).toLocaleDateString('de-CH', { day: 'numeric', month: 'long' }));
+  : new Date(at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' }));
 
 export default function Chat({ status, messages, busy, slow, error, onRetry, stage, onSend, inputRef }) {
   const scrollRef = useRef(null);
@@ -23,6 +23,7 @@ export default function Chat({ status, messages, busy, slow, error, onRetry, sta
   };
   useLayoutEffect(() => {
     const el = scrollRef.current;
+    if (messages[messages.length - 1]?.role === 'user') stick.current = true; // own message: always follow
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [messages, busy, error, slow]);
 

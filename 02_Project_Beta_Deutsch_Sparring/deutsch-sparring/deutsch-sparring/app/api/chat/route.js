@@ -83,17 +83,29 @@ async function handle(req) {
 
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;
-  if (process.env.MOCK === '1') {
-    text = await mockReply({ text: lastUser, settings, session, progress, topicId });
-  } else {
-    if (!process.env.GEMINI_API_KEY) return fail('GEMINI_API_KEY fehlt auf dem Server.', 500);
+  try {
+    text = process.env.MOCK === '1'
+      ? await mockReply({ text: lastUser, settings, session, progress, topicId })
+      : await askGemini();
+  } catch (e) {
+    console.error('Tutor failed:', e.status, e.message);
+    if (e.status === 429) {
+      return fail('Das kostenlose KI-Kontingent ist gerade erschöpft. Bitte versuche es in ein paar Minuten nochmal.', 429, 'quota');
+    }
+    if (e.status === 504) return fail('Der Tutor hat zu lange gebraucht. Bitte versuche es nochmal.', 504, 'timeout');
+    if (e.status === 'config') return fail(e.message, 500, 'config');
+    return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
+  }
+
+  async function askGemini() {
+    if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY fehlt auf dem Server.'), { status: 'config' });
 
     const recent = messages.slice(-MAX_HISTORY).map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: String(m.text || '').slice(0, m.role === 'assistant' ? MAX_MODEL_CHARS : MAX_CHARS) }],
     }));
     while (recent.length && recent[0].role !== 'user') recent.shift();
-    if (!recent.length) return fail('Keine Nachricht.', 400);
+    if (!recent.length) throw Object.assign(new Error('Keine Nachricht vom Lernenden.'), { status: 400 });
 
     const system = buildSystemPrompt({
       name: String(name || 'du').slice(0, 40),
@@ -107,17 +119,7 @@ async function handle(req) {
       notes,
       guessed,
     });
-
-    try {
-      text = await generate({ system, contents: recent, schema: RESPONSE_SCHEMA, deadline });
-    } catch (e) {
-      console.error('Gemini failed:', e.status, e.message);
-      if (e.status === 429) {
-        return fail('Das kostenlose KI-Kontingent ist gerade erschöpft. Bitte versuche es in ein paar Minuten nochmal.', 429, 'quota');
-      }
-      if (e.status === 504) return fail('Der Tutor hat zu lange gebraucht. Bitte versuche es nochmal.', 504, 'timeout');
-      return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
-    }
+    return generate({ system, contents: recent, schema: RESPONSE_SCHEMA, deadline });
   }
 
   // --- turn it into clean data for the screen ---

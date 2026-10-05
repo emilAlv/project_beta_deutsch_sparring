@@ -101,6 +101,7 @@ export default function Home() {
 
   const [prefs, setPrefsState] = useState(DEFAULT_PREFS);
   const prefsRef = useRef(DEFAULT_PREFS);
+  const prefsLoaded = useRef(false); // don't overwrite the saved settings before they are read
   const setPrefs = useCallback((patch) => {
     prefsRef.current = { ...prefsRef.current, ...patch };
     setPrefsState(prefsRef.current);
@@ -130,7 +131,7 @@ export default function Home() {
   };
   const [slow, setSlow] = useState(false);
   const [error, setError] = useState(null); // { text, retry }
-  const notesRef = useRef([]); // settings changed by buttons, told to the tutor with the next message
+  const notesRef = useRef({}); // settings changed by buttons, told to the tutor with the next message
   const inputRef = useRef(null);
 
   // ---------- small helpers to add things to the chat ----------
@@ -167,7 +168,8 @@ export default function Home() {
     const p = loadProfile();
     profileRef.current = p;
     setProfileState(p);
-    setPrefs(sanitizePrefs(loadPrefs()));
+    if (!prefsLoaded.current) setPrefs(sanitizePrefs(loadPrefs()));
+    prefsLoaded.current = true;
     setHistory(loadHistory());
 
     fetch('/api/topics')
@@ -219,6 +221,7 @@ export default function Home() {
   }, [convo]);
 
   useEffect(() => {
+    if (prefs === DEFAULT_PREFS) return; // first render: nothing loaded yet
     savePrefs(prefs);
     document.documentElement.dataset.options = prefs.optionsHidden ? 'hidden' : 'shown';
   }, [prefs]);
@@ -238,14 +241,14 @@ export default function Home() {
     if (!LEVELS.includes(level) || level === prefsRef.current.level) return;
     setPrefs({ level });
     addSystem('level', t('sysLevel', { value: level }));
-    if (tellTutor) notesRef.current.push(`Niveau → ${level}`);
+    if (tellTutor) notesRef.current.level = `Niveau → ${level}`;
   }
 
   function changeDifficulty(difficulty, { tellTutor = true } = {}) {
     if (!DIFFS.includes(difficulty) || difficulty === prefsRef.current.difficulty) return;
     setPrefs({ difficulty });
     addSystem('difficulty', t('sysDifficulty', { value: t(`diff_${difficulty}`) }));
-    if (tellTutor) notesRef.current.push(`Schwierigkeit → ${DIFF_DE[difficulty]}`);
+    if (tellTutor) notesRef.current.difficulty = `Schwierigkeit → ${DIFF_DE[difficulty]}`;
   }
 
   function changeView(view) {
@@ -308,7 +311,7 @@ export default function Home() {
     convoRef.current = fresh;
     setConvo(fresh);
     setError(null);
-    notesRef.current = [];
+    notesRef.current = {};
     tutorSay(t('tutorRestart', { name: profileRef.current.name }));
   }
 
@@ -411,7 +414,8 @@ export default function Home() {
     const p = prefsRef.current;
     const s = fresh ? newSession(topicId) : c.session;
     const sent = { level: p.level, difficulty: p.difficulty };
-    const notes = notesRef.current.slice();
+    const sentNotes = notesRef.current;
+    const notes = Object.values(sentNotes);
     const body = {
       name: profileRef.current.name,
       classCode: profileRef.current.classCode,
@@ -427,7 +431,7 @@ export default function Home() {
       progress: score(s.answers),
       mistakes: recentMistakes(c.session.answers, historyRef.current.sessions),
       notes,
-      messages: aiHistory(c, c.historyFrom),
+      messages: aiHistory(c, c.historyFrom).slice(-40),
     };
 
     setBusy(true);
@@ -443,7 +447,7 @@ export default function Home() {
         }
         throw new UiError(data.error || t('errorUnexpected', { status: res.status }), data.code !== 'limit');
       }
-      notesRef.current = notesRef.current.slice(notes.length);
+      if (notesRef.current === sentNotes) notesRef.current = {}; // (a click during the request keeps its note)
       if (!data.reply) {
         // not valid JSON: show the text, keep the panel as it is
         add({ role: 'tutor', text: data.text || '…', modelText: data.text || '' });

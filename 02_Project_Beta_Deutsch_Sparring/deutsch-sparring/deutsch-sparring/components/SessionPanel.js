@@ -1,6 +1,6 @@
 'use client';
 
-import { t } from '../lib/ui-text';
+import { t, LOCALE } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
 import { score, taskStates, tasksDone, headlineKey, ruleRows } from '../lib/stats';
 import { ProgressTrack } from './Chat';
@@ -203,7 +203,7 @@ function GlanceView({ level, session, topic, recent }) {
               <li key={r.id}>
                 <span>
                   <span className="recent-topic">{r.topicName || r.scenario || '—'}</span>
-                  <span className="muted"> · {new Date(r.updatedAt).toLocaleDateString('de-CH', { day: 'numeric', month: 'short' })}</span>
+                  <span className="muted"> · {new Date(r.updatedAt).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}</span>
                 </span>
                 <span className="recent-score">{r.correct}/{r.answered}</span>
               </li>

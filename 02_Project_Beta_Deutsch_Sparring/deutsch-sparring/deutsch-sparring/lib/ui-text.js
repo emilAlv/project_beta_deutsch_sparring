@@ -4,6 +4,7 @@
 // The tutor lines (tutor*) are German in both sets: the tutor always speaks German.
 
 export const UI_LANG = 'en';
+export const LOCALE = { en: 'en-GB', de: 'de-CH' }[UI_LANG]; // for dates and times
 
 const tutor = {
   tutorAskName: 'Grüezi! Ich bin wort., dein Deutsch-Sparringspartner. Wie heisst du?',

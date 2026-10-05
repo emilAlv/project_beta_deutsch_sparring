@@ -3,7 +3,9 @@
 // commands, so every part of the screen can be tested locally:
 //   onboarding → topic → right / wrong answers → hint, rule, skip → easier / harder, level
 //   → "show me progress" → end of session. Extra test words: "langsam" (slow answer),
-//   "kaputt" (broken JSON), "rohtext" (plain text instead of JSON).
+//   "kaputt" (broken JSON), "rohtext" (plain text instead of JSON), "absturz" (server error).
+
+import { ModelError } from './gemini';
 
 const SPEAKER = 'Dein Freund Marco';
 const SCENARIO = 'Umzug';
@@ -162,6 +164,7 @@ export async function mockReply({ text, settings, session, progress, topicId }) 
   if (/langsam|slow/.test(say)) await new Promise((r) => setTimeout(r, 4000));
   if (/kaputt|broken/.test(say)) return '{"message": "Das ist absichtlich kaputtes JSON, damit du die Fehlerbehandlung testen kannst", "feedback": {"forNumber": 2, "corr';
   if (/rohtext|raw text/.test(say)) return 'Das ist eine Antwort ohne JSON. Die App zeigt sie als normale Nachricht.';
+  if (/absturz|crash/.test(say)) throw new ModelError('Simulierter Fehler (Demo-Modus)', 502);
 
   let difficulty = settings.difficulty;
   let level = settings.level;
