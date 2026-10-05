@@ -9,7 +9,7 @@ export const viewport = { width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="de">
+    <html lang="de" translate="no">
       <body>{children}</body>
     </html>
   );
