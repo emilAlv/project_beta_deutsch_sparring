@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t, LOCALE, dirKey } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
 import Rich, { Marked } from './Rich';
-import { ArrowUp, Check, Refresh } from './icons';
+import { ArrowUp, Check, Refresh, Square } from './icons';
 
 const time = (at) => new Date(at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
 const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
@@ -12,7 +12,7 @@ const dayLabel = (at) => (sameDay(at, Date.now())
   ? t('today')
   : new Date(at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' }));
 
-export default function Chat({ status, messages, busy, slow, error, onRetry, stage, onSend, inputRef }) {
+export default function Chat({ status, messages, busy, waiting, onCancel, slow, error, onRetry, stage, onSend, inputRef }) {
   const scrollRef = useRef(null);
   const stick = useRef(true);
 
@@ -63,7 +63,7 @@ export default function Chat({ status, messages, busy, slow, error, onRetry, sta
         </div>
       </div>
 
-      <Composer stage={stage} busy={busy} onSend={onSend} inputRef={inputRef} />
+      <Composer stage={stage} busy={busy} waiting={waiting} onCancel={onCancel} onSend={onSend} inputRef={inputRef} />
     </section>
   );
 }
@@ -189,7 +189,7 @@ function Typing({ slow }) {
   );
 }
 
-function Composer({ stage, busy, onSend, inputRef }) {
+function Composer({ stage, busy, waiting, onCancel, onSend, inputRef }) {
   const [text, setText] = useState('');
   const placeholder = stage === 'name' ? t('inputPlaceholderName') : stage === 'code' ? t('inputPlaceholderCode') : t('inputPlaceholder');
 
@@ -204,7 +204,7 @@ function Composer({ stage, busy, onSend, inputRef }) {
   function submit(e) {
     e?.preventDefault();
     const value = text.trim();
-    if (!value || busy) return;
+    if (!value) return; // (while the tutor writes, the app only lets "stop" through)
     if (onSend(value) !== false) setText('');
   }
 
@@ -227,9 +227,15 @@ function Composer({ stage, busy, onSend, inputRef }) {
           spellCheck={stage !== 'code'}
           autoFocus
         />
-        <button className="send" type="submit" disabled={busy || !text.trim()} aria-label={t('send')}>
-          <ArrowUp size={21} />
-        </button>
+        {waiting ? (
+          <button className="send stop" type="button" onClick={onCancel} aria-label={t('cancel')} title={t('cancel')}>
+            <Square size={16} />
+          </button>
+        ) : (
+          <button className="send" type="submit" disabled={busy || !text.trim()} aria-label={t('send')}>
+            <ArrowUp size={21} />
+          </button>
+        )}
       </div>
       <div className="composer-foot">
         <span>{t('composerNote')}</span>

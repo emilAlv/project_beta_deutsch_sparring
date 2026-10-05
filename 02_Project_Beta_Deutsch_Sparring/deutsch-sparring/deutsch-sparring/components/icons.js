@@ -47,3 +47,4 @@ export const Refresh = (p) => (
     <path d="M8 16H3v5" />
   </Icon>
 );
+export const Square = (p) => <Icon {...p}><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" /></Icon>;

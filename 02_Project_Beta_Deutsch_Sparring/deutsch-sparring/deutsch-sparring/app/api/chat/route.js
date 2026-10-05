@@ -110,11 +110,19 @@ async function handle(req) {
   async function askGemini() {
     if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY fehlt auf dem Server.'), { status: 'config' });
 
-    const recent = messages.slice(-MAX_HISTORY).map((m) => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: String(m.text || '').slice(0, m.role === 'assistant' ? MAX_MODEL_CHARS : MAX_CHARS) }],
-    }));
+    // Gemini wants user and model turns to alternate: two student messages in a row (after an
+    // error or a cancelled request) are merged into one turn.
+    const recent = [];
+    for (const m of messages.slice(-MAX_HISTORY)) {
+      const role = m.role === 'assistant' ? 'model' : 'user';
+      const text = String(m.text || '').slice(0, role === 'model' ? MAX_MODEL_CHARS : MAX_CHARS);
+      if (!text) continue;
+      const last = recent[recent.length - 1];
+      if (last && last.role === role) last.parts[0].text += `\n${text}`;
+      else recent.push({ role, parts: [{ text }] });
+    }
     while (recent.length && recent[0].role !== 'user') recent.shift();
+    while (recent.length && recent[recent.length - 1].role !== 'user') recent.pop();
     if (!recent.length) throw Object.assign(new Error('Keine Nachricht vom Lernenden.'), { status: 400 });
 
     const system = buildSystemPrompt({

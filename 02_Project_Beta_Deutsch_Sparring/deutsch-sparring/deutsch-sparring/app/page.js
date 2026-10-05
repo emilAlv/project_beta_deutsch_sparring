@@ -89,13 +89,26 @@ class UiError extends Error {
   }
 }
 
-async function postJson(url, body, timeoutMs) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+async function postJson(url, body, timeoutMs, signal) {
+  // own timeout + the caller's cancel signal (AbortSignal.any is not in every browser yet)
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new DOMException('Timeout', 'TimeoutError')), timeoutMs);
+  const onCancel = () => controller.abort(new DOMException('Cancelled', 'AbortError'));
+  signal?.addEventListener('abort', onCancel);
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    throw controller.signal.reason?.name === 'TimeoutError' ? controller.signal.reason : e;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', onCancel);
+  }
   // Vercel can answer with an HTML error page (e.g. on a timeout): never assume JSON
   const raw = await res.text();
   try {
@@ -149,6 +162,8 @@ export default function Home() {
   const [slow, setSlow] = useState(false);
   const [error, setError] = useState(null); // { text, retry }
   const notesRef = useRef({}); // settings changed by buttons, told to the tutor with the next message
+  const requestRef = useRef(null); // the AI request in flight: { controller, cancelled }
+  const [waiting, setWaiting] = useState(false); // an AI request is in flight (it can be cancelled)
   const inputRef = useRef(null);
 
   // ---------- small helpers to add things to the chat ----------
@@ -475,10 +490,31 @@ export default function Home() {
     }));
   }
 
+  // stop waiting for the tutor (button in the input, or "Stopp" while it is writing)
+  function cancelRequest() {
+    const r = requestRef.current;
+    if (!r) return;
+    r.cancelled = true;
+    r.controller.abort();
+  }
+
+  function stopWaiting() {
+    if (!requestRef.current) return;
+    cancelRequest();
+    setBusy(false);
+    addSystem('cancel', t('sysCancelled'));
+  }
+
   // ---------- the router: every message (typed or tapped) comes through here ----------
   function handleSend(raw) {
     const text = String(raw || '').trim();
-    if (!text || busyRef.current) return false;
+    if (!text) return false;
+    if (busyRef.current) {
+      // while the tutor is writing, only "stop" gets through: it cancels the request and ends the session
+      if (!(requestRef.current && detectIntent(text)?.type === 'stop')) return false;
+      cancelRequest();
+      setBusy(false);
+    }
     setError(null);
     const c = convoRef.current;
     if (c.stage === 'loading') return false;
@@ -604,9 +640,13 @@ export default function Home() {
     };
 
     setBusy(true);
+    setWaiting(true);
+    const request = { controller: new AbortController(), cancelled: false };
+    requestRef.current = request;
     let then = null;
     try {
-      const { res, data } = await postJson('/api/chat', body, 70000);
+      const { res, data } = await postJson('/api/chat', body, 70000, request.controller.signal);
+      if (request.cancelled) return;
       if (!res.ok || data.error) {
         if (data.code === 'bad_code') {
           setProfile({ ...profileRef.current, classCode: '' });
@@ -625,11 +665,16 @@ export default function Home() {
         then = applyReply(data.reply, data.modelText, sent);
       }
     } catch (e) {
+      if (request.cancelled) return; // the student stopped it: no error message
       const text2 = e instanceof UiError ? e.message : e?.name === 'TimeoutError' ? t('errorTimeout') : t('errorNetwork');
       const canRetry = !(e instanceof UiError) || e.retry;
       setError({ text: text2, retry: canRetry ? () => { setError(null); askTutor(text); } : null });
     } finally {
-      setBusy(false);
+      if (requestRef.current === request) {
+        requestRef.current = null;
+        setWaiting(false);
+        if (!request.cancelled) setBusy(false);
+      }
     }
     if (then) then();
   }
@@ -648,8 +693,9 @@ export default function Home() {
     }
 
     let s = { ...before };
-    // 2) no topic yet: the tutor picked one (or the server guessed it)
-    if (!s.topicId && rs.topicId) {
+    // 2) no topic yet: the tutor picked one (or the server guessed it) and started with a question.
+    //    (If it only asks which topic, nothing is decided yet.)
+    if (!s.topicId && rs.topicId && reply.exercise) {
       const topic = topicById(rs.topicId) || { id: rs.topicId, short: rs.topicName || rs.topicId, type: 'Gemischt' };
       s = { ...newSession(topic, prefsRef.current.questions), id: s.id };
       if (topic.id === 'free' && rs.topicName) s.topicName = rs.topicName;
@@ -787,6 +833,8 @@ export default function Home() {
           status={status}
           messages={messages}
           busy={busy}
+          waiting={waiting}
+          onCancel={stopWaiting}
           slow={slow}
           error={error?.text}
           onRetry={error?.retry}

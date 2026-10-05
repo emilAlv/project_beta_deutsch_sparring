@@ -210,6 +210,8 @@ const en = {
   sysSentencesOn: 'Sentences with the word: on',
   sysSentencesOff: 'Sentences with the word: off',
   sysPrevSession: 'Previous session: {correct}/{answered} correct',
+  sysCancelled: 'Stopped waiting for the tutor',
+  cancel: 'Stop waiting',
 };
 
 const de = {
@@ -379,6 +381,8 @@ const de = {
   sysSentencesOn: 'Sätze mit dem Wort: an',
   sysSentencesOff: 'Sätze mit dem Wort: aus',
   sysPrevSession: 'Letzte Sitzung: {correct}/{answered} richtig',
+  sysCancelled: 'Warten abgebrochen',
+  cancel: 'Warten abbrechen',
 };
 
 const SETS = { en, de };
