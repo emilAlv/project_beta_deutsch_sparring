@@ -6,6 +6,7 @@
 
 ## Meta
 - Thema:
+- Niveau: A1 | A2 | B1 (one or more, e.g. "A2, B1"; decides at which level the topic is offered)
 - Typ: Grammatik | Wortschatz | Gemischt
 - Buch: Schritte plus Neu – Ausgabe Schweiz, Band _, Lektion _
 - Im Kurs behandelt am:

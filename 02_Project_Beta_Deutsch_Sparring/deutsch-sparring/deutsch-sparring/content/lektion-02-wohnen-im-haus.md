@@ -2,6 +2,7 @@
 
 ## Meta
 - Thema: Wortschatz Wohnung, Zimmer, Möbel, Haushalt
+- Niveau: A2, B1
 - Typ: Wortschatz (kombiniert mit Wechselpräpositionen, siehe Lektion 01)
 - Buch: Schritte plus Neu – Ausgabe Schweiz – Band/Lektion bitte ergänzen
 - Im Kurs behandelt am:

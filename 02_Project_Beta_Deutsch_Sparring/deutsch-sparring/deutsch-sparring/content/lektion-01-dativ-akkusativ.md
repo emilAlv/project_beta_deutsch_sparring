@@ -2,6 +2,7 @@
 
 ## Meta
 - Thema: Dativ oder Akkusativ – je nach Verb, Präposition oder Bewegung
+- Niveau: A2, B1
 - Typ: Grammatik
 - Buch: Schritte plus Neu – Ausgabe Schweiz, Band 1–4 (Wiederholung) – Lektion bitte ergänzen
 - Im Kurs behandelt am:
