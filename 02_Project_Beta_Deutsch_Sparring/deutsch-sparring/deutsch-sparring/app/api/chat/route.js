@@ -1,8 +1,10 @@
 import { getLesson, getKnownGrammar, listLessons } from '../../../lib/content';
 import { buildSystemPrompt } from '../../../lib/prompt';
+import { generate } from '../../../lib/gemini';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 30;
+export const maxDuration = 60;
+const DEADLINE_MS = 55_000; // stay below maxDuration so we can still answer with JSON
 
 const MODES = ['Grammatik', 'Wortschatz', 'Gemischt'];
 const MAX_HISTORY = 40;
@@ -22,34 +24,6 @@ function overLimit(key) {
   return entry.n > limit;
 }
 
-async function callGemini(model, system, contents) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-goog-api-key': process.env.GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
-      }),
-    }
-  );
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data?.error?.message || `Gemini error ${res.status}`);
-    err.status = res.status;
-    throw err;
-  }
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  const text = parts.filter((p) => !p.thought && p.text).map((p) => p.text).join('').trim();
-  if (!text) throw Object.assign(new Error('Leere Antwort vom Modell'), { status: 502 });
-  return text;
-}
-
 function mockReply(messages, count) {
   const n = messages.filter((m) => m.role === 'user').length;
   if (n === 1) return `Hallo! Schön, dass du übst. 😊\n\n**Aufgabe 1/${count}**\nDas Handy liegt auf ___ Tisch (der).`;
@@ -57,6 +31,16 @@ function mockReply(messages, count) {
 }
 
 export async function POST(req) {
+  try {
+    return await handle(req);
+  } catch (e) {
+    console.error('chat route crashed:', e);
+    return Response.json({ error: 'Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.' }, { status: 500 });
+  }
+}
+
+async function handle(req) {
+  const deadline = Date.now() + DEADLINE_MS;
   let body;
   try {
     body = await req.json();
@@ -108,20 +92,10 @@ export async function POST(req) {
     title,
   });
 
-  const primary = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
-  const fallback = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
   try {
-    const reply = await callGemini(primary, system, recent);
+    const reply = await generate({ system, contents: recent, deadline });
     return Response.json({ reply });
   } catch (e) {
-    if (fallback && fallback !== primary && [429, 500, 503, 404].includes(e.status)) {
-      try {
-        const reply = await callGemini(fallback, system, recent);
-        return Response.json({ reply });
-      } catch (e2) {
-        e = e2;
-      }
-    }
     console.error('Gemini failed:', e.status, e.message);
     const busy = e.status === 429;
     return Response.json(

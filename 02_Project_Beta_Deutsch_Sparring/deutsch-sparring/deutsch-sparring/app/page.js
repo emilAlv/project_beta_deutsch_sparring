@@ -59,8 +59,11 @@ export default function Home() {
           messages: history.map(({ role, text }) => ({ role, text })),
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
+      // Vercel can answer with an HTML error page (e.g. on a timeout), so never assume JSON.
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { data = { error: `Unerwartete Antwort vom Server (${res.status}). Bitte versuche es nochmal.` }; }
+      if (!res.ok || data.error) {
         if (data.code === 'bad_code') { store.del('ds_code'); setCode(''); setTopic(null); }
         throw new Error(data.error || 'Fehler');
       }
