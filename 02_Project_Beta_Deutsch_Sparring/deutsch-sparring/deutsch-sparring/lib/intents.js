@@ -31,11 +31,16 @@ export const QUESTION_MAX = 50;
 // { type: 'level', value }
 // { type: 'rule' }                   open the grammar view and ask the tutor
 // { type: 'skip' }                   skip the open question (+ ask the tutor for the next one)
-export function detectIntent(text) {
+// open = a question is waiting for an answer: then single words that could be an answer
+// ("fertig", "Ende", "schwer", "easy" …) are NOT taken as commands.
+export function detectIntent(text, { open = false } = {}) {
   const s = clean(text);
   if (!s) return null;
 
-  if (short(s, 7) && new RegExp(`^(ich (will|möchte|moechte) )?(jetzt )?(stopp?|stoppen|aufhören|aufhoeren|hör auf|hoer auf|genug|das reicht|reicht|schluss|fertig|ich bin fertig|beenden|sitzung beenden|ende|end session|end the session|end|quit|im done|i am done|done|thats enough|enough|i want to stop|lets stop|wir hören auf|wir hoeren auf|aufhören bitte|pause)${POLITE}$`).test(s)) {
+  const stopWords = open
+    ? 'stopp?|stoppen|aufhören|aufhoeren|hör auf|hoer auf|genug|das reicht|schluss|ich bin fertig|beenden|sitzung beenden|end session|end the session|quit|im done|i am done|thats enough|i want to stop|lets stop|wir hören auf|wir hoeren auf'
+    : 'stopp?|stoppen|aufhören|aufhoeren|hör auf|hoer auf|genug|das reicht|reicht|schluss|fertig|ich bin fertig|beenden|sitzung beenden|ende|end session|end the session|end|quit|im done|i am done|done|thats enough|enough|i want to stop|lets stop|wir hören auf|wir hoeren auf|pause';
+  if (short(s, 7) && new RegExp(`^(ich (will|möchte|moechte) )?(jetzt )?(${stopWords})${POLITE}$`).test(s)) {
     return { type: 'stop' };
   }
   if (new RegExp(`^(nochmal|noch ?mal|noch einmal|noch eine runde|neue runde|nochmals|again|one more round|another round|same topic again|gleiches thema( nochmal)?|repeat the session)${POLITE}$`).test(s)) {
@@ -99,7 +104,7 @@ export function detectIntent(text) {
       return { type: 'difficulty', step: -1 };
     }
     const d = s.match(/^(stufe |schwierigkeit |difficulty |level )?(leicht|easy|mittel|medium|schwer|hard)$/);
-    if (d) return { type: 'difficulty', value: { leicht: 'easy', easy: 'easy', mittel: 'medium', medium: 'medium', schwer: 'hard', hard: 'hard' }[d[2]] };
+    if (d && (d[1] || !open)) return { type: 'difficulty', value: { leicht: 'easy', easy: 'easy', mittel: 'medium', medium: 'medium', schwer: 'hard', hard: 'hard' }[d[2]] };
     const l = s.match(/^(niveau |level |stufe )?(a1|a2|b1)$/);
     if (l) return { type: 'level', value: l[2].toUpperCase() };
   }

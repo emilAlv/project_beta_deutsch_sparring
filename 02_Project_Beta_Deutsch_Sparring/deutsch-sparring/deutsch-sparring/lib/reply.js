@@ -193,7 +193,11 @@ export function normalizeReply(raw, ctx) {
   }
 
   const s = raw.session && typeof raw.session === 'object' ? raw.session : {};
-  const topicId = clip(s.topicId, 80);
+  let topicId = clip(s.topicId, 80);
+  if (topicId && !ctx.topicIds.has(topicId)) {
+    // a slightly wrong id ("lektion-02-wohnen") → the catalog entry it obviously means
+    topicId = [...ctx.topicIds].find((id) => id !== 'free' && (id.startsWith(topicId) || topicId.startsWith(id.slice(0, 10)))) || topicId;
+  }
   const session = {
     topicId: topicId && ctx.topicIds.has(topicId) ? topicId : ctx.topicId || null,
     topicName: orNull(s.topicName, 60),

@@ -54,7 +54,8 @@ export function listLessons() {
         short: title.split(/\s+[–-]\s+/)[0].replace(/\?$/, '').trim(),
         type,
         levels: parseLevels(text),
-        keywords: `${title} ${meta(text, 'Thema')} ${meta(text, 'Typ')} ${section(text, 'Regel').slice(0, 600)}`.toLowerCase(),
+        // title, theme, type – plus only the long, specific words of the rule (e.g. "Wechselpräpositionen")
+        keywords: `${title} ${meta(text, 'Thema')} ${meta(text, 'Typ')} ${(section(text, 'Regel').match(/[A-Za-zÄÖÜäöüß]{11,}/g) || []).join(' ')}`.toLowerCase(),
       };
     });
 }
@@ -156,5 +157,7 @@ export function guessTopic(text, lessons = listLessons()) {
 const STOP = new Set([
   'bitte', 'möchte', 'moechte', 'gerne', 'heute', 'üben', 'ueben', 'stufe', 'mittel', 'leicht', 'schwer',
   'thema', 'lektion', 'please', 'practise', 'practice', 'want', 'with', 'und', 'oder', 'mit', 'eine', 'einen',
-  'rollenspiel', 'role', 'play', 'machen', 'können', 'koennen', 'wir', 'ich',
+  'machen', 'können', 'koennen', 'wir', 'ich', 'über', 'ueber', 'meine', 'meinen', 'deine', 'unsere', 'brauche',
+  'sprechen', 'reden', 'lernen', 'gern', 'gerne', 'etwas', 'mehr', 'noch', 'jetzt', 'lieber', 'about', 'some',
+  'more', 'learn', 'talk', 'would', 'like', 'something', 'verben', 'nomen', 'sätze', 'saetze', 'wörter', 'woerter',
 ]);

@@ -81,6 +81,7 @@ const en = {
   errorNetwork: 'No connection to the server. Check your internet and try again.',
   errorUnexpected: 'The server sent an unexpected answer ({status}). Please try again.',
   errorTimeout: 'The tutor took too long to answer. Please try again.',
+  errorInterrupted: 'The page was closed before the tutor answered your last message.',
   codeHidden: '••••••',
 
   // "You can say" panel
@@ -259,6 +260,7 @@ const de = {
   errorNetwork: 'Keine Verbindung zum Server. Prüfe dein Internet und versuch es nochmal.',
   errorUnexpected: 'Unerwartete Antwort vom Server ({status}). Bitte versuch es nochmal.',
   errorTimeout: 'Der Tutor hat zu lange gebraucht. Bitte versuch es nochmal.',
+  errorInterrupted: 'Die Seite wurde geschlossen, bevor der Tutor auf deine letzte Nachricht geantwortet hat.',
   codeHidden: '••••••',
 
   optionsTitle: 'Du kannst sagen',

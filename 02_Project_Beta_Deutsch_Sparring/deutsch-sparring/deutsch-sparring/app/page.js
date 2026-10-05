@@ -34,8 +34,8 @@ const DEFAULT_PREFS = {
   level: 'B1', difficulty: 'medium', view: 'glance', optionsHidden: false,
   questions: QUESTION_MIN, direction: 'en-de', sentences: false,
 };
+const SETTING_WORDS = /schwer|leicht|einfach|schwierig|hard|easy|difficult|simple|level|niveau|stufe|\b[ab][12]\b/i;
 const CHAT_VERSION = 2; // saved conversations from older versions are not restored
-const RESTORE_HOURS = 18; // a conversation from earlier today comes back after a reload
 const RESUME_GREETING_MIN = 30; // …with a "welcome back" line if the break was longer than this
 
 let seq = 0;
@@ -221,14 +221,23 @@ export default function Home() {
   function begin(p) {
     const saved = loadChat();
     const codeOk = !needsCodeRef.current || p.classCode;
+    const age = Date.now() - (saved?.savedAt || 0);
+    const sameDay = saved && new Date(saved.savedAt).toDateString() === new Date().toDateString();
+    const longBreak = age > RESUME_GREETING_MIN * 60_000;
     if (
-      p.name && codeOk && saved?.version === CHAT_VERSION && saved.messages?.length
-      && Date.now() - (saved.savedAt || 0) < RESTORE_HOURS * 3600_000
+      p.name && codeOk && saved?.version === CHAT_VERSION && saved.messages?.length && sameDay
+      && !(saved.session?.finished && longBreak) // a finished session is not brought back after a break
     ) {
       const restored = { ...EMPTY_CONVO, ...saved, session: { ...newSession(), ...saved.session } };
       convoRef.current = restored;
       setConvo(restored);
-      if (Date.now() - saved.savedAt > RESUME_GREETING_MIN * 60_000) tutorSay(t('tutorResume', { name: p.name }));
+      const last = restored.messages[restored.messages.length - 1];
+      if (last?.role === 'user' && last.ai) {
+        // the page was closed while the tutor was answering: offer to send it again
+        setError({ text: t('errorInterrupted'), retry: () => { setError(null); askTutor(last.text); } });
+      } else if (longBreak && restored.session.started && !restored.session.finished) {
+        tutorSay(t('tutorResume', { name: p.name }));
+      }
       return;
     }
     const start = { ...EMPTY_CONVO, session: newSession(), historyFrom: Date.now() };
@@ -301,18 +310,30 @@ export default function Home() {
   }
 
   // ---------- settings (buttons and chat do the same) ----------
-  function changeLevel(level, { tellTutor = true } = {}) {
-    if (!LEVELS.includes(level) || level === prefsRef.current.level) return;
+  function changeLevel(level, { tellTutor = true, fromChat = false } = {}) {
+    if (!LEVELS.includes(level)) return;
+    if (level === prefsRef.current.level) {
+      if (fromChat) addSystem('level', t('sysLevel', { value: level })); // asked in the chat: confirm anyway
+      return;
+    }
     setPrefs({ level });
     addSystem('level', t('sysLevel', { value: level }));
-    if (tellTutor) notesRef.current.level = `Niveau → ${level}`;
+    const c = convoRef.current;
+    if (c.stage === 'topic' && topicsRef.current.length && !topicsRef.current.some((x) => x.levels.includes(level))) {
+      tutorSay(t('tutorNoTopicsForLevel', { level }));
+    }
+    if (tellTutor) notesRef.current = { ...notesRef.current, level: `Niveau → ${level}` };
   }
 
-  function changeDifficulty(difficulty, { tellTutor = true } = {}) {
-    if (!DIFFS.includes(difficulty) || difficulty === prefsRef.current.difficulty) return;
+  function changeDifficulty(difficulty, { tellTutor = true, fromChat = false } = {}) {
+    if (!DIFFS.includes(difficulty)) return;
+    if (difficulty === prefsRef.current.difficulty) {
+      if (fromChat) addSystem('difficulty', t('sysDifficulty', { value: t(`diff_${difficulty}`) }));
+      return;
+    }
     setPrefs({ difficulty });
     addSystem('difficulty', t('sysDifficulty', { value: t(`diff_${difficulty}`) }));
-    if (tellTutor) notesRef.current.difficulty = `Schwierigkeit → ${DIFF_DE[difficulty]}`;
+    if (tellTutor) notesRef.current = { ...notesRef.current, difficulty: `Schwierigkeit → ${DIFF_DE[difficulty]}` };
   }
 
   function changeView(view) {
@@ -325,14 +346,14 @@ export default function Home() {
     if (!DIRECTIONS.includes(direction) || direction === prefsRef.current.direction) return;
     setPrefs({ direction });
     addSystem('direction', t('sysDirection', { value: t(`dir_${dirKey(direction)}`) }));
-    notesRef.current.direction = `Karteikarten → ${DIR_DE[direction]}`;
+    notesRef.current = { ...notesRef.current, direction: `Karteikarten → ${DIR_DE[direction]}` };
   }
 
   function changeSentences(sentences) {
     if (sentences === prefsRef.current.sentences) return;
     setPrefs({ sentences });
     addSystem('sentences', t(sentences ? 'sysSentencesOn' : 'sysSentencesOff'));
-    notesRef.current.sentences = `Sätze mit dem Wort → ${sentences ? 'an' : 'aus'}`;
+    notesRef.current = { ...notesRef.current, sentences: `Sätze mit dem Wort → ${sentences ? 'an' : 'aus'}` };
   }
 
   // questions per session: also changes the running session; if it is already reached, it ends
@@ -349,7 +370,7 @@ export default function Home() {
       return;
     }
     updateSession((x) => ({ ...x, total: n }));
-    notesRef.current.questions = `Fragen pro Sitzung → ${n}`;
+    notesRef.current = { ...notesRef.current, questions: `Fragen pro Sitzung → ${n}` };
   }
 
   // ---------- ending a session (no AI): summary card in the chat ----------
@@ -411,6 +432,7 @@ export default function Home() {
   // ---------- topics (no AI until the topic starts) ----------
   function goToTopics(lineKey) {
     closeSession();
+    dropRequest();
     update((c) => ({ ...c, stage: 'topic', session: newSession(), modelOptions: [], localOptions: null, historyFrom: Date.now() }));
     const forLevel = topicsRef.current.filter((x) => x.levels.includes(prefsRef.current.level));
     tutorSay([
@@ -436,6 +458,7 @@ export default function Home() {
 
   function restart() {
     closeSession(false);
+    dropRequest();
     const fresh = { ...EMPTY_CONVO, stage: 'topic', session: newSession(), historyFrom: Date.now() };
     convoRef.current = fresh;
     setConvo(fresh);
@@ -447,6 +470,7 @@ export default function Home() {
   function changeName() {
     if (typeof window !== 'undefined' && !window.confirm(t('confirmChangeName'))) return;
     closeSession(false);
+    dropRequest();
     setProfile({ ...profileRef.current, name: '' });
     saveChat(null);
     const fresh = { ...EMPTY_CONVO, stage: 'name', session: newSession(), historyFrom: Date.now() };
@@ -498,9 +522,16 @@ export default function Home() {
     r.controller.abort();
   }
 
-  function stopWaiting() {
+  // a pending answer that no longer matters (new session from the menu, other topic …)
+  function dropRequest() {
     if (!requestRef.current) return;
     cancelRequest();
+    setBusy(false);
+  }
+
+  function stopWaiting() {
+    if (!requestRef.current) return;
+    dropRequest();
     setBusy(false);
     addSystem('cancel', t('sysCancelled'));
   }
@@ -511,7 +542,7 @@ export default function Home() {
     if (!text) return false;
     if (busyRef.current) {
       // while the tutor is writing, only "stop" gets through: it cancels the request and ends the session
-      if (!(requestRef.current && detectIntent(text)?.type === 'stop')) return false;
+      if (!(requestRef.current && detectIntent(text, { open: true })?.type === 'stop')) return false;
       cancelRequest();
       setBusy(false);
     }
@@ -526,7 +557,7 @@ export default function Home() {
     const s = c.session;
     const running = s.started && !s.finished;
     const open = running && Boolean(s.exercise);
-    const intent = detectIntent(text);
+    const intent = detectIntent(text, { open });
 
     switch (intent?.type) {
       case 'stop':
@@ -558,20 +589,20 @@ export default function Home() {
         return true;
       case 'direction':
         changeDirection(intent.value);
-        if (open && isVocab(s)) askTutor(text, { msg });
+        if (open && isVocab(s)) askTutor(text, { msg, settingsDone: true });
         return true;
       case 'sentences':
         changeSentences(intent.value);
         return true;
       case 'difficulty': {
         const cur = DIFFS.indexOf(prefsRef.current.difficulty);
-        changeDifficulty(intent.value || DIFFS[Math.max(0, Math.min(2, cur + intent.step))]);
-        if (open) askTutor(text, { msg });
+        changeDifficulty(intent.value || DIFFS[Math.max(0, Math.min(2, cur + intent.step))], { fromChat: true });
+        if (open) askTutor(text, { msg, settingsDone: true });
         return true;
       }
       case 'level':
-        changeLevel(intent.value);
-        if (open) askTutor(text, { msg });
+        changeLevel(intent.value, { fromChat: true });
+        if (open) askTutor(text, { msg, settingsDone: true });
         return true;
       case 'rule':
         changeView('grammar');
@@ -609,14 +640,16 @@ export default function Home() {
       .slice(-40);
   }
 
-  async function askTutor(text, { msg } = {}) {
+  async function askTutor(text, { msg, settingsDone = false } = {}) {
     // mark the student's message as part of the AI conversation
     if (msg && !msg.ai) update((c) => ({ ...c, messages: c.messages.map((m) => (m.id === msg.id ? { ...m, ai: true } : m)) }));
 
     const c = convoRef.current;
     const p = prefsRef.current;
     const s = c.session;
-    const sent = { level: p.level, difficulty: p.difficulty, topicId: s.topicId };
+    // settingsDone: the app already applied the level/difficulty command of this message, so the
+    // tutor must not change it again (e.g. "schwieriger" must not jump two steps)
+    const sent = { level: p.level, difficulty: p.difficulty, topicId: s.topicId, sessionId: s.id, text, settingsDone };
     const sentNotes = notesRef.current;
     const lastSkipped = s.answers[s.answers.length - 1]?.skipped ? s.answers[s.answers.length - 1] : null;
     const body = {
@@ -647,6 +680,8 @@ export default function Home() {
     try {
       const { res, data } = await postJson('/api/chat', body, 70000, request.controller.signal);
       if (request.cancelled) return;
+      // the student started something else meanwhile (new session, other topic): drop this answer
+      if (convoRef.current.session.id !== sent.sessionId) return;
       if (!res.ok || data.error) {
         if (data.code === 'bad_code') {
           setProfile({ ...profileRef.current, classCode: '' });
@@ -665,7 +700,9 @@ export default function Home() {
         then = applyReply(data.reply, data.modelText, sent);
       }
     } catch (e) {
-      if (request.cancelled) return; // the student stopped it: no error message
+      if (request.cancelled) return;
+      // the student started something else meanwhile (new session, other topic): drop this answer
+      if (convoRef.current.session.id !== sent.sessionId) return; // the student stopped it: no error message
       const text2 = e instanceof UiError ? e.message : e?.name === 'TimeoutError' ? t('errorTimeout') : t('errorNetwork');
       const canRetry = !(e instanceof UiError) || e.retry;
       setError({ text: text2, retry: canRetry ? () => { setError(null); askTutor(text); } : null });
@@ -743,9 +780,11 @@ export default function Home() {
       messages: [...c.messages, message],
     }));
 
-    // the tutor changed a setting because the student asked in the chat
-    if (rs.level !== sent.level) changeLevel(rs.level, { tellTutor: false });
-    if (rs.difficulty !== sent.difficulty) changeDifficulty(rs.difficulty, { tellTutor: false });
+    // the tutor changed a setting because the student asked in their own words. Only then: a
+    // tutor that just repeats an old value from earlier turns must not undo a button click.
+    const askedForSetting = !sent.settingsDone && SETTING_WORDS.test(sent.text || '');
+    if (askedForSetting && rs.level !== sent.level) changeLevel(rs.level, { tellTutor: false });
+    if (askedForSetting && rs.difficulty !== sent.difficulty) changeDifficulty(rs.difficulty, { tellTutor: false });
     if (reply.panelView) changeView(reply.panelView);
     if (feedback || justFinished) remember(s);
     return null;
