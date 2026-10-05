@@ -56,7 +56,7 @@ async function handle(req) {
 
   let topicId = topicIds.has(ses.topicId) ? ses.topicId : null;
   let guessed = false;
-  if (!topicId) {
+  if (!topicId && !(Number(ses.exerciseNumber) > 0)) {
     topicId = guessTopic(lastUser, lessons);
     guessed = Boolean(topicId);
   }

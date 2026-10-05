@@ -204,6 +204,8 @@ export function normalizeReply(raw, ctx) {
     difficulty: DIFFICULTY[s.difficulty] || ctx.difficulty,
     finished: s.finished === true,
   };
+  // an exercise started without a topic id (model forgot it): treat it as free practice
+  if (!session.topicId && exercise) session.topicId = 'free';
   if (!message && !feedback && !exercise) return null;
   return {
     message,

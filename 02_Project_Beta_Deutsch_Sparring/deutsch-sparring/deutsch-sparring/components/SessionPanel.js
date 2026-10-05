@@ -8,6 +8,19 @@ import { Marked } from './Rich';
 import SceneArt from './SceneArt';
 import { Check, MessageCircle, Sprout } from './icons';
 
+// Arrow keys move between the buttons of a group (radio buttons and tabs work like this).
+function arrowKeys(options, value, onChange) {
+  return (e) => {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const next = options[(options.indexOf(value) + step + options.length) % options.length];
+    onChange(next);
+    const buttons = e.currentTarget.querySelectorAll('button');
+    buttons[options.indexOf(next)]?.focus();
+  };
+}
+
 const LEVELS = ['A1', 'A2', 'B1'];
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
 const VIEWS = ['glance', 'progress', 'grammar'];
@@ -18,7 +31,7 @@ export default function SessionPanel({ level, difficulty, view, onLevel, onDiffi
     <aside className="session-panel" aria-label={t('panelTitle')}>
       <SettingsCard level={level} difficulty={difficulty} onLevel={onLevel} onDifficulty={onDifficulty} session={session} topic={topic} />
 
-      <div className="segmented tabs" role="tablist" aria-label={t('views')}>
+      <div className="segmented tabs" role="tablist" aria-label={t('views')} onKeyDown={arrowKeys(VIEWS, view, onView)}>
         {VIEWS.map((v) => (
           <button
             key={v}
@@ -26,6 +39,7 @@ export default function SessionPanel({ level, difficulty, view, onLevel, onDiffi
             role="tab"
             id={`tab-${v}`}
             aria-selected={view === v}
+            tabIndex={view === v ? 0 : -1}
             aria-controls="panel-view"
             className={view === v ? 'on' : ''}
             onClick={() => onView(v)}
@@ -48,13 +62,14 @@ export default function SessionPanel({ level, difficulty, view, onLevel, onDiffi
 
 function Segmented({ label, options, value, onChange, render }) {
   return (
-    <div className="segmented" role="radiogroup" aria-label={label}>
+    <div className="segmented" role="radiogroup" aria-label={label} onKeyDown={arrowKeys(options, value, onChange)}>
       {options.map((o) => (
         <button
           key={o}
           type="button"
           role="radio"
           aria-checked={value === o}
+          tabIndex={value === o ? 0 : -1}
           className={value === o ? 'on' : ''}
           onClick={() => value !== o && onChange(o)}
         >
