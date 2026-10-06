@@ -6,6 +6,8 @@
 
 ## Meta
 - Thema:
+- Niveau: A1 | A2 | B1 (one or more, e.g. "A2, B1"; decides at which level the topic is offered)
+- Stichwörter: words students might type to ask for this topic, German and English (e.g. "Möbel, furniture, home")
 - Typ: Grammatik | Wortschatz | Gemischt
 - Buch: Schritte plus Neu – Ausgabe Schweiz, Band _, Lektion _
 - Im Kurs behandelt am:
@@ -20,11 +22,12 @@
 |---|---|---|
 
 ## Wortschatz
-For every noun: article, plural, Genitiv, one typical adjective,
-and the verb or preposition that often decides its case.
+For every noun: article, the English meaning (reference language for the flashcards),
+plural, Genitiv, one typical adjective, and the verb or preposition that often decides its case.
+Swiss words: write "das Wohnzimmer / (CH) die Stube"; both are accepted.
 
-| Nomen | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
-|---|---|---|---|---|
+| Nomen | Englisch | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
+|---|---|---|---|---|---|
 
 Verben (Infinitiv – Perfekt – Kasus/Präposition):
 

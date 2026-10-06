@@ -2,77 +2,80 @@
 
 ## Meta
 - Thema: Wortschatz Wohnung, Zimmer, Möbel, Haushalt
+- Niveau: A2, B1
+- Stichwörter: Wohnung, Zimmer, Möbel, Haushalt, home, flat, apartment, house, rooms, furniture, vocabulary, flashcards
 - Typ: Wortschatz (kombiniert mit Wechselpräpositionen, siehe Lektion 01)
 - Buch: Schritte plus Neu – Ausgabe Schweiz – Band/Lektion bitte ergänzen
 - Im Kurs behandelt am:
 - Status: Entwurf (von Claude, noch nicht mit dem Buch abgeglichen)
 
 ## Regel
+Referenzsprache: Englisch (Spalte «Englisch»). Für Karteikarten: Englisch → Deutsch oder Deutsch → Englisch.
 Lerne jedes Nomen immer mit Artikel und Plural. Möbel und Dinge im Haus stehen oft
 nach Wechselpräpositionen: **Wo?** → Dativ (*Die Lampe steht neben dem Sofa*),
 **Wohin?** → Akkusativ (*Ich stelle die Lampe neben das Sofa*).
 Schweizer Wörter sind mit (CH) markiert; die deutschen Wörter sind auch richtig.
 
 ## Wortschatz – Räume
-| Nomen | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
-|---|---|---|---|---|
-| die Wohnung | die Wohnungen | der Wohnung | hell, möbliert | eine Wohnung mieten (Akk); in der Wohnung (Wo?) |
-| das Haus | die Häuser | des Hauses | alt, gross | nach Hause gehen; zu Hause sein |
-| das Zimmer | die Zimmer | des Zimmers | klein, ruhig | ins Zimmer gehen / im Zimmer sein |
-| die Küche | die Küchen | der Küche | modern | in die Küche gehen / in der Küche kochen |
-| das Bad / Badezimmer | die Bäder | des Bads | eng | ins Bad gehen / im Bad duschen |
-| das Wohnzimmer / (CH) die Stube | die Wohnzimmer / die Stuben | des Wohnzimmers / der Stube | gemütlich | in der Stube sitzen |
-| das Schlafzimmer | die Schlafzimmer | des Schlafzimmers | dunkel | |
-| der Flur / (CH) der Gang | die Flure / die Gänge | des Flurs / des Gangs | lang | im Gang warten |
-| der Balkon | die Balkone | des Balkons | sonnig | auf den Balkon gehen / auf dem Balkon sitzen |
-| der Keller | die Keller | des Kellers | feucht | in den Keller bringen |
-| der Dachboden / (CH) der Estrich | die Dachböden / die Estriche | des Dachbodens / des Estrichs | staubig | auf den Estrich bringen |
-| das Erdgeschoss / (CH) das Parterre | – | des Erdgeschosses | | im Parterre wohnen |
-| der Stock | die Stockwerke | des Stocks | | im dritten Stock wohnen |
-| die Waschküche (CH) | die Waschküchen | der Waschküche | gemeinsam | in die Waschküche gehen |
-| die Treppe | die Treppen | der Treppe | steil | die Treppe hinaufgehen |
+| Nomen | Englisch | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
+|---|---|---|---|---|---|
+| die Wohnung | the flat, the apartment | die Wohnungen | der Wohnung | hell, möbliert | eine Wohnung mieten (Akk); in der Wohnung (Wo?) |
+| das Haus | the house | die Häuser | des Hauses | alt, gross | nach Hause gehen; zu Hause sein |
+| das Zimmer | the room | die Zimmer | des Zimmers | klein, ruhig | ins Zimmer gehen / im Zimmer sein |
+| die Küche | the kitchen | die Küchen | der Küche | modern | in die Küche gehen / in der Küche kochen |
+| das Bad / Badezimmer | the bathroom | die Bäder | des Bads | eng | ins Bad gehen / im Bad duschen |
+| das Wohnzimmer / (CH) die Stube | the living room | die Wohnzimmer / die Stuben | des Wohnzimmers / der Stube | gemütlich | in der Stube sitzen |
+| das Schlafzimmer | the bedroom | die Schlafzimmer | des Schlafzimmers | dunkel | |
+| der Flur / (CH) der Gang | the hallway | die Flure / die Gänge | des Flurs / des Gangs | lang | im Gang warten |
+| der Balkon | the balcony | die Balkone | des Balkons | sonnig | auf den Balkon gehen / auf dem Balkon sitzen |
+| der Keller | the cellar, the basement | die Keller | des Kellers | feucht | in den Keller bringen |
+| der Dachboden / (CH) der Estrich | the attic | die Dachböden / die Estriche | des Dachbodens / des Estrichs | staubig | auf den Estrich bringen |
+| das Erdgeschoss / (CH) das Parterre | the ground floor | – | des Erdgeschosses | | im Parterre wohnen |
+| der Stock | the floor, the storey | die Stockwerke | des Stocks | | im dritten Stock wohnen |
+| die Waschküche (CH) | the laundry room | die Waschküchen | der Waschküche | gemeinsam | in die Waschküche gehen |
+| die Treppe | the stairs, the staircase | die Treppen | der Treppe | steil | die Treppe hinaufgehen |
 
 ## Wortschatz – Teile vom Raum
-| Nomen | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
-|---|---|---|---|---|
-| die Tür | die Türen | der Tür | offen, zu | vor der Tür stehen |
-| das Fenster | die Fenster | des Fensters | gross | aus dem Fenster schauen |
-| die Wand | die Wände | der Wand | weiss | an die Wand hängen / an der Wand hängen |
-| der Boden | die Böden | des Bodens | sauber | auf den Boden legen / auf dem Boden liegen |
-| die Decke | die Decken | der Decke | hoch | an der Decke hängen |
+| Nomen | Englisch | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
+|---|---|---|---|---|---|
+| die Tür | the door | die Türen | der Tür | offen, zu | vor der Tür stehen |
+| das Fenster | the window | die Fenster | des Fensters | gross | aus dem Fenster schauen |
+| die Wand | the wall | die Wände | der Wand | weiss | an die Wand hängen / an der Wand hängen |
+| der Boden | the floor | die Böden | des Bodens | sauber | auf den Boden legen / auf dem Boden liegen |
+| die Decke | the ceiling | die Decken | der Decke | hoch | an der Decke hängen |
 
 ## Wortschatz – Möbel und Geräte
-| Nomen | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
-|---|---|---|---|---|
-| der Tisch | die Tische | des Tischs | rund | auf den Tisch stellen / auf dem Tisch stehen |
-| der Stuhl | die Stühle | des Stuhls | bequem | sich auf den Stuhl setzen |
-| das Sofa | die Sofas | des Sofas | bequem | auf dem Sofa liegen |
-| der Sessel | die Sessel | des Sessels | weich | im Sessel sitzen |
-| das Bett | die Betten | des Betts | breit | ins Bett gehen / im Bett liegen |
-| der Schrank / (CH) der Kasten | die Schränke / die Kästen | des Schranks / des Kastens | alt | in den Kasten hängen / im Kasten hängen |
-| das Regal | die Regale | des Regals | leer | ins Regal stellen / im Regal stehen |
-| der Teppich | die Teppiche | des Teppichs | weich | vor das Sofa legen |
-| die Lampe | die Lampen | der Lampe | hell | über den Tisch hängen |
-| der Spiegel | die Spiegel | des Spiegels | rund | in den Spiegel schauen |
-| das Bild | die Bilder | des Bilds | schön | an die Wand hängen |
-| der Vorhang | die Vorhänge | des Vorhangs | dick | den Vorhang zumachen |
-| der Kühlschrank | die Kühlschränke | des Kühlschranks | leer | in den Kühlschrank stellen |
-| der Herd | die Herde | des Herds | heiss | auf den Herd stellen |
-| der Backofen | die Backöfen | des Backofens | | in den Backofen schieben |
-| die Spülmaschine / (CH) der Geschirrspüler | die Spülmaschinen / die Geschirrspüler | | | die Spülmaschine einräumen |
-| die Waschmaschine | die Waschmaschinen | der Waschmaschine | neu | in die Waschmaschine stecken |
-| das Waschbecken / (CH) das Lavabo | die Waschbecken / die Lavabos | des Waschbeckens / des Lavabos | | |
-| die Dusche | die Duschen | der Dusche | | unter die Dusche gehen |
-| die Badewanne | die Badewannen | der Badewanne | | in der Badewanne liegen |
+| Nomen | Englisch | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
+|---|---|---|---|---|---|
+| der Tisch | the table | die Tische | des Tischs | rund | auf den Tisch stellen / auf dem Tisch stehen |
+| der Stuhl | the chair | die Stühle | des Stuhls | bequem | sich auf den Stuhl setzen |
+| das Sofa | the sofa | die Sofas | des Sofas | bequem | auf dem Sofa liegen |
+| der Sessel | the armchair | die Sessel | des Sessels | weich | im Sessel sitzen |
+| das Bett | the bed | die Betten | des Betts | breit | ins Bett gehen / im Bett liegen |
+| der Schrank / (CH) der Kasten | the wardrobe, the cupboard | die Schränke / die Kästen | des Schranks / des Kastens | alt | in den Kasten hängen / im Kasten hängen |
+| das Regal | the shelf | die Regale | des Regals | leer | ins Regal stellen / im Regal stehen |
+| der Teppich | the carpet, the rug | die Teppiche | des Teppichs | weich | vor das Sofa legen |
+| die Lampe | the lamp | die Lampen | der Lampe | hell | über den Tisch hängen |
+| der Spiegel | the mirror | die Spiegel | des Spiegels | rund | in den Spiegel schauen |
+| das Bild | the picture | die Bilder | des Bilds | schön | an die Wand hängen |
+| der Vorhang | the curtain | die Vorhänge | des Vorhangs | dick | den Vorhang zumachen |
+| der Kühlschrank | the fridge | die Kühlschränke | des Kühlschranks | leer | in den Kühlschrank stellen |
+| der Herd | the stove, the cooker | die Herde | des Herds | heiss | auf den Herd stellen |
+| der Backofen | the oven | die Backöfen | des Backofens | | in den Backofen schieben |
+| die Spülmaschine / (CH) der Geschirrspüler | the dishwasher | die Spülmaschinen / die Geschirrspüler | | | die Spülmaschine einräumen |
+| die Waschmaschine | the washing machine | die Waschmaschinen | der Waschmaschine | neu | in die Waschmaschine stecken |
+| das Waschbecken / (CH) das Lavabo | the washbasin, the sink | die Waschbecken / die Lavabos | des Waschbeckens / des Lavabos | | |
+| die Dusche | the shower | die Duschen | der Dusche | | unter die Dusche gehen |
+| die Badewanne | the bathtub | die Badewannen | der Badewanne | | in der Badewanne liegen |
 
 ## Wortschatz – Menschen und Mietvertrag
-| Nomen | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
-|---|---|---|---|---|
-| der Nachbar (n-Deklination!) | die Nachbarn | des Nachbarn | nett | dem Nachbarn helfen (Dat) |
-| der Vermieter / die Vermieterin | die Vermieter / -innen | des Vermieters | streng | dem Vermieter schreiben (Dat) |
-| der Abwart / die Abwartin (CH) | die Abwarte / -innen | des Abwarts | freundlich | den Abwart anrufen (Akk) |
-| die Miete | die Mieten | der Miete | hoch | die Miete bezahlen |
-| die Nebenkosten | (nur Plural) | der Nebenkosten | | |
+| Nomen | Englisch | Plural | Genitiv | Typisches Adjektiv | Kasus-Auslöser / Kollokation |
+|---|---|---|---|---|---|
+| der Nachbar (n-Deklination!) | the neighbour | die Nachbarn | des Nachbarn | nett | dem Nachbarn helfen (Dat) |
+| der Vermieter / die Vermieterin | the landlord / the landlady | die Vermieter / -innen | des Vermieters | streng | dem Vermieter schreiben (Dat) |
+| der Abwart / die Abwartin (CH) | the caretaker | die Abwarte / -innen | des Abwarts | freundlich | den Abwart anrufen (Akk) |
+| die Miete | the rent | die Mieten | der Miete | hoch | die Miete bezahlen |
+| die Nebenkosten | the additional costs, the utilities | (nur Plural) | der Nebenkosten | | |
 
 ## Verben
 | Infinitiv | Perfekt | Kasus / Präposition |
