@@ -5,7 +5,7 @@ import { mockReply } from '../../../lib/mock';
 import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
 } from '../../../lib/reply';
-import { checkClassCode, overDailyLimit, clientKey } from '../../../lib/guard';
+import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 
 export const dynamic = 'force-dynamic';
@@ -39,7 +39,7 @@ async function handle(req) {
 
   if (!checkClassCode(classCode)) return fail('Falscher Klassen-Code.', 401, 'bad_code');
   if (!Array.isArray(messages) || messages.length === 0) return fail('Keine Nachricht.', 400);
-  if (overDailyLimit(clientKey(req))) {
+  if (overDailyLimit(req, body.clientId)) {
     return fail('Tageslimit erreicht. Morgen geht es weiter – bis dann! 👋', 429, 'limit');
   }
 
@@ -88,6 +88,7 @@ async function handle(req) {
     corrected: String(m?.corrected || '').slice(0, 200),
     rule: String(m?.rule || '').slice(0, 80),
   }));
+  const asked = (Array.isArray(body.asked) ? body.asked : []).slice(-50).map((x) => String(x).slice(0, 120)).filter(Boolean);
   const notes = (Array.isArray(body.notes) ? body.notes : []).slice(0, 6).map((n) => String(n).slice(0, 80));
   const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId };
 
@@ -136,6 +137,7 @@ async function handle(req) {
       mistakes,
       notes,
       guessed,
+      asked,
     });
     return generate({ system, contents: recent, schema: RESPONSE_SCHEMA, deadline });
   }

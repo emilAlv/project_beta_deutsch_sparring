@@ -55,7 +55,7 @@ export function listLessons() {
         type,
         levels: parseLevels(text),
         // title, theme, type – plus only the long, specific words of the rule (e.g. "Wechselpräpositionen")
-        keywords: `${title} ${meta(text, 'Thema')} ${meta(text, 'Typ')} ${(section(text, 'Regel').match(/[A-Za-zÄÖÜäöüß]{11,}/g) || []).join(' ')}`.toLowerCase(),
+        keywords: `${title} ${meta(text, 'Thema')} ${meta(text, 'Typ')} ${meta(text, 'Stichwörter')} ${(section(text, 'Regel').match(/[A-Za-zÄÖÜäöüß]{11,}/g) || []).join(' ')}`.toLowerCase(),
       };
     });
 }

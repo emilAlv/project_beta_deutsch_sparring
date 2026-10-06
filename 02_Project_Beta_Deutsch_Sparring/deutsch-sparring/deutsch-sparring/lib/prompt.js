@@ -26,7 +26,7 @@ const DIRECTION = {
 };
 
 export function buildSystemPrompt({
-  name, lesson, knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed,
+  name, lesson, knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
 }) {
   const topic = catalog.find((t) => t.id === session.topicId);
   const vocab = topic && topic.type !== 'Grammatik' && topic.id !== 'free';
@@ -46,7 +46,7 @@ CURRENT STATE (from the app – authoritative, the app counts everything)
 - Topic: ${topic ? `${topic.title} (id "${topic.id}", ${topic.type})` : 'not chosen yet'}
 - Questions this session: ${session.total}. Done: ${progress.done} (${progress.correct} right, ${progress.answered - progress.correct} wrong, ${progress.skipped} skipped).
 - Open question: ${open}.
-${session.skippedNumber ? `- The student just SKIPPED question ${session.skippedNumber}${session.skippedLine ? ` ("${session.skippedLine}")` : ''}. The app counted it. Give its solution in one line in message, feedback = null, then ${session.skippedNumber >= session.total ? 'exercise = null (it was the last question)' : `question ${next}`}.\n` : ''}${!session.openNumber && progress.done && !session.finished && !session.skippedNumber ? `- There is no open question: give question ${next} now (after answering what the student wrote).\n` : ''}${session.finished ? '- The session is FINISHED. Answer questions about it briefly, exercise = null. If the student wants more, tell them to tap «Same topic again» or choose a new topic.\n' : ''}${last && !session.finished ? `- This is the LAST question. After the feedback: exercise = null and a short closing message (well done + 1 tip). Do not count yourself, the app shows the score.\n` : ''}${notes.length ? `- The student just changed in the app: ${notes.join('; ')}. The app ALREADY applied it – follow it from now on, confirm it in a few words and do NOT change it again (a message like "schwieriger" was this change).\n` : ''}${vocab ? `- Flashcards: ${DIRECTION[settings.direction]}\n- Sentence building: ${settings.sentences ? 'ON' : 'OFF'}.\n` : ''}
+${session.skippedNumber ? `- The student just SKIPPED question ${session.skippedNumber}${session.skippedLine ? ` ("${session.skippedLine}")` : ''}. The app counted it. Give its solution in one line in message, feedback = null, then ${session.skippedNumber >= session.total ? 'exercise = null (it was the last question)' : `question ${next}`}.\n` : ''}${!session.openNumber && progress.done && !session.finished && !session.skippedNumber ? `- There is no open question: give question ${next} now (after answering what the student wrote).\n` : ''}${session.finished ? '- The session is FINISHED. Answer questions about it briefly, exercise = null. If the student wants more, tell them to tap «Same topic again» or choose a new topic.\n' : ''}${last && !session.finished ? `- This is the LAST question. After the feedback: exercise = null and a short closing message (well done + 1 tip). Do not count yourself, the app shows the score.\n` : ''}${notes.length ? `- The student just changed in the app: ${notes.join('; ')}. The app ALREADY applied it – follow it from now on and confirm it in a few words. If the student's message is this command (e.g. "schwieriger"), do NOT change the setting again.\n` : ''}${vocab ? `- Flashcards: ${DIRECTION[settings.direction]}\n- Sentence building: ${settings.sentences ? 'ON' : 'OFF'}.\n` : ''}
 HOW A SESSION WORKS
 - One question per message. When you give a new question, it is question ${next}${session.openNumber ? ` (or ${session.openNumber + 1} after the open one is answered)` : ''}; put that number in exercise.number.
 - Never reveal the answer before ${name} has replied.
@@ -102,7 +102,10 @@ No topic is chosen yet. Read what ${name} wants and pick the best topic id from 
 `}TOPIC CATALOG (id – title – type – levels)
 ${catalog.map((t) => `- ${t.id} – ${t.title} – ${t.type} – ${t.levels.join(', ')}`).join('\n')}
 
-RECENT MISTAKES (for "repeat my mistakes")
+${asked.length ? `ALREADY ASKED IN THIS SESSION (don't repeat a word or sentence until all words of the lesson were used)
+${asked.map((a) => `- ${a}`).join('\n')}
+
+` : ''}RECENT MISTAKES (for "repeat my mistakes")
 ${mistakes.length ? mistakes.map((m) => `- "${m.studentAnswer}" → "${m.corrected}" (${m.rule})`).join('\n') : '(none yet)'}
 
 KNOWN GRAMMAR

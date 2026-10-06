@@ -3,6 +3,7 @@
 ## Meta
 - Thema: Wortschatz Wohnung, Zimmer, Möbel, Haushalt
 - Niveau: A2, B1
+- Stichwörter: Wohnung, Zimmer, Möbel, Haushalt, home, flat, apartment, house, rooms, furniture, vocabulary, flashcards
 - Typ: Wortschatz (kombiniert mit Wechselpräpositionen, siehe Lektion 01)
 - Buch: Schritte plus Neu – Ausgabe Schweiz – Band/Lektion bitte ergänzen
 - Im Kurs behandelt am:

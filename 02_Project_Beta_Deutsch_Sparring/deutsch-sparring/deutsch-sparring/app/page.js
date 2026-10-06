@@ -17,7 +17,7 @@ import OptionsPanel from '../components/OptionsPanel';
 import Chat from '../components/Chat';
 import SessionPanel from '../components/SessionPanel';
 import { t, dirKey } from '../lib/ui-text';
-import { detectIntent, detectTopicWish, extractName, QUESTION_MIN, QUESTION_MAX } from '../lib/intents';
+import { detectIntent, detectTopicWish, topicGroupIn, extractName, QUESTION_MIN, QUESTION_MAX } from '../lib/intents';
 import { score, summaryOf } from '../lib/stats';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
@@ -40,7 +40,8 @@ const RESUME_GREETING_MIN = 30; // …with a "welcome back" line if the break wa
 
 let seq = 0;
 const uid = () => `${Date.now().toString(36)}${(seq++).toString(36)}`;
-const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const plain = (x) => String(x || '').toLowerCase().replace(/[.!?,;:«»„“”"'’()]/g, ' ').replace(/\s+/g, ' ').trim();
+const same = (a, b) => plain(a) === plain(b);
 const isVocab = (s) => s.topicType === 'Wortschatz';
 
 function newSession(topic = null, total = QUESTION_MIN) {
@@ -197,7 +198,12 @@ export default function Home() {
   // ---------- start: read what the browser remembers ----------
   useEffect(() => {
     let cancelled = false;
-    const p = loadProfile();
+    let p = loadProfile();
+    if (!p.clientId) {
+      // a random id for this browser: the daily limit counts per student, not per school network
+      p = { ...p, clientId: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}` };
+      saveProfile(p);
+    }
     profileRef.current = p;
     setProfileState(p);
     if (!prefsLoaded.current) setPrefs(sanitizePrefs(loadPrefs()));
@@ -413,7 +419,7 @@ export default function Home() {
     setBusy(true);
     let reply;
     try {
-      const { data } = await postJson('/api/code', { classCode: text }, 15000);
+      const { data } = await postJson('/api/code', { classCode: text, clientId: profileRef.current.clientId }, 15000);
       if (data.ok) {
         setProfile({ ...profileRef.current, classCode: text });
         const resume = Boolean(convoRef.current.session.topicId);
@@ -457,11 +463,14 @@ export default function Home() {
   }
 
   function restart() {
+    const before = convoRef.current.session;
+    const recap = before.started && !before.finished ? score(before.answers) : null;
     closeSession(false);
     dropRequest();
     const fresh = { ...EMPTY_CONVO, stage: 'topic', session: newSession(), historyFrom: Date.now() };
     convoRef.current = fresh;
     setConvo(fresh);
+    if (recap?.answered) addSystem('prev', t('sysPrevSession', recap));
     setError(null);
     notesRef.current = {};
     tutorSay(t('tutorRestart', { name: profileRef.current.name }));
@@ -559,11 +568,19 @@ export default function Home() {
     const open = running && Boolean(s.exercise);
     const intent = detectIntent(text, { open });
 
+    // before a topic runs, a settings command can also name what to practise:
+    // "Flashcards English to German please", "30 questions about furniture"
+    const thenTopic = () => {
+      if (running || s.topicId) return;
+      const group = topicGroupIn(text);
+      if (group) listTopicGroup(group, msg);
+    };
+
     switch (intent?.type) {
       case 'stop':
-        if (s.topicId && !s.started) {
-          // nothing answered yet: just go back to the topic list
-          goToTopics('tutorAskTopicAgain');
+        if (s.topicId && !s.answers.length) {
+          // nothing answered yet: no score to show, just go back to the topic list
+          goToTopics('tutorStopNoAnswers');
           return true;
         }
         finishSession({ early: true });
@@ -586,13 +603,16 @@ export default function Home() {
         return true;
       case 'questions':
         changeQuestions(intent.value);
+        thenTopic();
         return true;
       case 'direction':
         changeDirection(intent.value);
         if (open && isVocab(s)) askTutor(text, { msg, settingsDone: true });
+        else if (!running && !s.topicId) listTopicGroup('Wortschatz', msg); // flashcards = vocabulary
         return true;
       case 'sentences':
         changeSentences(intent.value);
+        thenTopic();
         return true;
       case 'difficulty': {
         const cur = DIFFS.indexOf(prefsRef.current.difficulty);
@@ -617,14 +637,15 @@ export default function Home() {
 
     // a topic: tapped chip, its exact name, or a short wish ("Ich möchte jetzt Wohnen üben")
     const exact = topicsRef.current.find((x) => same(x.short, text) || same(x.title, text));
-    const wish = exact ? null : detectTopicWish(text, topicsRef.current, { open });
+    const wish = exact ? null : detectTopicWish(text, topicsRef.current, { running });
     if (wish?.group) {
       listTopicGroup(wish.group, msg);
       return true;
     }
     const topic = exact || (wish?.topicId && topicById(wish.topicId));
-    if (topic && !(topic.id === s.topicId && open)) {
-      if (topic.id === s.topicId && running && !exact) tutorSay(t('tutorAlreadyOnTopic', { topic: topic.short }));
+    if (topic) {
+      // the topic that is already running: say so – never grade it as an answer
+      if (topic.id === s.topicId && running) tutorSay(t('tutorAlreadyOnTopic', { topic: topic.short }));
       else startTopic(topic, msg);
       return true;
     }
@@ -667,7 +688,10 @@ export default function Home() {
         skippedLine: lastSkipped && !s.exercise ? lastSkipped.skippedLine : '',
       },
       progress: score(s.answers),
+      // what was already asked in this session, so 20–50 questions don't repeat
+      asked: s.answers.map((a) => a.line || a.skippedLine).filter(Boolean).slice(-50),
       mistakes: recentMistakes(s.answers, historyRef.current.sessions),
+      clientId: profileRef.current.clientId,
       notes: Object.values(sentNotes),
       messages: aiHistory(c),
     };
@@ -744,8 +768,8 @@ export default function Home() {
     const lastAnswer = s.answers[s.answers.length - 1];
     const forSkipped = lastAnswer?.skipped && !s.exercise && reply.feedback?.forNumber === lastAnswer.n;
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
-      feedback = reply.feedback;
-      s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false }];
+      feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
+      s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false, line: s.exercise?.line || '' }];
       s.exercise = null;
       s.started = true;
     }

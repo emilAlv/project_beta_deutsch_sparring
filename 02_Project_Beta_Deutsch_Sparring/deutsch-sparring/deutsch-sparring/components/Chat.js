@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t, LOCALE, dirKey } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
 import Rich, { Marked } from './Rich';
-import { ArrowUp, Check, Refresh, Square } from './icons';
+import { ArrowUp, Check, Pencil, Refresh, Square } from './icons';
 
 const time = (at) => new Date(at).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
 const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
@@ -138,10 +138,14 @@ function NextLine({ ex }) {
 
 function FeedbackCard({ f }) {
   const d = compareAnswer(f.studentAnswer, f.corrected, f.changedWords);
-  const label = f.correct ? t('feedbackSpotOn') : d.changes <= 2 ? t('feedbackPolish') : t('feedbackFix');
+  const label = f.correct ? t('feedbackSpotOn')
+    : f.kind === 'flashcard' ? t('feedbackNotQuite')
+      : d.changes <= 2 ? t('feedbackPolish') : t('feedbackFix');
   return (
     <div className={`feedback-card ${f.correct ? 'is-right' : 'is-wrong'}`}>
-      <p className="caps feedback-label"><Check size={15} strokeWidth={2.4} /> {label}</p>
+      <p className="caps feedback-label">
+        {f.correct ? <Check size={15} strokeWidth={2.4} /> : <Pencil size={14} strokeWidth={2.2} />} {label}
+      </p>
       <p className="feedback-sentence">
         {f.correct ? f.corrected : <Marked segments={d.corrected} as="strong" className="fixed" />}
       </p>
@@ -155,10 +159,12 @@ function SummaryCard({ s }) {
     <div className="summary-card">
       <p className="caps">{s.ended ? t('summaryEnded') : t('summaryTitle')}</p>
       <p className="summary-score">
-        <span className="big">{s.correct}</span><span className="of"> / {s.answered}</span>
+        {s.answered
+          ? <><span className="big">{s.correct}</span><span className="of"> / {s.answered}</span></>
+          : <span className="big">–</span>}
       </p>
       <p className="summary-caption">
-        {t('summaryScore', s)} · {t('summaryDetail', { done: s.done, total: s.total })}
+        {s.answered ? `${t('summaryScore', s)} · ` : ''}{t('summaryDetail', { done: s.done, total: s.total })}
         {s.skipped > 0 && ` · ${t('summarySkipped', { n: s.skipped })}`}
       </p>
       <ProgressTrack states={s.states} />

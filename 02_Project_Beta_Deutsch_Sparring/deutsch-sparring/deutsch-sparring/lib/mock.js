@@ -9,7 +9,7 @@
 
 import { ModelError } from './gemini';
 import { getExamples, getVocab, listLessons } from './content';
-import { detectIntent } from './intents';
+import { detectIntent, detectTopicWish } from './intents';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
 
@@ -333,7 +333,8 @@ export async function mockReply({ text, settings, session, progress, topic }) {
   const ask = (n, strongHint = false) => {
     let pin = null;
     if (openQ && n === open) pin = { word: openQ.word, kind: openQ.exercise.type === 'Satzbau' ? 'sentence' : 'card', kase: openQ.kase };
-    else if (openQ && openQ.exercise.type !== 'Satzbau' && vocabSlot(n, settings.sentences).kind === 'sentence') pin = { word: openQ.word };
+    else if (openQ && settings.sentences && openQ.exercise.type !== 'Satzbau') pin = { word: openQ.word, kind: 'sentence' };
+    else if (openQ) pin = { kind: 'card' };
     const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint);
     out.exercise = q.exercise;
     out.options = q.options;
@@ -352,8 +353,9 @@ export async function mockReply({ text, settings, session, progress, topic }) {
     return json();
   }
   // the student asks for another topic in their own words
-  const other = lessons.find((l) => l.id !== topicId && (say.includes(norm(l.short)) || (l.type === 'Wortschatz' && /wortschatz|vokabel/.test(say)) || (l.type === 'Grammatik' && /grammatik/.test(say))));
-  if (other && /(machen|üben|ueben|lieber|wechseln|können wir|koennen wir)/.test(say)) {
+  const wish = detectTopicWish(text, lessons, { running: true });
+  const other = wish && lessons.find((l) => l.id !== topicId && (l.id === wish.topicId || l.type === wish.group));
+  if (other) {
     out.message = `Okay, wir wechseln zu «${other.short}».`;
     out.session.topicId = other.id;
     out.session.topicName = other.short;
@@ -406,6 +408,11 @@ export async function mockReply({ text, settings, session, progress, topic }) {
   if (/^(tipp|hint|give me a hint|gib mir einen tipp|einen tipp)/.test(say)) {
     out.message = 'Hier ist ein Tipp:';
     ask(open, true);
+    return json();
+  }
+  if (/^(nochmal|noch ?mal|noch einmal|again|wiederhol|repeat)/.test(say) && !/fehler|mistake/.test(say)) {
+    out.message = 'Gern, noch einmal:';
+    ask(open);
     return json();
   }
   const intent = intent0;

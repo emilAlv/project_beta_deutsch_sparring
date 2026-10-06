@@ -112,25 +112,36 @@ export function detectIntent(text, { open = false } = {}) {
 }
 
 // "Ich möchte jetzt lieber Wohnen üben" → { topicId } ; "Lass uns Wortschatz machen" → { group }
-// Only short messages that clearly ask to practise something else, so answers ("Wir wohnen
-// dort", "Ich möchte in einer Wohnung wohnen") are never taken for a topic wish. While a
-// question is open, an explicit switch word is required.
+// Only short messages that clearly ask to practise something else, so answers are never taken
+// for a topic wish. During a session (running) a practise verb is required: "Können wir Wohnen
+// machen?" switches, "Können wir in der neuen Wohnung wohnen?" or "Lass uns dort wohnen" do not.
 const NOT_LETTER = '(?<![a-zäöü])';
 const END = '(?![a-zäöü])';
-const SWITCH = new RegExp(`${NOT_LETTER}(üben|ueben|lernen|practi[sc]e|learn|study|wechseln|switch|thema|topic|lass uns|let'?s|können wir|koennen wir|instead|stattdessen)${END}`);
-const WANT = new RegExp(`${NOT_LETTER}(ich (will|möchte|moechte)|i want|i'd like|machen|lieber)${END}`);
+const word = (alts) => new RegExp(`${NOT_LETTER}(${alts})${END}`);
+const PRACTISE = word('üben|ueben|lernen|machen|practi[sc]e|learn|study|do|wechseln|switch|thema|topic|instead|stattdessen');
+const WANT = word('ich (will|möchte|moechte)|i want|id like|lieber|lass uns|lets|können wir|koennen wir');
 
-export function detectTopicWish(text, topics, { open = false } = {}) {
+export function detectTopicWish(text, topics, { running = false } = {}) {
   const s = clean(text);
-  if (!s || !short(s, open ? 7 : 9)) return null;
-  if (!SWITCH.test(s) && (open || !WANT.test(s))) return null;
+  if (!s || !short(s, running ? 8 : 10)) return null;
+  if (!PRACTISE.test(s) && (running || !WANT.test(s))) return null;
   const hit = topics.find((t) => {
     const name = clean(t.short);
-    return name.length >= 4 && (s.includes(name) || name.split(' ').filter((w) => w.length >= 5).some((w) => s.includes(w)));
+    const parts = name.split(' ').filter((w) => w.length >= 5);
+    return name.length >= 4 && (word(name).test(s) || parts.some((w) => word(w).test(s)));
   });
   if (hit) return { topicId: hit.id };
-  if (new RegExp(`${NOT_LETTER}(grammatik|grammar)${END}`).test(s)) return { group: 'Grammatik' };
-  if (new RegExp(`${NOT_LETTER}(wortschatz|vocabulary|vokabeln|vocab|wörter|woerter|flashcards|karteikarten)${END}`).test(s)) return { group: 'Wortschatz' };
+  if (word('grammatik|grammar').test(s)) return { group: 'Grammatik' };
+  if (word('wortschatz|vocabulary|vokabeln|vocab|wörter|woerter|words|flashcards|karteikarten').test(s)) return { group: 'Wortschatz' };
+  return null;
+}
+
+// A topic named inside a settings command at the start ("Flashcards English to German",
+// "30 questions about furniture"): only the vocabulary/grammar group words count.
+export function topicGroupIn(text) {
+  const s = clean(text);
+  if (word('wortschatz|vocabulary|vokabeln|vocab|flashcards|karteikarten|words|wörter|woerter|furniture|möbel|moebel').test(s)) return 'Wortschatz';
+  if (word('grammatik|grammar|dativ|akkusativ|dative|accusative|präpositionen|praepositionen|prepositions').test(s)) return 'Grammatik';
   return null;
 }
 

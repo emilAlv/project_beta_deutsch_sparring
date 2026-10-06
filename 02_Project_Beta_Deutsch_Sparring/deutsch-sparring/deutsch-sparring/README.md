@@ -34,7 +34,8 @@ or switch the right panel.
 5. Click **Deploy**. After ~1 minute you get a link like `deutsch-sparring.vercel.app`.
 
 Optional variables: `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_FALLBACK_MODEL`
-(default `gemini-3.5-flash-lite`), `DAILY_LIMIT` (messages per person per day, default 150),
+(default `gemini-3.5-flash-lite`), `DAILY_LIMIT` (messages per student per day, default 150 – counted
+per browser, so a whole class on one school network is not locked out; only wrong class codes count as tries),
 `MOCK=1` (demo tutor without AI, see below).
 After changing a variable: Vercel → Deployments → ⋯ → Redeploy.
 
@@ -50,6 +51,8 @@ the latest commit of the branch (the green ✓ → *Details*).
 
 Rules: one file per topic.
 - `- Niveau:` = `A1`, `A2` and/or `B1` (e.g. `A2, B1`) – the topic is offered at these levels.
+- `- Stichwörter:` words students might type to ask for the topic, German and English
+  (e.g. `Möbel, furniture, home`) – so «30 questions about furniture» finds the right lesson.
 - `- Typ:` = `Grammatik`, `Wortschatz` or `Gemischt` – shown as Grammar / Vocabulary / Mixed.
   `Wortschatz` topics are practised as flashcards.
 - Word tables: `| Nomen | Englisch | Plural | Genitiv | Typisches Adjektiv | … |` – the
