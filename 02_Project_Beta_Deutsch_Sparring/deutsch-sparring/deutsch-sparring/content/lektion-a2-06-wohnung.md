@@ -39,7 +39,7 @@ Es gibt + Akkusativ; Modalverben und Perfekt für Ereignisse; höfliche Bitten. 
 | 4 | Ich lege den Schlüssel ___ Tisch. (auf, der) | auf den | Lückentext |
 | 5 | Wir haben den Schaden schon ___. (melden) | gemeldet | Lückentext |
 | 6 | A: ___ Sie jemanden schicken? B: Ja, morgen. | Könnten | Lückentext |
-| 7 | Finde den Fehler: Die Lampe steht auf den Tisch. | auf dem | Fehler finden |
+| 7 | Finde den Fehler: Die Lampe steht auf den Tisch. | Die Lampe steht auf dem Tisch. | Fehler finden |
 | 8 | Übersetze: The heater has been broken since Monday. | Die Heizung ist seit Montag kaputt. | Übersetzung |
 
 ## Offene kommunikative Aufgabe
@@ -47,3 +47,23 @@ Du meldest der Hausverwaltung eine defekte Heizung. Antworte in ein oder zwei na
 
 ## Nicht verwenden (off-limits)
 Keine juristisch komplexen Mietrechtsargumente.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Guten Tag, ich möchte einen Schaden melden.
+> B: Was funktioniert nicht?
+> A: Seit gestern ist die Heizung im Wohnzimmer kalt.
+> B: Ich notiere das und melde mich wegen eines Termins.
+
+## Alltagsnaher Modelltext
+Notiz: «Hauswart: Reparatur Heizung am Dienstag von 10 bis 12 Uhr. Bitte Zugang zur Wohnung ermöglichen.»
+
+**Informationsfrage:** Wann kommt der Hauswart?
+
+**Beispielantwort:** Am Dienstag zwischen 10 und 12 Uhr.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Melde der Verwaltung einen Schaden und erkläre seit wann er besteht.
+2. **Unerwartete Wendung:** Die Verwaltung schlägt einen Termin vor, an dem du nicht zu Hause bist. Bitte um einen anderen.
+3. **Wiedergabe/Transfer:** Verfasse eine kurze Nachricht an einen Mitbewohner mit den wichtigsten Informationen.
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

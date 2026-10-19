@@ -40,7 +40,7 @@ Vorschläge mit wollen/sollen/können; feste Wendungen «Wie wäre es mit …?»
 | 4 | A: Passt dir elf Uhr? B: Ja, das passt ___ gut. | mir | Lückentext |
 | 5 | Ich komme später, weil ich arbeiten ___. (müssen) | muss | Lückentext |
 | 6 | A: Hast du Lust auf Kino? B: Ja, ___ gern! | sehr | Lückentext |
-| 7 | Finde den Fehler: Ich kann nicht kommen, weil muss ich arbeiten. | weil ich arbeiten muss | Fehler finden |
+| 7 | Finde den Fehler: Ich kann nicht kommen, weil muss ich arbeiten. | Ich kann nicht kommen, weil ich arbeiten muss. | Fehler finden |
 | 8 | Übersetze: Could we meet on Sunday instead? | Könnten wir uns stattdessen am Sonntag treffen? | Übersetzung |
 
 ## Offene kommunikative Aufgabe
@@ -48,3 +48,23 @@ Du planst mit Freunden einen Ausflug und musst einen Termin ändern. Antworte in
 
 ## Nicht verwenden (off-limits)
 Keine schwierigen höflichen Verhandlungen.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Wollen wir am Samstag wandern gehen?
+> B: Gute Idee! Wie ist das Wetter?
+> A: Laut Prognose soll es sonnig sein.
+> B: Dann treffen wir uns um neun am Bahnhof.
+
+## Alltagsnaher Modelltext
+Gruppenchat: «Samstag: Treffpunkt 08.45 Uhr vor dem Bahnhof. Bitte Wasser und ein kleines Picknick mitnehmen.»
+
+**Informationsfrage:** Was sollen die Teilnehmenden mitnehmen?
+
+**Beispielantwort:** Wasser und ein kleines Picknick.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Lade einen Freund zum Wandern ein. Schlag Ort und Uhrzeit vor.
+2. **Unerwartete Wendung:** Dein Freund kann erst eine Stunde später. Findet einen passenden Kompromiss.
+3. **Wiedergabe/Transfer:** Schreibe eine kurze Gruppennachricht mit der endgültigen Verabredung.
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

@@ -47,3 +47,23 @@ Du rufst in einer Praxis an und beschreibst deine Beschwerden. Antworte in ein o
 
 ## Nicht verwenden (off-limits)
 Keine Diagnosen und keine individuellen medizinischen Therapieempfehlungen.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Guten Tag, Praxis Müller.
+> B: Guten Tag, ich brauche einen Termin. Ich habe seit drei Tagen Halsschmerzen.
+> A: Haben Sie auch Fieber?
+> B: Nein, aber ich bin sehr müde.
+
+## Alltagsnaher Modelltext
+Praxisschild: «Termine nur nach Vereinbarung. Bei akuten Beschwerden rufen Sie bitte an.»
+
+**Informationsfrage:** Was soll man bei akuten Beschwerden tun?
+
+**Beispielantwort:** In der Praxis anrufen.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Du rufst in der Arztpraxis an. Beschreibe zwei Symptome und seit wann du sie hast.
+2. **Unerwartete Wendung:** Die Mitarbeiterin bietet Donnerstagvormittag an. Du arbeitest dann. Bitte um eine Alternative.
+3. **Wiedergabe/Transfer:** Gib die Terminangaben danach einer Freundin in zwei Sätzen weiter. Keine Diagnosen erfinden.
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

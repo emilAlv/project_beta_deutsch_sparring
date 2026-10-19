@@ -39,7 +39,7 @@ Reflexivpronomen: ich mich, du dich, er/sie sich, wir uns. Häufige Verben: sich
 | 4 | Sie fühlt ___ heute besser. | sich | Lückentext |
 | 5 | Er hat ___ über die Nachricht gefreut. | sich | Lückentext |
 | 6 | A: Wofür interessierst du dich? B: Ich interessiere mich ___ Kunst. | für | Lückentext |
-| 7 | Finde den Fehler: Ich freue mir auf Freitag. | mich | Fehler finden |
+| 7 | Finde den Fehler: Ich freue mir auf Freitag. | Ich freue mich auf Freitag. | Fehler finden |
 | 8 | Übersetze: We are meeting in the city centre. | Wir treffen uns im Stadtzentrum. | Übersetzung |
 
 ## Offene kommunikative Aufgabe
@@ -47,3 +47,23 @@ Du erzählst einer Freundin, wie du dich in einer neuen Stadt fühlst. Antworte 
 
 ## Nicht verwenden (off-limits)
 Keine komplexen reflexiven Dativkonstruktionen.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Freust du dich auf den Umzug?
+> B: Ja, aber ich bin auch etwas nervös.
+> A: Hast du dich schon mit deinen neuen Nachbarn getroffen?
+> B: Noch nicht. Ich möchte mich bald vorstellen.
+
+## Alltagsnaher Modelltext
+Mitteilung: «Der Quartiertreff lädt neue Nachbarinnen und Nachbarn am Freitag ab 18 Uhr ein.»
+
+**Informationsfrage:** Wen lädt der Quartiertreff ein?
+
+**Beispielantwort:** Neue Nachbarinnen und Nachbarn.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Erzähle, worauf du dich diese Woche freust und wofür du dich interessierst.
+2. **Unerwartete Wendung:** Eine neue Nachbarin sagt, dass sie noch niemanden kennt. Lade sie zu einem Treffen ein.
+3. **Wiedergabe/Transfer:** Schreibe eine kurze Nachricht über deine Interessen und den geplanten Treffpunkt.
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

@@ -47,3 +47,23 @@ Du musst in Olten umsteigen, aber dein Zug ist verspätet. Antworte in ein oder 
 
 ## Nicht verwenden (off-limits)
 Keine komplizierten Tarif- und Erstattungsbestimmungen.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Entschuldigung, fährt der Zug nach Bern von Gleis 4?
+> B: Heute nicht. Er fährt von Gleis 6.
+> A: Und wo muss ich umsteigen?
+> B: In Olten.
+
+## Alltagsnaher Modelltext
+Anzeige: «RE nach Luzern: 16.32, Gleis 5, ca. 10 Minuten Verspätung. Anschluss in Zug bitte prüfen.»
+
+**Informationsfrage:** Welcher Zug hat Verspätung?
+
+**Beispielantwort:** Der RE nach Luzern.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Du hast eine Verbindung verpasst. Frage am Schalter nach der nächsten Fahrt.
+2. **Unerwartete Wendung:** Die Mitarbeiterin sagt, dass du in Olten umsteigen musst. Wiederhole deine Verbindung zur Kontrolle.
+3. **Wiedergabe/Transfer:** Informiere einen Freund per SMS über deine neue Ankunftszeit.
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

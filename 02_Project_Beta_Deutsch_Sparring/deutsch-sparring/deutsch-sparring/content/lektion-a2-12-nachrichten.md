@@ -39,7 +39,7 @@ Anrede, Anlass, Grund, Bitte und Schluss. Weil/dass optional; formell Sie, infor
 | 4 | Vielen Dank ___ Ihre Nachricht. | für | Lückentext |
 | 5 | Ich hoffe, dass der Termin noch frei ___. (sein) | ist | Lückentext |
 | 6 | ___ Grüsse (Schweizer Grussformel) | Freundliche | Lückentext |
-| 7 | Finde den Fehler: Ich kann heute nicht teilnehmen, weil ich bin krank. | weil ich krank bin | Fehler finden |
+| 7 | Finde den Fehler: Ich kann heute nicht teilnehmen, weil ich bin krank. | Ich kann heute nicht teilnehmen, weil ich krank bin. | Fehler finden |
 | 8 | Übersetze: Thank you for your reply. | Vielen Dank für Ihre Antwort. | Übersetzung |
 
 ## Offene kommunikative Aufgabe
@@ -47,3 +47,23 @@ Du informierst deine Kursleitung über eine Abwesenheit. Antworte in ein oder zw
 
 ## Nicht verwenden (off-limits)
 Keine langen argumentativen Schreiben.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Guten Tag, ich habe Ihre Nachricht bekommen.
+> B: Danke. Können Sie am Mittwoch zum Gespräch kommen?
+> A: Leider arbeite ich bis 17 Uhr. Wäre Donnerstag möglich?
+> B: Ja, Donnerstag um 10 Uhr passt.
+
+## Alltagsnaher Modelltext
+E-Mail: «Guten Tag, Ihr Deutschkurs beginnt am 4. November um 18 Uhr. Bitte bringen Sie ein Schreibheft mit. Freundliche Grüsse, Kursleitung».
+
+**Informationsfrage:** Was sollen die Teilnehmenden mitbringen?
+
+**Beispielantwort:** Ein Schreibheft.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Antworte der Kursleitung: Bestätige den Termin und stelle eine kurze Rückfrage.
+2. **Unerwartete Wendung:** Die Kursleitung ändert die Anfangszeit. Bestätige, dass du die Änderung verstanden hast.
+3. **Wiedergabe/Transfer:** Formuliere dieselbe Information als informelle Nachricht an einen Freund.
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.
