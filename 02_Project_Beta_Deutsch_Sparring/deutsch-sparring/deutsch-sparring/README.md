@@ -28,7 +28,17 @@ this». Hint, rule, skip and stop still work in the chat (and as chips above the
   The topics are the word list's sections and lists (e.g. *Home & living › Furniture & objects*);
   tap a section to practise all of it or pick one list. English is the reference language:
   English → German (answer with the article), German → English, or mixed. With grammar points
-  chosen on the setup screen, a sentence task with the same word follows each card.
+  chosen on the setup screen, a grammar task with the same word follows each card. The card always
+  comes first and always checks the article (a German → English noun card shows the noun without
+  article: you give article + meaning; *Article & plural* also asks for the plural). The grammar task
+  depends on the word: **nouns** – a sentence in Akkusativ, Dativ or Genitiv with the word's adjective
+  (e.g. *wegen des alten Schranks*); **verbs** – the Perfekt (*Ich bin abgebogen*) and a sentence with the
+  case the verb needs; **adjectives** – fill in the ending; **phrases** and other words – card only.
+  The tutor names the point the same way every time in `feedback.rule` (*Genitiv nach wegen*,
+  *Dativ nach in (Wo?)*, *Perfekt mit sein* … list in `lib/grammar.js`), so the stats can group it.
+  A wrong word or article is reported as *Artikel* / *Wortschatz* (costs the V score); a wrong case,
+  ending or Perfekt as *Kasus* / *Adjektivendung* / *Verbform* / *Präposition* (costs the G score only).
+  The browser sends the chosen points as `settings.grammar`; the server checks them (`lib/grammar.js`).
 - **Word scores:** the app keeps two scores per word from 1 to 10 – *V* (the word itself) and *G*
   (the word in grammar) – in the browser (`wort_scores`). A session only gets the words it needs
   (1 per question; with sentences 1 per 2 questions; plus 3 spare), chosen from the chosen
@@ -147,7 +157,10 @@ npm run dev                  # http://localhost:3000
 
 With `MOCK=1` the demo tutor builds its questions from the lesson files (the example exercises
 for grammar) and from the same word picker as the real tutor (flashcards) and understands hint, rule and skip
-(asking to change a setting gets «end the session to change this»). Test words: `langsam` (slow answer), `kaputt` (broken JSON),
+(asking to change a setting gets «end the session to change this»). It shows every grammar task type
+(noun cases incl. Genitiv, verb Perfekt and verb + case, adjective endings); its German forms live in
+`lib/declension.js` and `lib/word-tasks.js` and `node scripts/check-word-tasks.mjs` checks them on every
+word of the list. Test words: `langsam` (slow answer), `kaputt` (broken JSON),
 `rohtext` (plain text), `absturz` (server error), `keine Lust mehr` (stop in own words).
 To start over as a new student: browser DevTools → Application → Local Storage → delete the
 `wort_*` entries (or use the avatar menu → *Change name*). The avatar menu → *Start a new session*
