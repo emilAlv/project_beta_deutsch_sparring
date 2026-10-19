@@ -144,3 +144,13 @@ These are **local formative rubrics**, not verbatim official assessment grids.
 Curriculum content is owned on `curriculum/a1-b1-natural-learning` (the `content/` directory plus this curriculum map). Codex integration belongs on `integration/cefr-natural-sparring`. Keep changes in separate branches until review.
 
 For B2–C2, extend the same metadata and action-based assessment across complex conversations, multiple viewpoints, mediation and genre-specific writing. **Do not enable those levels** until the application, test evidence and content are ready.
+
+## Static verification log (19 October 2026)
+
+- Verified on the curriculum branch: **48 additional communicative lessons**, 16 each at A1, A2 and B1.
+- Verified lesson table structure: **408 numbered example exercises** (A1 152, A2 128, B1 128), each within a parseable four-column Markdown table.
+- All 48 files contain their expected `Niveau` metadata, a dialogue, a short original fictional reading text and a communicative transfer or follow-up task.
+- Normalised the authored `Finde den Fehler` example answer keys to full corrected sentences so the scripted tutor can reconstruct the corrected sentence from the model.
+- Corrected identified ambiguous or unnatural exercises in A1 and A2, plus a malformed B1 infinitive item.
+- **Important limitation:** these are static checks of authored content and syntax, **not** a passing Next.js build, a running `MOCK=1` session, automatic correctness proof for free-form answers, a professional language review, or audio-based assessment. Codex owns application integration and runtime tests.
+- Known integration requirement: `lib/mock.js` identifies some tasks by their text prefix (for example, `Verbinde:` / `Finde den Fehler:`) rather than always using the authored `Typ` column. Codex should support `Bilde einen Satz` and `Übersetze` explicitly, with suitable handling of multiple acceptable solutions. No app code was modified by the curriculum author.
