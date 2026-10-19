@@ -13,6 +13,10 @@
 | wortschatz-11-kommunikation-dienste.md | Plural column empty for: der Briefträger, der Minister, der User | Plural filled in: die Briefträger / die Briefträgerinnen, die Minister / die Ministerinnen, die User / die Userinnen | The Plural column needs a value for the plural exercises; please check |
 | wortschatz-12-verben.md | wortschatz-12-verben.md | möchten – Partizip «—» | möchten – Perfekt «–» | Emilio gave no Partizip for «möchten» (special form of mögen); the Perfekt cell is empty |
 | wortschatz-12-verben.md | Partizip with "sich": sich setzen → sich gesetzt, sich drehen → sich gedreht, sich bedanken → sich bedankt, sich entschuldigen → sich entschuldigt, sich beschweren → sich beschwert, sich anwenden → sich angewendet, sich verhalten → sich verhalten, sich beeilen → sich beeilt, sich ausruhen → sich ausgeruht, sich amüsieren → sich amüsiert, sich ärgern → sich geärgert, sich freuen → sich gefreut, sich fühlen → sich gefühlt, sich befinden → sich befunden, sich eignen → sich geeignet, sich bewegen → sich bewegt | Perfekt without "sich" in the Partizip, e.g. hat sich gesetzt | Partizip II is only the verb part (unterhalten, bedankt …); "sich" belongs to the Perfekt form |
+| wortschatz-14-aus-dem-kurs.md | wortschatz-14-aus-dem-kurs.md | die Kleinkindererziehnerinnen | die Kleinkindererzieherinnen | Spelling mistake in the plural |
+| wortschatz-14-aus-dem-kurs.md | wortschatz-14-aus-dem-kurs.md | das Fusballtrikot, die Fusballtrikots | das Fussballtrikot, die Fussballtrikots | Spelling mistake (the word is written correctly in section «Ropa» as «Fussballtrikot») |
+| wortschatz-14-aus-dem-kurs.md | wortschatz-14-aus-dem-kurs.md | bescheid wissen, bescheid gewusst | Bescheid wissen, hat Bescheid gewusst | «Bescheid» is a noun and is written with a capital letter (as in «Bescheid geben») |
+| wortschatz-14-aus-dem-kurs.md | Partizip with "sich": sich aus den Augen verlieren → sich aus den Augen verloren | Perfekt without "sich" in the Partizip, e.g. hat sich aus den Augen verloren | Partizip II is only the verb part (unterhalten, bedankt …); "sich" belongs to the Perfekt form |
 | all files | der/die Bekannte (one cell with «der/die») | der Bekannte / die Bekannte | The app only reads «der», «die» or «das» at the start of a noun cell |
 
 ## Questions
@@ -25,6 +29,8 @@
 - wortschatz-07-zeit-kalender.md: no plural given and none added (shown as «–»): der Montag, der Dienstag, der Mittwoch, der Donnerstag, der Freitag, der Samstag, der Sonntag, der Januar, der Februar, der März, der April, der Mai, der Juni, der Juli, der August, der September, der Oktober, der November, der Dezember, der Frühling, der Sommer, der Herbst, der Winter.
 - wortschatz-12-verben.md: «sich anwenden» (hat sich angewendet) is not a common verb; «anwenden» is usually not reflexive. I kept Emilio's row. Please check.
 - wortschatz-12-verben.md: «stossen» uses «hat gestossen» as written by Emilio; with movement («an etwas stossen») it can also be «ist gestossen».
+- wortschatz-14-aus-dem-kurs.md: «der Ohrenstöpsel» (this list) and «der Ohrstöpsel» (Gesundheit) are the same word with two spellings. I kept both as Emilio wrote them.
+- wortschatz-14-aus-dem-kurs.md: «tischdecken» (hat tischgedeckt) is not a standard verb; it is usually «den Tisch decken» (hat den Tisch gedeckt). I kept Emilio's version.
 
 ## Open questions (code)
 - Nothing so far.
