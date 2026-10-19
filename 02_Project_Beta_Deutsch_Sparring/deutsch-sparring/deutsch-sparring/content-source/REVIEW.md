@@ -6,6 +6,7 @@
 | wortschatz-01-person-identitaet.md | Plural column empty for: der Ausländer, der Einwohner, der Bürger | Plural filled in: die Ausländer / die Ausländerinnen, die Einwohner / die Einwohnerinnen, die Bürger / die Bürgerinnen | The Plural column needs a value for the plural exercises; please check |
 | wortschatz-02-familie-beziehungen.md | Partizip with "sich": sich unterhalten → sich unterhalten | Perfekt without "sich" in the Partizip, e.g. hat sich unterhalten | Partizip II is only the verb part (unterhalten, bedankt …); "sich" belongs to the Perfekt form |
 | wortschatz-05-kleidung-einkauf-geld.md | Plural column empty for: der Friseur | Plural filled in: die Friseure / die Friseurinnen | The Plural column needs a value for the plural exercises; please check |
+| wortschatz-06-verkehr-reisen.md | Plural column empty for: der Fahrer | Plural filled in: die Fahrer / die Fahrerinnen | The Plural column needs a value for the plural exercises; please check |
 | all files | der/die Bekannte (one cell with «der/die») | der Bekannte / die Bekannte | The app only reads «der», «die» or «das» at the start of a noun cell |
 
 ## Questions
