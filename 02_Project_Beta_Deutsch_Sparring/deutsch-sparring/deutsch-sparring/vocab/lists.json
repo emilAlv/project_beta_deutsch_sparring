@@ -11,8 +11,7 @@
     "TRABAJO, EMPRESA Y FORMACIÓN": "Work, business & education",
     "OCIO, CULTURA Y NATURALEZA": "Leisure, culture & nature",
     "COMUNICACIÓN Y SERVICIOS": "Communication & services",
-    "VERBOS, ADJETIVOS Y PALABRAS FUNCIONALES": "Verbs, adjectives & function words",
-    "AUS DEM KURS — Palabras adicionales": "From the course – extra words"
+    "VERBOS, ADJETIVOS Y PALABRAS FUNCIONALES": "Verbs, adjectives & function words"
   },
   "lists": {
     "Datos personales y documentos": "Personal details & documents",
@@ -80,7 +79,9 @@
     "Adjetivos frecuentes": "Common adjectives",
     "Saludos y expresiones fijas": "Greetings & fixed expressions",
     "Verbos de comunicación y percepción": "Verbs of communication & perception",
-    "Verbos modales": "Modal verbs",
-    "Palabras añadidas del curso (no en Goethe oficial)": "Words added in the course (not in the official Goethe list)"
+    "Verbos modales": "Modal verbs"
+  },
+  "sourceSections": {
+    "AUS DEM KURS — Palabras adicionales": "kurs"
   }
 }

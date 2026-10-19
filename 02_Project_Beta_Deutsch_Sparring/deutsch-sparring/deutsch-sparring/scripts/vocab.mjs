@@ -6,6 +6,7 @@
 //   node scripts/vocab.mjs merge                                         check + merge filled batches
 //   node scripts/vocab.mjs status                                        counts and problems
 //
+// Every word has sources (goethe-a1/a2/b1, kurs), a level (A1/A2/B1) and at least one topic; see vocab/README.md.
 // Data lives in vocab/words.json (one word per line, English only). See vocab/README.md.
 // Emilio's Spanish meanings are used only to write the temporary batches in vocab/todo/;
 // words.json keeps just their fingerprint (fp).
@@ -24,6 +25,10 @@ const BATCH_SIZE = 80;
 
 export const TYPES = ['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'pronoun', 'number', 'name', 'phrase', 'other'];
 const LEVELS = { A1: 'A1', A2: 'A2', B1: 'B1', 'AUS DEM KURS': 'Kurs', KURS: 'Kurs' };
+// The level column of the Word file mixes level and source: "Kurs" = shown by the teacher.
+export const SOURCES = ['goethe-a1', 'goethe-a2', 'goethe-b1', 'kurs'];
+const CEFR = ['A1', 'A2', 'B1'];
+const OTHER_TOPIC = 'Other words › Other words'; // when no existing list fits a course-only word
 
 // ---------- reading the .docx (a zip file with word/document.xml inside) ----------
 
@@ -133,7 +138,7 @@ const normSecond = (s) => {
 };
 const hash = (s) => crypto.createHash('sha1').update(s).digest('hex').slice(0, 10);
 
-function rowsOf(blocks) {
+function rowsOf(blocks, sourceSections = {}) {
   const rows = [];
   let section = '';
   for (const b of blocks) {
@@ -154,12 +159,20 @@ function rowsOf(blocks) {
       }
       const [de, second, es, level] = cells;
       if (!clean(de)) continue;
+      const lv = LEVELS[clean(level).toUpperCase()] || clean(level);
+      if (![...CEFR, 'Kurs'].includes(lv)) throw new Error(`Unknown level "${clean(level)}" for "${clean(de)}" (expected A1, A2, B1 or Kurs)`);
+      const sources = new Set([lv === 'Kurs' ? 'kurs' : `goethe-${lv.toLowerCase()}`]);
+      // a section that is a source (not a topic), e.g. AUS DEM KURS: its words get that source and no topic
+      const isSource = sourceSections[section];
+      if (isSource) sources.add(isSource);
       rows.push({
+        sources: [...sources],
+        isSource: !!isSource,
         de: clean(de),
         second: EMPTY.test(clean(second)) ? '' : clean(second),
         es: clean(es),
-        level: LEVELS[clean(level).toUpperCase()] || clean(level),
-        topic: [section, list].filter(Boolean).join(' › '),
+        level: lv,
+        topic: isSource ? '' : [section, list].filter(Boolean).join(' › '),
       });
     }
   }
@@ -183,17 +196,66 @@ function saveWords(words) {
 
 const needsEnrichment = (w) => !w.removed && (!w.enriched || w.enriched.fp !== w.fp);
 
+const sortSources = (set) => SOURCES.filter((x) => set.has(x));
+const goetheLevels = (w) => (w.sources || []).filter((x) => x.startsWith('goethe-')).map((x) => x.slice(7).toUpperCase());
+const validEnriched = (w) => w.enriched && w.enriched.fp === w.fp;
+const hasOwnTopics = (w) => (w.topics || []).length > 0 && !w.topicsEstimated;
+
+// Words with a Goethe source: level = their (lowest) Goethe level.
+// Course-only words: level and, if the word is in no real topic, topic come from the estimate kept in `enriched`
+// (valid only while enriched.fp equals fp, like all enrichment – so it is done once and survives weekly imports).
+export function derive(w) {
+  const g = goetheLevels(w);
+  if (g.length) {
+    w.level = CEFR.find((l) => g.includes(l));
+    delete w.levelEstimated;
+  } else {
+    const l = validEnriched(w) && w.enriched.level;
+    if (CEFR.includes(l)) {
+      w.level = l;
+      w.levelEstimated = true;
+    } else {
+      delete w.level;
+      delete w.levelEstimated;
+    }
+  }
+  if (!hasOwnTopics(w)) {
+    const t = validEnriched(w) && w.enriched.topics;
+    if (Array.isArray(t) && t.length) {
+      w.topics = t;
+      w.topicsEstimated = true;
+    } else {
+      w.topics = [];
+      delete w.topicsEstimated;
+    }
+  }
+}
+
+// Course-only words (no Goethe source) need an estimated level. Words that sit in no real topic (they are only in
+// the course section of the Word file) need a best-fitting topic, whatever their source.
+const needsLevel = (w) => !w.removed && !goetheLevels(w).length;
+const needsTopics = (w) => !w.removed && !hasOwnTopics(w);
+const needsEstimate = (w) =>
+  !needsEnrichment(w) && ((needsLevel(w) && !CEFR.includes(w.enriched.level)) || (needsTopics(w) && !(w.enriched.topics || []).length));
+
+// Every "Section › List" that real (Word-file) topics use, plus the fallback list.
+function allowedTopics(words) {
+  const set = new Set([OTHER_TOPIC]);
+  for (const w of words) if (hasOwnTopics(w)) w.topics.forEach((t) => set.add(t));
+  return set;
+}
+
 // ---------- commands ----------
 
 function importDocx(file, versionArg) {
   if (!file || !fs.existsSync(file)) throw new Error(`File not found: ${file}`);
   const version = versionArg || (path.basename(file).match(/v(\d+)/i) || [])[0]?.toLowerCase();
   if (!version) throw new Error('Cannot tell the version from the file name; add it: import <file> v11');
-  const rows = rowsOf(readDocx(file));
-  if (rows.length < 50) throw new Error(`Only ${rows.length} rows found – is the table layout still the same?`);
   const names = loadListNames();
+  const rows = rowsOf(readDocx(file), names.sourceSections || {});
+  if (rows.length < 50) throw new Error(`Only ${rows.length} rows found – is the table layout still the same?`);
   const missingNames = new Set();
-  for (const r of rows) r.topic = englishTopic(r.topic, names, missingNames);
+  for (const r of rows) if (r.topic) r.topic = englishTopic(r.topic, names, missingNames);
   if (missingNames.size)
     throw new Error(`No English name yet in vocab/lists.json for: ${[...missingNames].map((n) => `"${n}"`).join(', ')}. Add them (sections or lists) and run import again.`);
 
@@ -203,9 +265,10 @@ function importDocx(file, versionArg) {
     const id = keyOf(r.de);
     if (!id) continue;
     const e = incoming.get(id);
-    if (!e) incoming.set(id, { src: { de: r.de, second: r.second, es: r.es, level: r.level }, topics: [r.topic], others: [] });
+    if (!e) incoming.set(id, { src: { de: r.de, second: r.second, es: r.es, level: r.level }, topics: r.topic ? [r.topic] : [], sources: new Set(r.sources), others: [] });
     else {
-      if (!e.topics.includes(r.topic)) e.topics.push(r.topic);
+      r.sources.forEach((x) => e.sources.add(x));
+      if (r.topic && !e.topics.includes(r.topic)) e.topics.push(r.topic);
       // only a different level or plural/Partizip is a real conflict; other Spanish wording is just kept
       if (r.level !== e.src.level || normSecond(r.second) !== normSecond(e.src.second)) e.others.push({ de: r.de, second: r.second, es: r.es, level: r.level });
       else if (norm(r.es) !== norm(e.src.es) && !e.src.es.includes(r.es)) e.src.es = `${e.src.es} / ${r.es}`;
@@ -221,10 +284,11 @@ function importDocx(file, versionArg) {
     const old = byId.get(id);
     if (inc.others.length) report.conflicts.push(`${inc.src.de}: ${[inc.src, ...inc.others].map((s) => `${s.second || '—'} · ${s.es} · ${s.level}`).join('  ≠  ')}`);
     if (!old) {
-      const w = { id, src: withoutEs(inc.src), topics: inc.topics, fp, since: version };
+      const w = { id, src: withoutEs(inc.src), topics: inc.topics, sources: sortSources(inc.sources), fp, since: version };
       if (inc.others.length) w.variants = inc.others.map(withoutEs);
       words.push(w);
       byId.set(id, w);
+      derive(w);
       report.added.push(inc.src.de);
       continue;
     }
@@ -233,12 +297,15 @@ function importDocx(file, versionArg) {
       report.back.push(inc.src.de);
     }
     if (old.fp !== fp) report.changed.push(`${old.src.de} (${old.src.second || '—'} · ${old.src.level}) → ${inc.src.de} (${inc.src.second || '—'} · ${inc.src.es} · ${inc.src.level})`);
-    if (JSON.stringify(old.topics) !== JSON.stringify(inc.topics)) report.moved.push(inc.src.de);
+    if (inc.topics.length && JSON.stringify(old.topics) !== JSON.stringify(inc.topics)) report.moved.push(inc.src.de);
     old.src = withoutEs(inc.src);
     old.topics = inc.topics;
+    delete old.topicsEstimated; // derive() puts the estimated topic back if the word has no real one
+    old.sources = sortSources(inc.sources);
     old.fp = fp;
     if (inc.others.length) old.variants = inc.others.map(withoutEs);
     else delete old.variants;
+    derive(old);
   }
   for (const w of words) {
     if (!incoming.has(w.id) && !w.removed) {
@@ -273,6 +340,7 @@ function importDocx(file, versionArg) {
 // Batches are the only place where Emilio's Spanish meaning is written out; they are deleted after `merge`.
 function writeBatches(words, spanish) {
   const pending = words.filter(needsEnrichment);
+  const estimates = words.filter(needsEstimate); // enriched course-only words that still need a level / topic
   fs.mkdirSync(TODO, { recursive: true });
   const already = new Set(
     fs.readdirSync(TODO).filter((f) => f.endsWith('.json')).flatMap((f) => JSON.parse(fs.readFileSync(path.join(TODO, f), 'utf8')).map((x) => `${x.id}#${x.fp}`)),
@@ -284,19 +352,44 @@ function writeBatches(words, spanish) {
   for (let i = 0; i < fresh.length; i += BATCH_SIZE) {
     const items = fresh.slice(i, i + BATCH_SIZE).map((w) => {
       const { src, others } = spanish.get(w.id);
-      return { id: w.id, fp: w.fp, de: src.de, second: src.second, es: src.es, level: src.level, ...(others.length ? { also: others.map((v) => `${v.second || '—'} · ${v.es} · ${v.level}`) } : {}), out: null };
+      return { id: w.id, fp: w.fp, de: src.de, second: src.second, es: src.es, level: src.level, ...(others.length ? { also: others.map((v) => `${v.second || '—'} · ${v.es} · ${v.level}`) } : {}), ...(needsLevel(w) ? { needsLevel: true } : {}), ...(needsTopics(w) ? { needsTopics: true } : {}), out: null };
     });
     const name = `batch-${String(++n).padStart(3, '0')}.json`;
     fs.writeFileSync(path.join(TODO, name), `[\n${items.map((x) => JSON.stringify(x)).join(',\n')}\n]\n`);
   }
+  // estimate batches: no Spanish needed, `en` is enough to judge level and topic
+  const freshEst = estimates.filter((w) => !already.has(`${w.id}#${w.fp}`));
+  for (let i = 0; i < freshEst.length; i += BATCH_SIZE) {
+    const items = freshEst.slice(i, i + BATCH_SIZE).map((w) => ({
+      kind: 'estimate', id: w.id, fp: w.fp, de: w.src.de, second: w.src.second, en: w.enriched.en,
+      ...(needsLevel(w) ? { needsLevel: true } : {}), ...(needsTopics(w) ? { needsTopics: true } : {}), out: null,
+    }));
+    const name = `batch-${String(++n).padStart(3, '0')}.json`;
+    fs.writeFileSync(path.join(TODO, name), `[\n${items.map((x) => JSON.stringify(x)).join(',\n')}\n]\n`);
+  }
   const files = fs.readdirSync(TODO).filter((f) => f.endsWith('.json'));
-  console.log(`  ${pending.length} words need enrichment; ${fresh.length} newly put into batches. Batches waiting: ${files.length ? files.join(', ') : 'none'}`);
+  console.log(`  ${pending.length} words need enrichment; ${fresh.length} newly put into batches. ${estimates.length} course-only words need a level/topic estimate; ${freshEst.length} newly put into batches. Batches waiting: ${files.length ? files.join(', ') : 'none'}`);
+}
+
+// level / topics of an estimate (item.needsLevel / item.needsTopics say what is required)
+function validateEstimate(out, item, topicSet) {
+  const errs = [];
+  if (out.level !== undefined && !CEFR.includes(out.level)) errs.push('level must be A1, A2 or B1');
+  if (item?.needsLevel && !out.level) errs.push('level is missing (estimate A1, A2 or B1)');
+  if (out.topics !== undefined) {
+    if (!Array.isArray(out.topics) || !out.topics.length) errs.push('topics must be a non-empty list');
+    else if (topicSet) for (const t of out.topics) if (!topicSet.has(t)) errs.push(`unknown topic "${t}" (use an existing "Section › List" in English, or "${OTHER_TOPIC}")`);
+  }
+  if (item?.needsTopics && !out.topics) errs.push('topics is missing (best fitting existing "Section › List")');
+  return errs;
 }
 
 // Checks one enrichment result; returns a list of problems (empty = fine).
-export function validate(out, item) {
+export function validate(out, item, topicSet) {
   const errs = [];
   if (!out || typeof out !== 'object') return ['out is missing'];
+  errs.push(...validateEstimate(out, item, topicSet));
+  if (item?.kind === 'estimate') return errs;
   if (!TYPES.includes(out.type)) errs.push(`type must be one of ${TYPES.join(', ')}`);
   if (!out.en || typeof out.en !== 'string') errs.push('en is missing');
   for (const [k, v] of Object.entries(out)) if (typeof v === 'string' && /ß/.test(v)) errs.push(`${k} contains ß`);
@@ -318,6 +411,7 @@ function merge() {
   if (!fs.existsSync(TODO)) return console.log('Nothing to merge.');
   const words = loadWords();
   const byId = new Map(words.map((w) => [w.id, w]));
+  const topicSet = allowedTopics(words);
   let merged = 0;
   let problems = 0;
   let stale = 0;
@@ -334,7 +428,7 @@ function merge() {
     if (items.every((x) => x.out == null)) continue; // not started yet
     const bad = [];
     for (const item of items) {
-      const errs = validate(item.out, item);
+      const errs = validate(item.out, item, topicSet);
       if (errs.length) bad.push(`  ${item.id}: ${errs.join('; ')}`);
     }
     if (bad.length) {
@@ -350,14 +444,23 @@ function merge() {
         continue;
       }
       const { fp, ...out } = item.out;
-      w.enriched = { ...out, fp: w.fp };
+      if (item.kind === 'estimate') {
+        if (!validEnriched(w)) {
+          stale++;
+          continue;
+        }
+        w.enriched = { ...w.enriched, ...out, ...(out.level ? { levelEstimated: true } : {}) }; // keep the word's enrichment, add the estimate
+      } else {
+        w.enriched = { ...out, ...(out.level ? { levelEstimated: true } : {}), fp: w.fp };
+      }
+      derive(w);
       merged++;
     }
     fs.unlinkSync(file);
     console.log(`✓ ${f} merged`);
   }
   saveWords(words);
-  console.log(`${merged} words merged${stale ? ` (${stale} skipped: changed since – run batches again)` : ''}. ${words.filter(needsEnrichment).length} still need enrichment. ${problems ? `${problems} problem(s) – fix them and run merge again.` : ''}`);
+  console.log(`${merged} words merged${stale ? ` (${stale} skipped: changed since – run batches again)` : ''}. ${words.filter(needsEnrichment).length} still need enrichment, ${words.filter(needsEstimate).length} still need a level/topic estimate. ${problems ? `${problems} problem(s) – fix them and run merge again.` : ''}`);
 }
 
 function status() {
@@ -367,14 +470,23 @@ function status() {
   const byType = {};
   for (const w of active) if (w.enriched) byType[w.enriched.type] = (byType[w.enriched.type] || 0) + 1;
   const byLevel = {};
-  for (const w of active) byLevel[w.src.level] = (byLevel[w.src.level] || 0) + 1;
+  for (const w of active) byLevel[w.level || '?'] = (byLevel[w.level || '?'] || 0) + 1;
+  const bySource = {};
+  for (const w of active) for (const s of w.sources || []) bySource[s] = (bySource[s] || 0) + 1;
+  const estimated = {};
+  for (const w of active) if (w.levelEstimated) estimated[w.level] = (estimated[w.level] || 0) + 1;
   console.log(`${active.length} active words (${words.length - active.length} removed, kept hidden)`);
   console.log(`enriched: ${count((w) => !needsEnrichment(w))} · waiting: ${count(needsEnrichment)}`);
   console.log(`levels: ${Object.entries(byLevel).map(([k, v]) => `${k} ${v}`).join(' · ')}`);
+  console.log(`sources: ${SOURCES.map((s) => `${s} ${bySource[s] || 0}`).join(' · ')}`);
+  console.log(`estimated levels (course-only words): ${Object.entries(estimated).map(([k, v]) => `${k} ${v}`).join(' · ') || 'none'} · still to estimate: ${count(needsEstimate)}`);
+  console.log(`words in no topic: ${count((w) => !w.topics.length)} · topic estimated: ${count((w) => w.topicsEstimated)}`);
   if (Object.keys(byType).length) console.log(`types: ${Object.entries(byType).map(([k, v]) => `${k} ${v}`).join(' · ')}`);
+  const incomplete = active.filter((w) => !w.sources?.length || !CEFR.includes(w.level) || !w.topics.length);
+  if (incomplete.length) console.log(`! ${incomplete.length} words without sources, level or topic: ${incomplete.slice(0, 5).map((w) => w.id).join(', ')}`);
   const fixes = active.filter((w) => w.enriched?.fix);
   if (fixes.length) console.log(`corrections to review: ${fixes.length} (see vocab/REVIEW.md after: node scripts/vocab.mjs review)`);
-  const bad = active.filter((w) => w.enriched && !needsEnrichment(w) && validate(w.enriched).length);
+  const bad = active.filter((w) => w.enriched && !needsEnrichment(w) && validate(w.enriched, null, allowedTopics(words)).length);
   if (bad.length) console.log(`! ${bad.length} enriched words fail the checks: ${bad.slice(0, 5).map((w) => w.id).join(', ')}`);
 }
 
