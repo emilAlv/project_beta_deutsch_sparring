@@ -1,0 +1,721 @@
+[Title] MASTERLIST ALEMÁN
+A1 · A2 · B1 · aus dem Kurs  —  Swiss Hochdeutsch (ss statt ß)  —  v9
+■ der (m.)  ■ die (f.)  ■ das (n.)  ■ Verben/Adj.  ■ B1  ■ Kurs
+[Heading1] 1. PERSONEN & FAMILIE
+<TABLE>
+| Personen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Mann | die Männer | el hombre | A1 | — |
+| die Frau | die Frauen | la mujer | A1 | — |
+| das Kind | die Kinder | el niño/a | A1 | — |
+| der Junge | die Jungen | el chico | A1 | — |
+| das Mädchen | die Mädchen | la chica | A1 | — |
+| der Mensch | die Menschen | la persona | A1 | — |
+| der Erwachsene | die Erwachsenen | el adulto | A2 | — |
+| der Jugendliche | die Jugendlichen | el joven | B1 | — |
+</TABLE>
+<TABLE>
+| Familie |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Familie | die Familien | la familia | A1 | — |
+| die Mutter | die Mütter | la madre | A1 | — |
+| der Vater | die Väter | el padre | A1 | — |
+| die Eltern | Pl. | los padres | A1 | — |
+| die Schwester | die Schwestern | la hermana | A1 | — |
+| der Bruder | die Brüder | el hermano | A1 | — |
+| die Grossmutter | die Grossmütter | la abuela | A1 | — |
+| der Grossvater | die Grossväter | el abuelo | A1 | — |
+| die Grosseltern | Pl. | los abuelos | A1 | — |
+| die Tante | die Tanten | la tía | A2 | — |
+| der Onkel | die Onkel | el tío | A2 | — |
+| die Nichte | die Nichten | la sobrina | A2 | — |
+| der Neffe | die Neffen | el sobrino | A2 | — |
+| die Cousine | die Cousinen | la prima | A2 | — |
+| der Cousin | die Cousins | el primo | A2 | — |
+| der Ehemann | die Ehemänner | el esposo | A2 | — |
+| die Ehefrau | die Ehefrauen | la esposa | A2 | — |
+| das Ehepaar | die Ehepaare | el matrimonio / la pareja casada | aus dem Kurs | — |
+| die Witwe | die Witwen | la viuda | B1 | — |
+| der Witwer | die Witwer | el viudo | A2 | — |
+| das Kleinkind | die Kleinkinder | el bebé / niño pequeño | B1 | — |
+</TABLE>
+[Heading1] 2. KÖRPER & GESUNDHEIT
+<TABLE>
+| Körperteile |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Kopf | die Köpfe | la cabeza | A1 | — |
+| das Auge | die Augen | el ojo | A1 | — |
+| das Ohr | die Ohren | la oreja | A1 | — |
+| die Nase | die Nasen | la nariz | A1 | — |
+| der Mund | die Münder | la boca | A1 | — |
+| der Zahn | die Zähne | el diente | A1 | — |
+| der Hals | die Hälse | el cuello / la garganta | A1 | — |
+| die Hand | die Hände | la mano | A1 | — |
+| der Arm | die Arme | el brazo | A1 | — |
+| das Bein | die Beine | la pierna | A1 | — |
+| der Fuss | die Füsse | el pie | A1 | — |
+| der Bauch | die Bäuche | el vientre | A2 | — |
+| der Rücken | die Rücken | la espalda | A2 | — |
+| die Schulter | die Schultern | el hombro | A2 | — |
+| das Knie | die Knie | la rodilla | A2 | — |
+| die Psyche | Sg. | la psique | B1 | — |
+</TABLE>
+<TABLE>
+| Gesundheit & Krankheit |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Arzt | die Ärzte | el médico | A1 | — |
+| die Ärztin | die Ärztinnen | la médica | A1 | — |
+| das Krankenhaus | die Krankenhäuser | el hospital | A1 | — |
+| die Apotheke | die Apotheken | la farmacia | A1 | — |
+| das Medikament | die Medikamente | el medicamento | A2 | — |
+| die Krankheit | die Krankheiten | la enfermedad | A2 | — |
+| der Schmerz | die Schmerzen | el dolor | A2 | — |
+| das Fieber | Sg. | la fiebre | A2 | — |
+| der Husten | Sg. | la tos | A2 | — |
+| der Schnupfen | Sg. | el resfriado | A2 | — |
+| die Allergie | die Allergien | la alergia | A2 | — |
+| die Untersuchung | die Untersuchungen | el examen médico | B1 | — |
+| die Impfung | die Impfungen | la vacunación | B1 | — |
+| die Erkrankung | die Erkrankungen | la enfermedad / la dolencia | B1 | — |
+| die Vorsorge | Sg. | la prevención / la precaución | B1 | — |
+| die Vorbeugung | Sg. | la prevención | B1 | — |
+| das Übergewicht | Sg. | el sobrepeso | B1 | — |
+| das Labor | die Labore | el laboratorio | B1 | — |
+| schwanger | — | embarazada | aus dem Kurs | — |
+| haltbar | — | duradero / conservable (fecha de caducidad) | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Medizinisches Material |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Verband | die Verbände | el vendaje / la asociación | B1 | — |
+| die Spritze | die Spritzen | la inyección / la jeringa | B1 | — |
+| das Pflaster | die Pflaster | la tirita / el parche | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Verben Gesundheit |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| sich fühlen | gefühlt | sentirse | A2 | — |
+| wehtun | wehgetan | doler | A2 | — |
+| husten | gehustet | toser | A2 | — |
+| untersuchen | untersucht | examinar | B1 | — |
+| impfen | geimpft | vacunar | B1 | — |
+| reagieren | reagiert | reaccionar | B1 | — |
+| wirken | gewirkt | actuar / surtir efecto / parecer | B1 | — |
+</TABLE>
+<TABLE>
+| Expresiones de bienestar |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| sich wohlfühlen | wohlgefühlt | sentirse bien | aus dem Kurs | — |
+</TABLE>
+[Heading1] 3. WOHNEN & HAUSHALT
+<TABLE>
+| Wohnung & Haus |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Wohnung | die Wohnungen | el apartamento | A1 | — |
+| das Haus | die Häuser | la casa | A1 | — |
+| das Zimmer | die Zimmer | la habitación | A1 | — |
+| die Küche | die Küchen | la cocina | A1 | — |
+| das Badezimmer | die Badezimmer | el baño | A1 | — |
+| das Schlafzimmer | die Schlafzimmer | el dormitorio | A1 | — |
+| das Wohnzimmer | die Wohnzimmer | la sala | A1 | — |
+| der Keller | die Keller | el sótano | A2 | — |
+| der Balkon | die Balkone | el balcón | A2 | — |
+| der Garten | die Gärten | el jardín | A2 | — |
+| das Mietshaus | die Mietshäuser | el edificio de alquiler | aus dem Kurs | — |
+| die Hofeinfahrt | die Hofeinfahrten | la entrada al patio | aus dem Kurs | — |
+| die Heizung | die Heizungen | la calefacción | aus dem Kurs | — |
+| die Stehlampe | die Stehlampen | la lámpara de pie | aus dem Kurs | — |
+| der Lampenschirm | die Lampenschirme | la pantalla de lámpara | aus dem Kurs | — |
+| der Sessel | die Sessel | el sillón | aus dem Kurs | — |
+| der Küchenschrank | die Küchenschränke | el armario de cocina | aus dem Kurs | — |
+| der Wäschetrockner | die Wäschetrockner | la secadora | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Möbel & Einrichtung |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Tisch | die Tische | la mesa | A1 | — |
+| der Stuhl | die Stühle | la silla | A1 | — |
+| das Bett | die Betten | la cama | A1 | — |
+| der Schrank | die Schränke | el armario | A1 | — |
+| das Regal | die Regale | la estantería | A2 | — |
+| der Teppich | die Teppiche | la alfombra | A2 | — |
+| die Lampe | die Lampen | la lámpara | A2 | — |
+| das Sofa | die Sofas | el sofá | A2 | — |
+</TABLE>
+<TABLE>
+| Haushalt Gegenstände |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Teekanne | die Teekannen | la tetera | aus dem Kurs | — |
+| der Briefumschlag | die Briefumschläge | el sobre | aus dem Kurs | — |
+| die Briefmarke | die Briefmarken | el sello postal | aus dem Kurs | — |
+| die Schere | die Scheren | las tijeras | aus dem Kurs | — |
+| die Postkarte | die Postkarten | la postal | aus dem Kurs | — |
+| der Deckel | die Deckel | la tapa | aus dem Kurs | — |
+| der Bierdeckel | die Bierdeckel | el posavasos | aus dem Kurs | — |
+| die Kerze | die Kerzen | la vela | aus dem Kurs | — |
+| der Kerzenständer | die Kerzenständer | el candelabro | aus dem Kurs | — |
+| die Münze | die Münzen | la moneda | aus dem Kurs | — |
+| das Salatbesteck | die Salatbestecke | los cubiertos de ensalada | aus dem Kurs | — |
+| der Schreibblock | die Schreibblöcke | el bloc de notas | B1 | — |
+</TABLE>
+<TABLE>
+| Material |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Holz | Sg. | la madera | aus dem Kurs | — |
+| der Stoff | die Stoffe | la tela / el tejido / la materia | aus dem Kurs | — |
+| das Plastik | Sg. | el plástico | aus dem Kurs | — |
+| das Metall | die Metalle | el metal | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Verben Haushalt |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| kochen | gekocht | cocinar | A2 | — |
+| putzen | geputzt | limpiar | A2 | — |
+| waschen | gewaschen | lavar | A2 | — |
+| giessen | gegossen | regar | aus dem Kurs | — |
+| leeren | geleert | vaciar | aus dem Kurs | — |
+| tischdecken | tischgedeckt | poner la mesa | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Wohnen Verträge |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Vertrag | die Verträge | el contrato | aus dem Kurs | — |
+| die Frist | die Fristen | el plazo | aus dem Kurs | — |
+| die Kündigung | die Kündigungen | la rescisión / el preaviso | aus dem Kurs | — |
+| kündigen | gekündigt | rescindir / dar de baja | aus dem Kurs | — |
+| abschliessen | abgeschlossen | concluir / firmar | aus dem Kurs | — |
+| übergeben | übergeben | entregar | aus dem Kurs | — |
+| das Verständnis | Sg. | la comprensión | aus dem Kurs | — |
+| gerecht | — | justo / equitativo | aus dem Kurs | — |
+| die Übergabe | die Übergaben | la entrega | B1 | — |
+</TABLE>
+[Heading1] 4. ESSEN & TRINKEN
+<TABLE>
+| Lebensmittel |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Brot | die Brote | el pan | A1 | — |
+| die Milch | Sg. | la leche | A1 | — |
+| das Ei | die Eier | el huevo | A1 | — |
+| der Käse | Sg. | el queso | A1 | — |
+| die Butter | Sg. | la mantequilla | A1 | — |
+| das Fleisch | Sg. | la carne | A1 | — |
+| der Fisch | die Fische | el pescado | A1 | — |
+| das Gemüse | Sg. | la verdura | A1 | — |
+| das Obst | Sg. | la fruta | A1 | — |
+| der Apfel | die Äpfel | la manzana | A1 | — |
+| die Tomate | die Tomaten | el tomate | A2 | — |
+| die Kartoffel | die Kartoffeln | la papa | A2 | — |
+| der Reis | Sg. | el arroz | A2 | — |
+| die Nudeln | Pl. | la pasta | A2 | — |
+| das Nahrungsmittel | die Nahrungsmittel | el alimento | aus dem Kurs | — |
+| die Ware | die Waren | la mercancía / el producto | B1 | — |
+</TABLE>
+<TABLE>
+| Getränke |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Wasser | Sg. | el agua | A1 | — |
+| der Kaffee | Sg. | el café | A1 | — |
+| der Tee | Sg. | el té | A1 | — |
+| das Bier | die Biere | la cerveza | A1 | — |
+| der Wein | die Weine | el vino | A1 | — |
+| der Saft | die Säfte | el jugo | A1 | — |
+</TABLE>
+<TABLE>
+| Mahlzeiten & Kochen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Frühstück | Sg. | el desayuno | A1 | — |
+| das Mittagessen | Sg. | el almuerzo | A1 | — |
+| das Abendessen | Sg. | la cena | A1 | — |
+| die Mahlzeit | die Mahlzeiten | la comida / el plato | aus dem Kurs | — |
+| braten | gebraten | freír / asar en sartén | B1 | — |
+</TABLE>
+[Heading1] 5. ARBEIT & BERUF
+<TABLE>
+| Berufe |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Lehrer | die Lehrer | el maestro | A1 | — |
+| die Lehrerin | die Lehrerinnen | la maestra | A1 | — |
+| der Arzt | die Ärzte | el médico | A1 | — |
+| die Ärztin | die Ärztinnen | la médica | A1 | — |
+| der Verkäufer | die Verkäufer | el vendedor | A1 | — |
+| der Ingenieur | die Ingenieure | el ingeniero | A2 | — |
+| der Informatiker | die Informatiker | el informático | A2 | — |
+| die Erzieherin | die Erzieherinnen | la educadora / maestra de guardería | B1 | — |
+| die Kleinkindererzieherin | die Kleinkindererziehnerinnen | educadora de niños pequeños | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Ausbildung & Arbeit |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Ausbildung | die Ausbildungen | la formación profesional | A2 | — |
+| der Beruf | die Berufe | la profesión | A2 | — |
+| die Stelle | die Stellen | el puesto de trabajo | A2 | — |
+| das Unternehmen | die Unternehmen | la empresa | B1 | — |
+| die Leistung | die Leistungen | la prestación / el rendimiento | B1 | — |
+| die Aufgabenverteilung | die Aufgabenverteilungen | la distribución de tareas | B1 | — |
+| die Verteilung | die Verteilungen | la distribución / el reparto | B1 | — |
+| die Förderung | die Förderungen | el fomento / la ayuda / la beca | B1 | — |
+| die Spalte | die Spalten | la columna | aus dem Kurs | — |
+| überhaupt | — | en absoluto / para nada | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Verben Arbeit |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| arbeiten | gearbeitet | trabajar | A2 | — |
+| ausbilden | ausgebildet | formar / capacitar | B1 | — |
+| übernehmen | übernommen | asumir / hacerse cargo | B1 | — |
+</TABLE>
+[Heading1] 6. FREIZEIT & HOBBYS
+<TABLE>
+| Sport & Aktivitäten |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Sport | Sg. | el deporte | A1 | — |
+| das Schwimmen | Sg. | la natación | A1 | — |
+| der Fussball | Sg. | el fútbol | A2 | — |
+| der Inlineskater | die Inlineskater | el patinador en línea | aus dem Kurs | — |
+| das Fusballtrikot | die Fusballtrikots | la camiseta de fútbol | aus dem Kurs | — |
+| der Drachen | die Drachen | la cometa | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Kultur & Unterhaltung |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Kino | die Kinos | el cine | A2 | — |
+| das Theater | die Theater | el teatro | A2 | — |
+| das Museum | die Museen | el museo | A2 | — |
+| das Konzert | die Konzerte | el concierto | A2 | — |
+| der Krimi | die Krimis | la novela policial | aus dem Kurs | — |
+| der Liebesroman | die Liebesromane | la novela romántica | aus dem Kurs | — |
+| der Musikgutschein | die Musikgutscheine | el vale de música | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Reisen & Ausflüge |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Rundfahrt | die Rundfahrten | el tour / la excursión en círculo | B1 | — |
+| draussen | — | afuera | aus dem Kurs | — |
+| die Ermässigung | die Ermässigungen | el descuento | aus dem Kurs | — |
+| erleben | erlebt | vivir / experimentar | B1 | — |
+| dabei | — | presente / junto a eso | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Bücher & Medien |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Zeitschrift | die Zeitschriften | la revista | aus dem Kurs | — |
+| der Bericht | die Berichte | el informe / el reportaje | aus dem Kurs | — |
+| die Sendung | die Sendungen | el programa (TV/radio) | aus dem Kurs | — |
+| die Staumeldung | die Staumeldungen | el aviso de atasco | aus dem Kurs | — |
+</TABLE>
+[Heading1] 7. VERKEHR & REISE
+<TABLE>
+| Verkehrsmittel |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Auto | die Autos | el coche | A1 | — |
+| der Bus | die Busse | el autobús | A1 | — |
+| der Zug | die Züge | el tren | A1 | — |
+| das Flugzeug | die Flugzeuge | el avión | A1 | — |
+| das Fahrrad | die Fahrräder | la bicicleta | A1 | — |
+| die U-Bahn | die U-Bahnen | el metro | A2 | — |
+| die Strassenbahn | die Strassenbahnen | el tranvía | A2 | — |
+| das Schiff | die Schiffe | el barco | A2 | — |
+| die Autobahn | die Autobahnen | la autopista | aus dem Kurs | — |
+| die Spur | die Spuren | el carril | aus dem Kurs | — |
+| die Fahrbahn | die Fahrbahnen | la calzada | aus dem Kurs | — |
+| der Geisterfahrer | die Geisterfahrer | el conductor en sentido contrario | aus dem Kurs | — |
+| die Baustelle | die Baustellen | la obra / zona de construcción | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Orientierung |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| links | — | a la izquierda | A1 | — |
+| rechts | — | a la derecha | A1 | — |
+| geradeaus | — | recto | A1 | — |
+| die Richtung | die Richtungen | la dirección | A2 | — |
+| die Kreuzung | die Kreuzungen | el cruce | A2 | — |
+| entlang | — | a lo largo de | aus dem Kurs | — |
+| herum | — | alrededor | aus dem Kurs | — |
+| um ... herum | — | alrededor de | aus dem Kurs | — |
+| nirgends | — | en ningún lugar | aus dem Kurs | — |
+| dorthin | — | hacia allá / allí | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Reise |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Urlaub | die Urlaube | las vacaciones | A1 | — |
+| die Reise | die Reisen | el viaje | A1 | — |
+| der Flughafen | die Flughäfen | el aeropuerto | A2 | — |
+| der Bahnhof | die Bahnhöfe | la estación | A2 | — |
+| das Hotel | die Hotels | el hotel | A2 | — |
+| der Pass | die Pässe | el pasaporte | aus dem Kurs | — |
+| die Identitätskarte | die Identitätskarten | la cédula de identidad | aus dem Kurs | — |
+| der Umzug | die Umzüge | la mudanza | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Verben Verkehr |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| fahren | gefahren (s) | ir / conducir | A2 | — |
+| fliegen | geflogen (s) | volar | A2 | — |
+| umsteigen | umgestiegen (s) | transbordar | A2 | — |
+| zusammenstossen | zusammengestossen (s) | chocar | aus dem Kurs | — |
+| stürzen | gestürzt (s) | caerse / derrumbarse | aus dem Kurs | — |
+| überholen | überholt | adelantar / sobrepasar | aus dem Kurs | — |
+| losfahren | losgefahren (s) | partir / salir / arrancar | B1 | — |
+</TABLE>
+<TABLE>
+| Unfälle & Schäden |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Panne | die Pannen | la avería | aus dem Kurs | — |
+| beschädigt | — | dañado | aus dem Kurs | — |
+| zerbrochen | — | roto | aus dem Kurs | — |
+</TABLE>
+[Heading1] 8. EINKAUFEN & GELD
+<TABLE>
+| Einkaufen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Supermarkt | die Supermärkte | el supermercado | A1 | — |
+| das Geschäft | die Geschäfte | la tienda | A1 | — |
+| der Markt | die Märkte | el mercado | A2 | — |
+| der Preis | die Preise | el precio | A2 | — |
+| das Schaufenster | die Schaufenster | el escaparate | aus dem Kurs | — |
+| der Kratzer | die Kratzer | el arañazo | aus dem Kurs | — |
+| die Rückseite | die Rückseiten | la parte trasera | aus dem Kurs | — |
+| einwandfrei | — | perfecto / impecable | aus dem Kurs | — |
+| der Zustand | die Zustände | el estado / la condición | aus dem Kurs | — |
+| der Fehler | die Fehler | el error / el defecto | aus dem Kurs | — |
+| versteigern | versteigert | subastar | aus dem Kurs | — |
+| der Flohmarkt | die Flohmärkte | el mercado de pulgas | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Geld & Bank |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Geld | Sg. | el dinero | A2 | — |
+| die Bank | die Banken | el banco | A2 | — |
+| die Karte | die Karten | la tarjeta | A2 | — |
+| das Konto | die Konten | la cuenta bancaria | aus dem Kurs | — |
+| die Kontoverbindung | die Kontoverbindungen | los datos bancarios | aus dem Kurs | — |
+| der Kontoauszug | die Kontoauszüge | el extracto bancario | aus dem Kurs | — |
+| die Lastschrift | die Lastschriften | el débito directo | aus dem Kurs | — |
+| die Gutschrift | die Gutschriften | el abono / el crédito | aus dem Kurs | — |
+| die Auszahlung | die Auszahlungen | el retiro / el pago | aus dem Kurs | — |
+| das Bargeld | Sg. | el efectivo | aus dem Kurs | — |
+| die Banknote | die Banknoten | el billete de banco | aus dem Kurs | — |
+| die Münze | die Münzen | la moneda | aus dem Kurs | — |
+| die Zinsen | Pl. | los intereses | aus dem Kurs | — |
+| die Aktie | die Aktien | la acción (bolsa) | aus dem Kurs | — |
+| die Gesellschaft | die Gesellschaften | la sociedad / la empresa | aus dem Kurs | — |
+| der Betrag | die Beträge | el importe / el monto | aus dem Kurs | — |
+| die Rate | die Raten | la cuota / el plazo | aus dem Kurs | — |
+| das Bankgeschäft | die Bankgeschäfte | el trámite bancario | aus dem Kurs | — |
+| abheben | abgehoben | retirar dinero | B1 | — |
+| abbuchen | abgebucht | cargar / debitar | aus dem Kurs | — |
+| besorgen | besorgt | conseguir / procurar | aus dem Kurs | — |
+| erledigen | erledigt | tramitar / resolver / ocuparse de | aus dem Kurs | — |
+| auswendig lernen | auswendig gelernt | aprender de memoria | aus dem Kurs | — |
+| bestimmen | bestimmt | determinar / decidir | aus dem Kurs | — |
+| verschieben | verschoben | aplazar / desplazar | aus dem Kurs | — |
+| umsonst | — | gratis / en vano | B1 | — |
+| zusätzlich | — | adicional / además | B1 | — |
+</TABLE>
+<TABLE>
+| Lieferung & Pakete |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| abholen | abgeholt | recoger | aus dem Kurs | — |
+| die Abholung | die Abholungen | la recogida | aus dem Kurs | — |
+| packen | gepackt | empacar | aus dem Kurs | — |
+| die Verpackung | die Verpackungen | el empaque | aus dem Kurs | — |
+| die Lieferadresse | die Lieferadressen | la dirección de entrega | aus dem Kurs | — |
+| die Anlieferung | die Anlieferungen | la entrega | aus dem Kurs | — |
+| der Warenwert | die Warenwerte | el valor de la mercancía | aus dem Kurs | — |
+| die Bezeichnung | die Bezeichnungen | la denominación | aus dem Kurs | — |
+| abgebildet | — | representado / ilustrado | aus dem Kurs | — |
+| beschrieben | — | descrito | aus dem Kurs | — |
+| geliefert | — | entregado | aus dem Kurs | — |
+| der Kaufgegenstand | die Kaufgegenstände | el artículo comprado | aus dem Kurs | — |
+| der Anschluss | die Anschlüsse | la conexión | aus dem Kurs | — |
+| aufstellen | aufgestellt | instalar / montar | aus dem Kurs | — |
+| aufnehmen | aufgenommen | grabar / registrar | aus dem Kurs | — |
+| tauschen | getauscht | cambiar / intercambiar | aus dem Kurs | — |
+</TABLE>
+[Heading1] 9. SCHULE & BILDUNG
+<TABLE>
+| Schule |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Schule | die Schulen | la escuela | A1 | — |
+| der Lehrer | die Lehrer | el maestro | A1 | — |
+| das Buch | die Bücher | el libro | A1 | — |
+| der Stift | die Stifte | el bolígrafo / el lápiz | A1 | — |
+| das Heft | die Hefte | el cuaderno | A2 | — |
+| die Hausaufgaben | Pl. | las tareas | A2 | — |
+| der Kurs | die Kurse | el curso | A2 | — |
+| die Überschrift | die Überschriften | el título / el encabezado | aus dem Kurs | — |
+| die Einleitung | die Einleitungen | la introducción | aus dem Kurs | — |
+| der Ausdruck | die Ausdrücke | la expresión / el término | aus dem Kurs | — |
+| der Zettel | die Zettel | el papel / la nota | aus dem Kurs | — |
+| die Zusammengesetzte | Pl. | las palabras compuestas | aus dem Kurs | — |
+| die Anleitung | die Anleitungen | las instrucciones / el manual | B1 | — |
+| das Vorhaben | die Vorhaben | el proyecto / el propósito | B1 | — |
+| die Wissenschaft | die Wissenschaften | la ciencia | B1 | — |
+| das Sprichwort | die Sprichwörter | el refrán / el proverbio | B1 | — |
+</TABLE>
+<TABLE>
+| Lernen & Prüfungen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| lernen | gelernt | aprender | A2 | — |
+| üben | geübt | practicar | A2 | — |
+| bestehen | bestanden | aprobar (examen) / existir | B1 | — |
+| herausfinden | herausgefunden | averiguar / descubrir | B1 | — |
+| erforderlich | — | necesario / requerido | aus dem Kurs | — |
+| ausreichend | — | suficiente | aus dem Kurs | — |
+</TABLE>
+[Heading1] 10. KOMMUNIKATION & MEDIEN
+<TABLE>
+| Kommunikation |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Telefon | die Telefone | el teléfono | A1 | — |
+| das Handy | die Handys | el móvil | A1 | — |
+| die E-Mail | die E-Mails | el correo electrónico | A2 | — |
+| der Brief | die Briefe | la carta | A2 | — |
+| das Gespräch | die Gespräche | la conversación | B1 | — |
+| sich unterhalten | sich unterhalten | conversar / entretenerse | B1 | — |
+| besprechen | besprochen | discutir / hablar de | aus dem Kurs | — |
+| ansprechen | angesprochen | abordar / hablar con | aus dem Kurs | — |
+| klingeln | geklingelt | llamar al timbre | aus dem Kurs | — |
+| anlächeln | angelächelt | sonreírle a alguien | B1 | — |
+</TABLE>
+<TABLE>
+| Ausdrücke & Formulierungen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| auf jeden Fall | — | en todo caso / sin duda | aus dem Kurs | — |
+| wie wäre es mit | — | ¿qué tal si...? / ¿qué te parece...? | aus dem Kurs | — |
+| übrigens | — | por cierto / a propósito | aus dem Kurs | — |
+| wohl | — | probablemente / bien | aus dem Kurs | — |
+| schliesslich | — | finalmente / al fin y al cabo | aus dem Kurs | — |
+| deshalb | — | por eso | aus dem Kurs | — |
+| stattdessen | — | en cambio / en lugar de eso | B1 | — |
+| davor | — | antes de eso / delante de eso | B1 | — |
+| damals | — | entonces / en aquel tiempo | aus dem Kurs | — |
+| ziemlich | — | bastante | aus dem Kurs | — |
+| hauptsächlich | — | principalmente | aus dem Kurs | — |
+| selbstgemacht | — | hecho a mano / casero | aus dem Kurs | — |
+| zufällig | — | por casualidad / casualmente | B1 | — |
+| überhaupt | — | en absoluto / para nada | aus dem Kurs | — |
+| vergeblich | — | en vano / inútilmente | B1 | — |
+| danach | — | después de eso / a continuación | B1 | — |
+| dauernd | — | constantemente / sin parar | B1 | — |
+</TABLE>
+<TABLE>
+| Medien & Texte |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Bericht | die Berichte | el informe / reportaje | aus dem Kurs | — |
+| die Zusammenfassung | die Zusammenfassungen | el resumen | B1 | — |
+| der Vorschlag | die Vorschläge | la propuesta / la sugerencia | B1 | — |
+| der Ratschlag | die Ratschläge | el consejo | B1 | — |
+</TABLE>
+<TABLE>
+| Frases de ejemplo — Expresiones |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| Ich fühle mich wohl. | — | Me siento bien. | aus dem Kurs | — |
+| Wie wäre es mit einem Spaziergang? | — | ¿Qué tal un paseo? | aus dem Kurs | — |
+| Das wirkt sehr gut. | — | Eso surte muy buen efecto. | aus dem Kurs | — |
+| Ich habe es endlich herausgefunden. | — | Al final lo averigüé. | aus dem Kurs | — |
+</TABLE>
+[Heading1] 11. NATUR & UMWELT
+<TABLE>
+| Natur |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Wetter | Sg. | el tiempo meteorológico | A1 | — |
+| die Sonne | Sg. | el sol | A1 | — |
+| der Regen | Sg. | la lluvia | A1 | — |
+| der Schnee | Sg. | la nieve | A1 | — |
+| der Wind | Sg. | el viento | A2 | — |
+| das Meer | die Meere | el mar | A2 | — |
+| der Berg | die Berge | la montaña | A2 | — |
+| der Fluss | die Flüsse | el río | A2 | — |
+| die Wiese | die Wiesen | el prado | B1 | — |
+| verschneit | — | nevado / cubierto de nieve | B1 | — |
+| tief | — | profundo / bajo | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Umwelt |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Umwelt | Sg. | el medioambiente | aus dem Kurs | — |
+| nachhaltig | — | sostenible | B1 | — |
+| der Abfall | die Abfälle | la basura / el residuo | B1 | — |
+| wegwerfen | weggeworfen | tirar / desechar | aus dem Kurs | — |
+| entstehen | entstanden (s) | surgir / crearse | aus dem Kurs | — |
+| einfach | — | sencillo / simplemente | aus dem Kurs | — |
+| gebraucht | — | de segunda mano / usado | aus dem Kurs | — |
+| der Flohmarkt | die Flohmärkte | el mercado de pulgas | aus dem Kurs | — |
+| mitgekauft | — | comprado junto | aus dem Kurs | — |
+</TABLE>
+[Heading1] 12. GEFÜHLE & EIGENSCHAFTEN
+<TABLE>
+| Gefühle |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| froh | — | alegre / contento | A1 | — |
+| traurig | — | triste | A1 | — |
+| ärgerlich | — | molesto | A2 | — |
+| aufgeregt | — | emocionado / nervioso | A2 | — |
+| die Stimmung | die Stimmungen | el estado de ánimo / el ambiente | B1 | — |
+| weinen | geweint | llorar | aus dem Kurs | — |
+| lachen | gelacht | reír | aus dem Kurs | — |
+| der Ärger | Sg. | el enojo / el problema | aus dem Kurs | — |
+| blöd | — | tonto / estúpido | aus dem Kurs | — |
+| erstaunlich | — | sorprendente / asombroso | aus dem Kurs | — |
+| wach | — | despierto | aus dem Kurs | — |
+| der Mut | Sg. | el valor / el coraje | B1 | — |
+</TABLE>
+<TABLE>
+| Charaktereigenschaften |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| freundlich | — | amable | A2 | — |
+| nett | — | simpático | A2 | — |
+| höflich | — | educado | A2 | — |
+| geduldig | — | paciente | B1 | — |
+| zuverlässig | — | fiable / de confianza | B1 | — |
+| sorgfältig | — | cuidadoso / esmerado | aus dem Kurs | — |
+| niedrig | — | bajo | aus dem Kurs | — |
+| besonders | — | especialmente / en particular | aus dem Kurs | — |
+| häufig | — | frecuente / frecuentemente | aus dem Kurs | — |
+| angenehm | — | agradable | aus dem Kurs | — |
+| entfernt | — | alejado / a distancia | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Adjektive allgemein |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| reich | — | rico | aus dem Kurs | — |
+| wertvoll | — | valioso | aus dem Kurs | — |
+| passend | — | adecuado / que queda bien | aus dem Kurs | — |
+| schwanger | — | embarazada | B1 | — |
+</TABLE>
+[Heading1] 13. VERANSTALTUNGEN & GESELLSCHAFT
+<TABLE>
+| Feste & Feiern |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Fest | die Feste | la fiesta | A2 | — |
+| der Geburtstag | die Geburtstage | el cumpleaños | A2 | — |
+| die Hochzeit | die Hochzeiten | la boda | A2 | — |
+| die Trauung | die Trauungen | la ceremonia nupcial | aus dem Kurs | — |
+| die Braut | die Bräute | la novia | aus dem Kurs | — |
+| das Brautpaar | die Brautpaare | la pareja de novios | aus dem Kurs | — |
+| der Wecker | die Wecker | el despertador | aus dem Kurs | — |
+| vorbei | — | pasado / terminado | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Veranstaltungen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| die Veranstaltung | die Veranstaltungen | el evento / la manifestación | B1 | — |
+| der Eintritt | die Eintritte | la entrada | B1 | — |
+| mitmachen | mitgemacht | participar | aus dem Kurs | — |
+| die Gebühr | die Gebühren | la tarifa / el honorario | B1 | — |
+| überall | — | en todas partes | aus dem Kurs | — |
+| auftreten | aufgetreten (s) | actuar / aparecer | B1 | — |
+</TABLE>
+<TABLE>
+| Sehenswürdigkeiten |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| das Schloss | die Schlösser | el castillo | B1 | — |
+| die Festung | die Festungen | la fortaleza | B1 | — |
+| besichtigen | besichtigt | visitar / recorrer | B1 | — |
+</TABLE>
+[Heading1] 14. VERBEN (Allgemein)
+<TABLE>
+| Bewegung & Lage |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| gehen | gegangen (s) | ir / caminar | A1 | — |
+| kommen | gekommen (s) | venir | A1 | — |
+| laufen | gelaufen (s) | correr / caminar | A1 | — |
+| fallen | gefallen (s) | caer | A2 | — |
+| hinfallen | hingefallen (s) | caerse | A2 | — |
+| herunterfallen | heruntergefallen (s) | caerse / bajar cayendo | aus dem Kurs | — |
+| retten | gerettet | rescatar / salvar | B1 | — |
+| abbrechen | abgebrochen | interrumpir / abandonar / romper | B1 | — |
+</TABLE>
+<TABLE>
+| Kognitive & kommunikative Verben |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| sagen | gesagt | decir | A1 | — |
+| fragen | gefragt | preguntar | A1 | — |
+| antworten | geantwortet | responder | A1 | — |
+| erklären | erklärt | explicar | A2 | — |
+| verstehen | verstanden | entender | A2 | — |
+| nachdenken | nachgedacht | reflexionar / pensar detenidamente | B1 | — |
+| entscheiden | entschieden | decidir | B1 | — |
+| werfen | geworfen | lanzar / tirar | aus dem Kurs | — |
+| kleben | geklebt | pegar | aus dem Kurs | — |
+| zeichnen | gezeichnet | dibujar | aus dem Kurs | — |
+| aufpassen | aufgepasst | prestar atención / cuidar | aus dem Kurs | — |
+| achten | geachtet | prestar atención / respetar | aus dem Kurs | — |
+| beachten | beachtet | atender / tener en cuenta | aus dem Kurs | — |
+| trennen | getrennt | separar | aus dem Kurs | — |
+| vermeiden | vermieden | evitar / eludir | B1 | — |
+</TABLE>
+<TABLE>
+| Planen & Organisieren |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| planen | geplant | planear | A2 | — |
+| verbringen | verbracht | pasar (tiempo) | B1 | — |
+| aufbauen | aufgebaut | construir / establecer | B1 | — |
+| einleiten | eingeleitet | introducir / iniciar | B1 | — |
+| verschieben | verschoben | aplazar / desplazar | aus dem Kurs | — |
+| vorschlagen | vorgeschlagen | proponer | aus dem Kurs | — |
+| darstellen | dargestellt | representar | aus dem Kurs | — |
+| handeln | gehandelt | actuar / negociar / tratar de | aus dem Kurs | — |
+| bestehen | bestanden | aprobar / existir / consistir en | aus dem Kurs | — |
+| geschafft | — | logrado (participio) | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Zustände & Empfindungen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| sich befinden | sich befunden | encontrarse / estar | B1 | — |
+| stören | gestört | molestar | aus dem Kurs | — |
+| sich aus den Augen verlieren | sich aus den Augen verloren | perderse de vista | B1 | — |
+| recht haben | recht gehabt | tener razón | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Helfen & Besorgen |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| helfen | geholfen | ayudar | A2 | — |
+| beraten | beraten | aconsejar | B1 | — |
+| ernähren | ernährt | alimentar | aus dem Kurs | — |
+| meinen | gemeint | opinar / creer | aus dem Kurs | — |
+| liefern | geliefert | entregar / suministrar | aus dem Kurs | — |
+| wiegen | gewogen | pesar | aus dem Kurs | — |
+</TABLE>
+<TABLE>
+| Pflege & Reparatur |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| pflegen | gepflegt | cuidar | aus dem Kurs | — |
+| bescheid wissen | bescheid gewusst | saber / estar informado | aus dem Kurs | — |
+| rechtzeitig | — | a tiempo | aus dem Kurs | — |
+</TABLE>
+[Heading1] 15. WEITERE WÖRTER AUS DEM KURS
+<TABLE>
+| Diverses |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| der Ohrenstöpsel | die Ohrenstöpsel | el tapón para los oídos | aus dem Kurs | — |
+| die Abfahrt | die Abfahrten | la salida / la partida | aus dem Kurs | — |
+| der Frühschicht | die Frühschichten | el turno de mañana | aus dem Kurs | — |
+| die Gewohnheit | die Gewohnheiten | el hábito / la costumbre | aus dem Kurs | — |
+| das Gericht | die Gerichte | el plato / el tribunal | aus dem Kurs | — |
+| die Beratung | die Beratungen | la asesoría / el consejo | aus dem Kurs | — |
+| die Entscheidung | die Entscheidungen | la decisión | aus dem Kurs | — |
+| die Übung | die Übungen | el ejercicio | aus dem Kurs | — |
+| die Ernährung | Sg. | la alimentación | aus dem Kurs | — |
+| die Meinung | die Meinungen | la opinión | aus dem Kurs | — |
+| die Lieferung | die Lieferungen | la entrega | aus dem Kurs | — |
+| die Abholung | die Abholungen | la recogida | aus dem Kurs | — |
+| die Steuern | Pl. | los impuestos | aus dem Kurs | — |
+| der Vorgesetzte | die Vorgesetzten | el jefe / el superior | aus dem Kurs | — |
+| das Ergebnis | die Ergebnisse | el resultado | B1 | — |
+| die Angabe | die Angaben | el dato / la indicación | B1 | — |
+| die Polizeiangaben | Pl. | los datos / declaraciones de la policía | B1 | — |
+| verwechseln | verwechselt | confundir / intercambiar por error | B1 | — |
+</TABLE>
+<TABLE>
+| Adjektive & Adverbien |
+| Palabra / Infinitivo | Plural / Partizip II | Español | Nivel | Fecha |
+| zurzeit | — | actualmente | aus dem Kurs | — |
+| mittlere | — | mediano / del medio | aus dem Kurs | — |
+| während | — | durante | aus dem Kurs | — |
+| ausserdem | — | además | aus dem Kurs | — |
+| ständig | — | constantemente | aus dem Kurs | — |
+| nass | — | mojado | aus dem Kurs | — |
+</TABLE>
