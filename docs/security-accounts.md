@@ -16,11 +16,34 @@ One row per student in the table `users`:
 | `username` | what the student chose, e.g. `Anna` (3–24 letters or numbers). `Anna` and `anna` are the same account. |
 | `password_hash` + `salt` | a scrambled fingerprint of the password (see below), not the password |
 | `created_at` | when the account was made |
-| `settings` | empty for now; Task 8 keeps progress here |
+| `settings` | one small note, only after an import: that the old browser data was handed over once (and the old streak) |
+
+**Progress (new, three more tables).** For a logged-in student the app saves its learning progress
+in the database, so it follows the student to any device:
+
+| Table | One row per | What is in it |
+|---|---|---|
+| `sessions` | practice session | the settings chosen (level, difficulty, topic …), start and end time, number of questions, the result card (done / correct / skipped, topic name, the last 5 mistakes) |
+| `answers` | answered or skipped question | question number, task type, the word, the question text, **what the student typed**, the corrected sentence, the rule, the kind of error, right / wrong / skipped, the time |
+| `word_scores` | student and word | the two scores 1–10 (word itself / grammar), the right-answers-in-a-row counters, when the word comes back, when it was last practised |
+
+All rows are tied to the account (`user_id`) and deleted with it. Every request checks that you
+are logged in and only ever reads or writes **your own** rows; the id of the student is taken from
+the signed login cookie, never from the request. Word scores are calculated **on the server**
+(`lib/scores.js`), so a browser cannot give itself a 10. The word picker of the tutor also reads
+them from the database, not from the browser. The streak is counted from the days with answers.
+Everything sent by the browser is checked and limited in size (a request over 20 KB is refused;
+the one-time import 500 KB).
 
 **What is not stored:** the password itself, e-mail addresses, real names, IP addresses,
-the chat. The chat, the last 5 sessions and the streak stay in the student's browser, as before
-(now kept separately per username, so two students on one computer don't see each other's work).
+the chat text itself (the conversation with the tutor is not saved on the server; only the typed
+answers and corrections of each question are, see above). Only the current conversation stays in the
+student's browser (to survive a reload), kept separately per username. Without accounts
+(no database yet) everything stays in the browser, exactly as before.
+
+**First login on an old browser.** If a browser still holds history and word scores from before
+accounts existed, they are copied into the account **once** (and ignored if the account already has
+progress). After that the browser's copy is no longer used.
 
 **Password fingerprint.** We use *scrypt*, which is built into Node (no extra package). It turns
 the password plus a random "salt" into a long number. The same password always gives the same
