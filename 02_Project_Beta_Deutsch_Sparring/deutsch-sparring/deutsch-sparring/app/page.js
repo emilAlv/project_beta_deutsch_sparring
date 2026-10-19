@@ -51,7 +51,7 @@ function newSession(topic = null, total = QUESTION_MIN) {
     topicName: topic?.short || null,
     topicType: topic ? (topic.id === 'free' ? 'free' : topic.type) : null,
     total,
-    answers: [], // { n, correct, skipped, studentAnswer, corrected, changedWords, explanation, rule, errorType }
+    answers: [], // { n, correct, skipped, studentAnswer, corrected, changedWords, explanation, rule, errorType, question (the task text), qType (exercise type, e.g. 'flashcard') }
     exercise: null, // the open question (its number is always answers.length + 1)
     lastType: null,
     grammarFocus: null,
@@ -518,7 +518,7 @@ export default function Home() {
   function skipOpen() {
     updateSession((s) => ({
       ...s,
-      answers: [...s.answers, { n: s.answers.length + 1, skipped: true, correct: false, studentAnswer: '', corrected: '', changedWords: [], explanation: '', rule: '', skippedLine: s.exercise?.line || '' }],
+      answers: [...s.answers, { n: s.answers.length + 1, skipped: true, correct: false, studentAnswer: '', corrected: '', changedWords: [], explanation: '', rule: '', skippedLine: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null }],
       exercise: null,
     }));
   }
@@ -769,7 +769,7 @@ export default function Home() {
     const forSkipped = lastAnswer?.skipped && !s.exercise && reply.feedback?.forNumber === lastAnswer.n;
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
       feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
-      s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false, line: s.exercise?.line || '' }];
+      s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false, line: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null }];
       s.exercise = null;
       s.started = true;
     }

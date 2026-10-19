@@ -196,6 +196,10 @@ const en = {
   youWrote: '(you: {words})',
   skipped: 'skipped',
   noAnswers: 'Every answer you give appears here, with the correction.',
+  answerYou: 'You:',
+  answerRight: 'Right:',
+  tagRight: 'right',
+  tagRepeat: 'to repeat',
 
   // grammar focus
   grammarFocus: 'Grammar focus',
@@ -371,6 +375,10 @@ const de = {
   youWrote: '(du: {words})',
   skipped: 'übersprungen',
   noAnswers: 'Jede Antwort erscheint hier, mit der Korrektur.',
+  answerYou: 'Du:',
+  answerRight: 'Richtig:',
+  tagRight: 'richtig',
+  tagRepeat: 'nochmal üben',
 
   grammarFocus: 'Grammatik-Fokus',
   fromConversation: 'Aus deinem Gespräch',
