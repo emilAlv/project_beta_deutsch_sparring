@@ -24,6 +24,7 @@ export const ERROR_TYPE = {
   Rechtschreibung: 'spelling',
   Andere: 'other',
 };
+const WORD_ERROR_KEYS = [ERROR_TYPE.Artikel, ERROR_TYPE.Wortschatz]; // 'article', 'vocab'
 export const TASKS = ['flashcard', 'grammar']; // which score a word task is for (lib/scores.js)
 export const LEVELS = ['A1', 'A2', 'B1'];
 export const VIEWS = ['glance', 'progress', 'grammar'];
@@ -47,8 +48,11 @@ export const RESPONSE_SCHEMA = {
         corrected: str('The full corrected sentence (same as studentAnswer when correct).'),
         changedWords: { type: 'ARRAY', items: { type: 'STRING' } },
         explanation: str('1–2 short lines in simple German.'),
-        rule: str('The grammar point in max 5 words, e.g. "Wohin? → Akkusativ".'),
-        errorType: enumOf(Object.keys(ERROR_TYPE), { nullable: true }),
+        rule: str('The grammar point in max 5 words, always the same wording for the same point, e.g. "Genitiv nach wegen", "Dativ nach in (Wo?)", "Perfekt mit sein". For a mistake in the word or its article: the word itself, e.g. "der Schrank".'),
+        errorType: enumOf(Object.keys(ERROR_TYPE), {
+          nullable: true,
+          description: 'null when correct. Artikel / Wortschatz = the word or its article was wrong (counts for the vocabulary score). Kasus / Adjektivendung / Verbform / Präposition / Wortstellung = a grammar mistake.',
+        }),
       },
       required: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule'],
       propertyOrdering: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule', 'errorType'],
@@ -140,7 +144,8 @@ export function salvageMessage(text) {
   }
 }
 
-// ctx: { level, difficulty (key), topicIds: Set, topicId, wordIds?: Set } – current values sent by the browser.
+// ctx: { level, difficulty (key), topicIds: Set, topicId, wordIds?: Set, openTask? } – current values sent by the browser.
+// openTask = the task of the question being answered ('flashcard' | 'grammar'), if the browser knows it.
 // wordIds = the ids of the words picked for this session; a wordId outside this set is dropped.
 export function normalizeReply(raw, ctx) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
@@ -161,6 +166,8 @@ export function normalizeReply(raw, ctx) {
       errorType: ERROR_TYPE[f.errorType] || null,
     };
     if (feedback.correct) feedback.errorType = null;
+    // a wrong flashcard is always a mistake in the word or its article, never "grammar" (lib/scores.js)
+    else if (ctx.openTask === 'flashcard' && !WORD_ERROR_KEYS.includes(feedback.errorType)) feedback.errorType = 'vocab';
   }
 
   // the number is only a hint: the app counts the questions itself
@@ -180,7 +187,8 @@ export function normalizeReply(raw, ctx) {
     const wordId = clip(e.wordId, 120);
     if (wordId && ctx.wordIds?.has(wordId)) {
       exercise.wordId = wordId;
-      exercise.task = TASKS.includes(e.task) ? e.task : type === 'flashcard' ? 'flashcard' : 'grammar';
+      // a card is always the "flashcard" task, every other exercise type is a "grammar" task with the word
+      exercise.task = type === 'flashcard' ? 'flashcard' : 'grammar';
     }
   }
 
