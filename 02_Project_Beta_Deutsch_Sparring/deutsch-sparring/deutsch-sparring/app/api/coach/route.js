@@ -19,14 +19,16 @@ const MAX_TURNS = 10;
 const MAX_STUDENT_CHARS = 500;
 
 // every error is JSON { error, code }; the page shows its own text for the code
-const fail = (error, status, code) => Response.json({ error, code }, { status });
+// detail: a short technical reason shown small under the error, so a problem can be reported (never secrets)
+const fail = (error, status, code, detail) => Response.json({ error, code, ...(detail ? { detail: cleanDetail(detail) } : {}) }, { status });
+const cleanDetail = (d) => String(d).replace(/[a-z]+:\/\/\S+/gi, '[url]').replace(/key=\S+/gi, 'key=[…]').slice(0, 140);
 
 export async function POST(req) {
   try {
     return await handle(req);
   } catch (e) {
     console.error('coach route crashed:', e?.message);
-    return fail('The coach is not available right now.', 500, 'server');
+    return fail('The coach is not available right now.', 500, 'server', `crash: ${e?.message}`);
   }
 }
 
@@ -72,7 +74,7 @@ async function handle(req) {
     home = await homeData(user, body);
   } catch (e) {
     console.error('coach: numbers unavailable:', e?.message);
-    return fail('The coach is not available right now.', 502, 'model');
+    return fail('The coach is not available right now.', 502, 'model', `numbers: ${e?.message}`);
   }
 
   // --- get the answer (demo script or Gemini) ---
@@ -86,7 +88,7 @@ async function handle(req) {
     if (e.status === 429) return fail('The free AI quota is used up for now. Try again in a few minutes.', 429, 'quota');
     if (e.status === 504) return fail('The coach took too long.', 504, 'timeout');
     if (e.status === 'config') return fail(e.message, 500, 'config');
-    return fail('The coach is not available right now.', 502, 'model');
+    return fail('The coach is not available right now.', 502, 'model', `AI ${e.status}: ${e.message}`);
   }
 
   async function askGemini() {
@@ -113,6 +115,6 @@ async function handle(req) {
   // invalid JSON: show at least the text
   console.warn('Coach answer was not valid JSON:', String(raw_answer).slice(0, 300));
   const text = salvageMessage(raw_answer);
-  if (!text) return fail('The coach is not available right now.', 502, 'model');
+  if (!text) return fail('The coach is not available right now.', 502, 'model', `unreadable answer (${String(raw_answer).length} chars)`);
   return Response.json({ coach: { message: text.slice(0, 1200), suggestedSession: null, planChanges: null, quickReplies: [] } });
 }

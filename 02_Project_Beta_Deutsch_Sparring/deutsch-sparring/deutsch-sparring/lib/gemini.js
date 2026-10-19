@@ -21,7 +21,7 @@ async function callOnce(model, { system, contents, schema, thinking, deadline })
   const timeout = Math.min(CALL_TIMEOUT_MS, msLeft(deadline));
   if (timeout < 3000) throw new ModelError('Keine Zeit mehr für einen weiteren Versuch.', 504);
 
-  const generationConfig = { temperature: 0.7, maxOutputTokens: 4096 };
+  const generationConfig = { temperature: 0.7, maxOutputTokens: 8192 } // thinking counts too: room for a long JSON answer;
   if (thinking) generationConfig.thinkingConfig = { thinkingLevel: 'low' };
   if (schema) {
     generationConfig.responseMimeType = 'application/json';

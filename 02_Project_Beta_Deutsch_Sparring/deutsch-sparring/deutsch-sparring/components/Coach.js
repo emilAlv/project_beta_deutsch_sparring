@@ -103,7 +103,8 @@ export default function Coach({ name, classCode, clientId, goals, topics, today,
     busyRef.current = false;
     setBusy(false);
     if (!res.coach) {
-      setError(t(`coachErr_${res.code}`) === `coachErr_${res.code}` ? t('coachErr_server') : t(`coachErr_${res.code}`));
+      const msg = t(`coachErr_${res.code}`) === `coachErr_${res.code}` ? t('coachErr_server') : t(`coachErr_${res.code}`);
+      setError(res.detail ? `${msg} (${res.detail})` : msg);
       return;
     }
     const c = res.coach;

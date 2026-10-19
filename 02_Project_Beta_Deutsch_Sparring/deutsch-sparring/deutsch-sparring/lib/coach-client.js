@@ -49,7 +49,7 @@ export async function askCoach({ messages, kind, name, classCode, clientId, toda
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.coach) return { coach: data.coach };
-    return { code: data.code || (res.status === 401 ? 'auth' : 'server') };
+    return { code: data.code || (res.status === 401 ? 'auth' : 'server'), detail: data.detail || (data.code ? '' : `HTTP ${res.status}`) };
   } catch {
     return { code: 'network' };
   }
