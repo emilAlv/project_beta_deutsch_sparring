@@ -53,7 +53,7 @@ Keine komplexen Beschwerden oder Speiseallergien-Beratung.
 > A: Sehr gern. Möchten Sie noch etwas?
 > B: Nein, danke. Das ist alles.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Mittagsmenü: «Suppe CHF 7 · Salat CHF 9 · Pasta CHF 16».
 
 **Verstehen:** Was ist am günstigsten?

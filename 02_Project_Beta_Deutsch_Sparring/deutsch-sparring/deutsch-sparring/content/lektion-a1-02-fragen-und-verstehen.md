@@ -53,7 +53,7 @@ Noch keine indirekten Fragen (Könnten Sie mir sagen, wann …).
 > A: Wie bitte? Können Sie das wiederholen?
 > B: Natürlich: eine Quittung.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Am Kursraum steht: «Zimmer 204, 2. Stock, Beginn: 18.30 Uhr».
 
 **Verstehen:** Wann beginnt der Kurs?

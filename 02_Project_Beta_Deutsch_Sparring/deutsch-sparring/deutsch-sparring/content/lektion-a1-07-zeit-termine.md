@@ -53,7 +53,7 @@ Keine komplexen Zeitformen oder indirekte Rede.
 > A: Treffen wir uns um halb sieben?
 > B: Das passt gut.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Öffnungszeiten: «Mo–Fr 09.00–17.00, Sa 09.00–13.00, So geschlossen».
 
 **Verstehen:** Ist das Geschäft am Sonntag geöffnet?

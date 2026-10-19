@@ -54,7 +54,7 @@ Preisdiskussionen und komplizierte Reklamationen erst später.
 > A: Nein, danke. Was kostet das?
 > B: Sieben Franken fünfzig.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Schild in der Bäckerei: «Brot CHF 3.80 · Gipfeli CHF 1.40 · Tee CHF 3.00».
 
 **Verstehen:** Was kostet ein Gipfeli?

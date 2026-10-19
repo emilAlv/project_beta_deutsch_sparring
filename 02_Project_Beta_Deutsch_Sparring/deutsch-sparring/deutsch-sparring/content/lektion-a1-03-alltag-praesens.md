@@ -52,7 +52,7 @@ Kein Passiv und keine komplexen Nebensätze.
 > A: Und am Sonntag?
 > B: Da schlafe ich länger und koche.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Nora arbeitet montags bis freitags. Am Samstag kauft sie ein. Sonntags besucht sie ihre Mutter.
 
 **Verstehen:** Was macht Nora am Samstag?

@@ -52,7 +52,7 @@ Keine Genitivdeklination und keine Passivformen.
 > A: Ist er neu?
 > B: Nein, er ist nicht neu.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Im Fundbüro liegen eine Brille, ein Schlüssel und zwei Taschen. Ein Handy liegt dort nicht.
 
 **Verstehen:** Gibt es im Fundbüro ein Handy?
