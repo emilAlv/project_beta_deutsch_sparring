@@ -12,7 +12,9 @@ const dayLabel = (at) => (sameDay(at, Date.now())
   ? t('today')
   : new Date(at).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' }));
 
-export default function Chat({ status, messages, busy, waiting, onCancel, slow, error, onRetry, stage, onSend, inputRef }) {
+// quick: chips above the input (answer choices, hint, skip …) – each one sends its text.
+// summaryActions: buttons under the last summary card (e.g. "Same settings again", "New session").
+export default function Chat({ status, messages, busy, waiting, onCancel, slow, error, onRetry, stage, onSend, inputRef, quick = [], summaryActions = null }) {
   const scrollRef = useRef(null);
   const stick = useRef(true);
 
@@ -42,10 +44,11 @@ export default function Chat({ status, messages, busy, waiting, onCancel, slow, 
           {messages.filter((m) => !m.hidden).map((m, i, shown) => {
             const prev = shown[i - 1];
             const marker = !prev || !sameDay(prev.at, m.at);
+            const lastSummary = m.summary && !shown.slice(i + 1).some((x) => x.summary);
             return (
               <div key={m.id} className="chat-item">
                 {marker && <DayMarker at={m.at} />}
-                <Message m={m} />
+                <Message m={m} actions={lastSummary ? summaryActions : null} />
               </div>
             );
           })}
@@ -63,6 +66,16 @@ export default function Chat({ status, messages, busy, waiting, onCancel, slow, 
         </div>
       </div>
 
+      {quick.length > 0 && (
+        <div className="quick" role="group" aria-label={t('optionsTitle')}>
+          {quick.map((c) => (
+            <button key={c.text} type="button" className={`chip chip-${c.style || 'soft'} small`} disabled={busy} onClick={() => onSend(c.text)}>
+              {c.text}
+            </button>
+          ))}
+        </div>
+      )}
+
       <Composer stage={stage} busy={busy} waiting={waiting} onCancel={onCancel} onSend={onSend} inputRef={inputRef} />
     </section>
   );
@@ -76,7 +89,7 @@ function DayMarker({ at }) {
   );
 }
 
-function Message({ m }) {
+function Message({ m, actions }) {
   if (m.role === 'system') {
     return <p className="system-line"><span>{m.text}</span></p>;
   }
@@ -88,10 +101,10 @@ function Message({ m }) {
       </div>
     );
   }
-  return <TutorMessage m={m} />;
+  return <TutorMessage m={m} actions={actions} />;
 }
 
-function TutorMessage({ m }) {
+function TutorMessage({ m, actions }) {
   const r = m.reply;
   const text = r ? r.message : m.text;
   return (
@@ -102,7 +115,7 @@ function TutorMessage({ m }) {
         {text && <p className="tutor-text"><Rich text={text} /></p>}
         {r?.feedback && <FeedbackCard f={r.feedback} />}
         {r?.exercise && (r.feedback ? <NextLine ex={r.exercise} /> : <ExerciseCard ex={r.exercise} />)}
-        {m.summary && <SummaryCard s={m.summary} />}
+        {m.summary && <SummaryCard s={m.summary} actions={actions} />}
       </div>
     </div>
   );
@@ -154,7 +167,7 @@ function FeedbackCard({ f }) {
   );
 }
 
-function SummaryCard({ s }) {
+function SummaryCard({ s, actions }) {
   return (
     <div className="summary-card">
       <p className="caps">{s.ended ? t('summaryEnded') : t('summaryTitle')}</p>
@@ -168,6 +181,13 @@ function SummaryCard({ s }) {
         {s.skipped > 0 && ` · ${t('summarySkipped', { n: s.skipped })}`}
       </p>
       <ProgressTrack states={s.states} />
+      {actions?.length > 0 && (
+        <div className="summary-actions">
+          {actions.map((a) => (
+            <button key={a.text} type="button" className={a.primary ? 'button-primary small' : 'button-outline small'} onClick={a.onClick}>{a.text}</button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

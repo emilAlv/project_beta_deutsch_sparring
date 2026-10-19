@@ -6,21 +6,29 @@ stored in Vercel's Postgres / Neon) – see `docs/security-accounts.md` at the r
 Without a database the app works without login; the practice history is remembered in each
 student's own browser either way.
 
-**One screen, the chat is the control panel.** Students type (or tap an option) to give their
-name and the class code, pick a topic, change level or difficulty, ask for a hint or a rule,
-or switch the right panel.
+**A setup screen, then the chat.** Before each session the student chooses everything once on
+the setup screen: *Grammar* or *Vocabulary + grammar*, the topic (grammar lesson, or word
+section + list with word counts), level (A1/A2/B1), difficulty (Easy/Medium/Hard), questions
+(10–50), word source (Goethe list / From the course / Both), flashcard direction, grammar with
+each word (article & plural, Akkusativ, Dativ, Genitiv, adjective endings, Perfekt, verb + case)
+and *Swiss or German Hochdeutsch* (stored; the tutor uses it from Task 5). The screen opens with
+the last session's choices. **These settings stay fixed until the session ends**: asking for
+«harder», «20 questions» or another topic in the chat gets a short «end the session to change
+this». Hint, rule, skip and stop still work in the chat (and as chips above the input).
 
-- **Sessions of 10–50 questions** (buttons in the right panel, or say «20 Fragen»). The app counts
-  the questions itself and ends the session when they are done – or at once when the student
-  says «Stopp», «genug», «I'm done» or taps *End session*. A summary card shows the score;
-  *Same topic again* starts a new round.
+- **During a session** a slim ribbon above the chat shows the fixed settings, «Question X of N»
+  with a mini progress bar and *End session*. The right panel has three tabs: *At a glance*,
+  *Progress & gaps*, *Grammar focus*.
+- **Sessions of 10–50 questions.** The app counts the questions itself and ends the session when
+  they are done – or at once when the student says «Stopp», «genug», «I'm done» or taps
+  *End session*. A summary card shows the score with *Same settings again* and *New session*
+  (back to the setup screen).
 - **Grammar topics:** gap fill, choose the form, build a sentence, translate, find the mistake.
 - **Vocabulary topics = flashcards** from the word list (`vocab/words.json`, see `vocab/README.md`).
   The topics are the word list's sections and lists (e.g. *Home & living › Furniture & objects*);
   tap a section to practise all of it or pick one list. English is the reference language:
-  English → German (answer with the article), German → English, or mixed. Optionally
-  *Add sentences*: after each card, build a sentence with the word – practises article +
-  adjective ending in Nominativ, Akkusativ and Dativ.
+  English → German (answer with the article), German → English, or mixed. With grammar points
+  chosen on the setup screen, a sentence task with the same word follows each card.
 - **Word scores:** the app keeps two scores per word from 1 to 10 – *V* (the word itself) and *G*
   (the word in grammar) – in the browser (`wort_scores`). A session only gets the words it needs
   (1 per question; with sentences 1 per 2 questions; plus 3 spare), chosen from the chosen
@@ -29,8 +37,8 @@ or switch the right panel.
   4–6 / 7–9 / 10). A 10 needs 4 right answers in a row; answers after a hint or on *Easy* give +1
   and do not count toward that. The app, never the AI, changes the scores. All rules and numbers
   are in `lib/scores.js`; `node scripts/check-scores.mjs` checks them.
-- Change topic any time: tap *Change topic*, *Grammar* / *Vocabulary*, a topic name, or just
-  write «Ich möchte jetzt Wohnen üben».
+- Without accounts the chat first asks for the name and the class code, then shows the setup
+  screen; with accounts the setup screen comes right after logging in.
 
 ## Deploy (first time, ~15 minutes)
 
@@ -88,18 +96,23 @@ Rules: one file per topic.
 
 ## How it works (for developers)
 
-- `app/page.js` – the screen and its state. **The app owns the session**: it numbers the
-  questions, counts the score, ends the session (all questions done, or the student stops) and
-  switches topics; the AI only writes exercises and feedback. Onboarding (name, class code via
-  `/api/code`) runs without AI; short commands ("stop", "20 questions", "English to German",
-  "harder", "change topic" …) are understood by `lib/intents.js`; everything else goes to `/api/chat`.
+- `app/page.js` – the screen and its state, in stages: name / class code (chat, no AI, only
+  without accounts) → `setup` (`components/SetupScreen.js`) → `practice` (chat + ribbon
+  `components/SessionRibbon.js` + right panel `components/SessionPanel.js`). **The app owns the
+  session**: it numbers the questions, counts the score and ends the session; the AI only writes
+  exercises and feedback. Each session carries its fixed settings (`session.settings`, helpers in
+  `lib/session-settings.js`); the last setup is remembered in `wort_prefs` to prefill the next one.
+  Short commands ("stop", "skip", "explain the rule" …) are understood by `lib/intents.js`; asking
+  to change a setting is answered by the app («end the session to change this»); everything else
+  goes to `/api/chat`. A running session survives a reload (`wort_chat`).
 - **Accounts** (only when switched on): `proxy.js` sends visitors without a valid login cookie to
   `/login` (API routes answer 401); `lib/session.js` = on/off switch + signed cookie,
   `lib/auth.js` = checks in each API route, `lib/password.mjs` = scrypt, `lib/users.js` = the
   `users` table (or memory with `AUTH_MEMORY=1`), `lib/schema.mjs` = the table (created on first
   use or with `node scripts/db-migrate.mjs`), `app/api/auth/*` = log in / sign up / log out,
   `components/AuthCard.js` = the login card. Tries are limited in `lib/guard.js`.
-- `/api/topics` – grammar lessons (`content/*.md`) plus the vocabulary sections/lists (`lib/words.js`).
+- `/api/topics` – grammar lessons (`content/*.md`) plus the vocabulary sections/lists (`lib/words.js`),
+  each list with its word counts per level and word source (for the setup screen).
   The old `wortschatz-*.md` lesson files are no longer used as topics.
 - `/api/chat` – for a vocabulary topic the server picks the session's words once (`pickWords` in
   `lib/scores.js`, using the scores the browser sends with the first request), puts only those
@@ -109,9 +122,10 @@ Rules: one file per topic.
   `lib/gemini.js`: low thinking (retried without it on HTTP 400), 25 s timeout per call,
   fallback model, `maxDuration = 60`, every error as JSON. Broken JSON → shown as a normal message.
 - The browser keeps the session: answers, score (counted by the app, not the model), the gap
-  card, last 5 sessions and the streak (`lib/storage.js`, localStorage only).
+  card, last 5 sessions (with their settings) and the streak (`lib/storage.js`, localStorage only).
 - Design: colours, fonts (Lora + Inter) and spacing from the Figma file "wort.", tokens at the
-  top of `app/globals.css`. Desktop layout = 3 columns; the phone layout is not done yet.
+  top of `app/globals.css`. Desktop layout = ribbon on top, chat + right panel below; the phone
+  layout is not done yet.
 
 ## Run locally
 
@@ -122,11 +136,12 @@ npm run dev                  # http://localhost:3000
 ```
 
 With `MOCK=1` the demo tutor builds its questions from the lesson files (the example exercises
-for grammar) and from the same word picker as the real tutor (flashcards) and understands hint, rule, skip, easier/harder,
-level and direction changes. Test words: `langsam` (slow answer), `kaputt` (broken JSON),
+for grammar) and from the same word picker as the real tutor (flashcards) and understands hint, rule and skip
+(asking to change a setting gets «end the session to change this»). Test words: `langsam` (slow answer), `kaputt` (broken JSON),
 `rohtext` (plain text), `absturz` (server error), `keine Lust mehr` (stop in own words).
 To start over as a new student: browser DevTools → Application → Local Storage → delete the
-`wort_*` entries (or use the avatar menu → *Change name*).
+`wort_*` entries (or use the avatar menu → *Change name*). The avatar menu → *Start a new session*
+opens the setup screen (*Cancel* goes back to the running session).
 
 Accounts locally without a database: add `AUTH_MEMORY=1` and `SESSION_SECRET=test` to
 `.env.local` (users live in memory until the server stops).

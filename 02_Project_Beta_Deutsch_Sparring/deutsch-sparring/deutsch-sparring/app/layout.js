@@ -13,17 +13,12 @@ export const metadata = {
 
 export const viewport = { width: 'device-width', initialScale: 1, themeColor: '#f6f4ee' };
 
-// Runs before the first paint: applies the remembered "options hidden" choice, so the
-// left panel doesn't jump after the page loads.
-const restoreLayout = `try{if(JSON.parse(localStorage.getItem('wort_prefs')||'{}').optionsHidden)document.documentElement.dataset.options='hidden'}catch(e){}`;
-
 export default function RootLayout({ children }) {
   return (
     // translate="no": browser auto-translation rewrites the page and crashed the app before
     <html lang="de" translate="no" className={`${lora.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         <meta name="google" content="notranslate" />
-        <script dangerouslySetInnerHTML={{ __html: restoreLayout }} />
       </head>
       <body>{children}</body>
     </html>
