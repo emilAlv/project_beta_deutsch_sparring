@@ -43,7 +43,7 @@ Bei kaufen/brauchen/bestellen häufig Akkusativ: der → den, ein → einen; die
 | 7 | Bilde einen Satz: bitte / ich / einen Tee / möchte | Ich möchte einen Tee, bitte. | Satzbau |
 | 8 | Finde den Fehler: Ich kaufe ein Apfel. | Ich kaufe einen Apfel. | Fehler finden |
 | 9 | Übersetze: How much is the bread? | Was kostet das Brot? | Übersetzung |
-| 10 | A: Haben Sie Milch? B: Ja, ___ Sie hier. | bitte | Lückentext |
+| 10 | A: Haben Sie Milch? B: Ja, ___ steht hier. | die | Lückentext |
 
 ## Nicht verwenden (off-limits)
 Preisdiskussionen und komplizierte Reklamationen erst später.

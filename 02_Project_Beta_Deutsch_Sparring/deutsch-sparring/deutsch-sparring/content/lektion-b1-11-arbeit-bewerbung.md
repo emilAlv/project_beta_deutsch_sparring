@@ -37,7 +37,7 @@ Seit + Dativ, Perfekt/Präteritum für Erfahrung, weil für Motivation; Konjunkt
 | 3 | Ich bin ___ die Planung verantwortlich. | für | Lückentext |
 | 4 | Ich interessiere mich ___ diese Stelle. | für | Lückentext |
 | 5 | Ich habe früher in Madrid ___. (arbeiten) | gearbeitet | Lückentext |
-| 6 | Ich würde mich freuen, Sie persönlich ___ . (kennenlernen) | kennenzulernen | Lückentext |
+| 6 | Ich würde mich freuen, Sie persönlich ___ (kennenlernen). | kennenzulernen | Lückentext |
 | 7 | Finde den Fehler: Seit drei Jahren habe ich in Zürich gearbeitet. (weiterhin dort tätig) | Seit drei Jahren arbeite ich in Zürich. | Fehler finden |
 | 8 | Übersetze: I am responsible for organising the project. | Ich bin für die Organisation des Projekts verantwortlich. | Übersetzung |
 
