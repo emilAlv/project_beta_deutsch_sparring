@@ -42,6 +42,7 @@ Figma is on the Starter plan with a small request limit: **read only the frame y
 - Swiss Hochdeutsch ("ss", Velo, Spital …) is the default; the other variant is always accepted as an answer.
 - Accounts: username + password; anyone with the class code can create one. No payments or marketing.
 - Plan view: linear timeline with a "Whole plan / Still to do" switch.
+- **Source is not a topic.** Every word has a **source**: Goethe A1, Goethe A2, Goethe B1, or **From the course** (words the teacher showed in class). A word can have more than one source. "Aus dem Kurs / From the course" is never shown as a topic. Every word also has a **level** (A1/A2/B1): for Goethe words their Goethe level, for course-only words a level estimated once during enrichment (marked as estimated). Setup and the word picker filter by topic, level **and** source.
 - **Open:** database. Task 7 needs Emilio's OK for Vercel's free Postgres (Neon) and its one package.
 
 ## Word scores (used by Tasks 2, 3, 8, 9)
@@ -107,6 +108,27 @@ Follow "Common rules" in docs/revamp-tasks.md.
    "written differently in two places" list, so he can fix his Word file.
 ```
 
+## Task 1b – Source and level for every word
+**Model: Sonnet** · effort: small–medium · you see: "From the course" is a source filter, not a topic; course words sit in their real topics
+
+```
+Task 1b of docs/revamp-tasks.md: word sources. Follow "Common rules" and the decision "Source is not a
+topic" in docs/revamp-tasks.md. Only vocab/ and scripts/vocab.mjs change; no app code.
+In Emilio's Word file the level column mixes level and source ("Kurs" = shown by the teacher), and the
+section "AUS DEM KURS — Palabras adicionales" is a source, not a topic.
+- scripts/vocab.mjs: give every word "sources" (array of "goethe-a1" | "goethe-a2" | "goethe-b1" | "kurs")
+  and "level" (A1 | A2 | B1). Level column A1/A2/B1 → that Goethe source + level; "Kurs" → source "kurs";
+  a word listed in the AUS DEM KURS section also gets "kurs" (it keeps its Goethe source if it has one).
+- Remove the AUS DEM KURS section from "topics" and from vocab/lists.json.
+- Course-only words: estimate their CEFR level once (enrichment field "level", plus "levelEstimated": true)
+  and, for the words that are in no other topic (about 58), add the best fitting existing topic and list
+  (enrichment field "topics"); if nothing fits, list "Other words". Use the batch + merge flow of
+  vocab/README.md for this so the work is done once and kept across weekly imports.
+- vocab/README.md: document sources and level; the weekly import keeps working.
+- Report to Emilio: how many words per source, the estimated levels per course word count, and the
+  topics given to the 58 words, so he can correct them in his Word file if he wants.
+```
+
 ## Task 2 – Word scores and word picker
 **Model: Sonnet** · effort: medium · you see: vocabulary from your word list, chosen by how well you know each word; answers arrive faster
 
@@ -120,7 +142,8 @@ lesson files, and only the words the session needs are sent to Gemini.
   with all numbers as named constants at the top.
 - New lib/words.js: load words.json once; leave out words marked "removed" (no longer in Emilio's list)
   and words without enrichment (no English or article yet – they cannot be checked); list sections and
-  lists with their English names.
+  lists with their English names; filter by level and by source (Goethe list / From the course / both,
+  using "sources" from Task 1b). "From the course" is never a topic.
 - Each answer must say which word it was about: add wordId and a "task" field ("flashcard" | "grammar")
   to the tutor's exercise/feedback in lib/reply.js (backwards compatible); the app, not the model,
   updates the scores from feedback.correct, feedback.errorType, hint/Leicht and skip.
@@ -160,7 +183,8 @@ Today "Add sentences" (lib/prompt.js, lib/mock.js) only does nouns in Nom/Akk/Da
 Task 4 of docs/revamp-tasks.md: session setup screen. Follow "Common rules" in docs/revamp-tasks.md.
 Design: Figma frames 31:42 (setup) and 32:101 (Sparring) – read only these two.
 - New setup screen before a session (route of your choice, e.g. /sparring/new): type (Grammar / Vocabulary
-  + grammar), topic (grammar topic, or word section + list from lib/words.js), level (+ "Kurs" words),
+  + grammar), topic (grammar topic, or word section + list from lib/words.js), level, word source (Goethe list /
+  From the course / both – replaces the "Include «Kurs» words" checkbox in Figma),
   difficulty, questions (10–50), flashcard direction, grammar points per word (no reference-language
   choice: English only, although the Figma frame still shows one),
   German variant (Swiss / German Hochdeutsch – store it; Task 5 makes the tutor use it).
