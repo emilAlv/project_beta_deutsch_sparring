@@ -2,12 +2,13 @@
 // and hand only new or changed words to a model for enrichment.
 // No packages needed. Run from the app folder:
 //
-//   node scripts/vocab.mjs import vocab/sources/MASTERLIST_..._v11.docx   read a new version
-//   node scripts/vocab.mjs batches                                       write todo batches for the model
+//   node scripts/vocab.mjs import vocab/sources/MASTERLIST_..._v11.docx   read a new version + write todo batches
 //   node scripts/vocab.mjs merge                                         check + merge filled batches
 //   node scripts/vocab.mjs status                                        counts and problems
 //
-// Data lives in vocab/words.json (one word per line). See vocab/README.md.
+// Data lives in vocab/words.json (one word per line, English only). See vocab/README.md.
+// Emilio's Spanish meanings are used only to write the temporary batches in vocab/todo/;
+// words.json keeps just their fingerprint (fp).
 
 import fs from 'fs';
 import path from 'path';
@@ -18,6 +19,7 @@ const ROOT = path.join(process.cwd(), 'vocab');
 const WORDS = path.join(ROOT, 'words.json');
 const TODO = path.join(ROOT, 'todo');
 const CHANGES = path.join(ROOT, 'changes');
+const LISTS = path.join(ROOT, 'lists.json');
 const BATCH_SIZE = 80;
 
 export const TYPES = ['noun', 'verb', 'adjective', 'adverb', 'preposition', 'conjunction', 'pronoun', 'number', 'name', 'phrase', 'other'];
@@ -82,6 +84,26 @@ function readDocx(file) {
 const clean = (s) => String(s || '').replace(/ß/g, 'ss').replace(/\s+/g, ' ').trim();
 const stripIcons = (s) => clean(s.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, ''));
 const EMPTY = /^[—–-]?$/;
+
+// English names of the sections and lists (vocab/lists.json: Spanish name from the Word file → English).
+function loadListNames() {
+  return JSON.parse(fs.readFileSync(LISTS, 'utf8'));
+}
+
+// "SECTION › List" (Spanish, as in the Word file) → English. Unknown names are collected in `missing`.
+function englishTopic(topic, names, missing) {
+  const [section, list] = topic.split(' › ');
+  const parts = [];
+  for (const [name, table] of [[section, names.sections], [list, names.lists]]) {
+    if (name == null) continue;
+    if (table[name]) parts.push(table[name]);
+    else missing.add(name);
+  }
+  return parts.join(' › ');
+}
+
+// What goes into words.json: no Spanish.
+const withoutEs = ({ es, ...rest }) => rest;
 
 // Identity of a word: lowercase, without dictionary suffixes (", -n", ", Pässe"), notes in brackets
 // or a trailing "...". Keeps the article, so "der See" and "die See" stay different words.
@@ -169,6 +191,11 @@ function importDocx(file, versionArg) {
   if (!version) throw new Error('Cannot tell the version from the file name; add it: import <file> v11');
   const rows = rowsOf(readDocx(file));
   if (rows.length < 50) throw new Error(`Only ${rows.length} rows found – is the table layout still the same?`);
+  const names = loadListNames();
+  const missingNames = new Set();
+  for (const r of rows) r.topic = englishTopic(r.topic, names, missingNames);
+  if (missingNames.size)
+    throw new Error(`No English name yet in vocab/lists.json for: ${[...missingNames].map((n) => `"${n}"`).join(', ')}. Add them (sections or lists) and run import again.`);
 
   // group duplicates (the same word in several lists)
   const incoming = new Map();
@@ -194,8 +221,8 @@ function importDocx(file, versionArg) {
     const old = byId.get(id);
     if (inc.others.length) report.conflicts.push(`${inc.src.de}: ${[inc.src, ...inc.others].map((s) => `${s.second || '—'} · ${s.es} · ${s.level}`).join('  ≠  ')}`);
     if (!old) {
-      const w = { id, src: inc.src, topics: inc.topics, fp, since: version };
-      if (inc.others.length) w.variants = inc.others;
+      const w = { id, src: withoutEs(inc.src), topics: inc.topics, fp, since: version };
+      if (inc.others.length) w.variants = inc.others.map(withoutEs);
       words.push(w);
       byId.set(id, w);
       report.added.push(inc.src.de);
@@ -205,12 +232,12 @@ function importDocx(file, versionArg) {
       delete old.removed;
       report.back.push(inc.src.de);
     }
-    if (old.fp !== fp) report.changed.push(`${old.src.de} (${old.src.second || '—'} · ${old.src.es} · ${old.src.level}) → ${inc.src.de} (${inc.src.second || '—'} · ${inc.src.es} · ${inc.src.level})`);
+    if (old.fp !== fp) report.changed.push(`${old.src.de} (${old.src.second || '—'} · ${old.src.level}) → ${inc.src.de} (${inc.src.second || '—'} · ${inc.src.es} · ${inc.src.level})`);
     if (JSON.stringify(old.topics) !== JSON.stringify(inc.topics)) report.moved.push(inc.src.de);
-    old.src = inc.src;
+    old.src = withoutEs(inc.src);
     old.topics = inc.topics;
     old.fp = fp;
-    if (inc.others.length) old.variants = inc.others;
+    if (inc.others.length) old.variants = inc.others.map(withoutEs);
     else delete old.variants;
   }
   for (const w of words) {
@@ -220,6 +247,7 @@ function importDocx(file, versionArg) {
     }
   }
   saveWords(words);
+  const spanish = new Map([...incoming].map(([id, inc]) => [id, inc]));
 
   fs.mkdirSync(CHANGES, { recursive: true });
   const list = (title, items, note = '') =>
@@ -238,26 +266,31 @@ function importDocx(file, versionArg) {
 
   console.log(`Imported ${version}: ${rows.length} rows, ${incoming.size} words.`);
   console.log(`  new ${report.added.length} · changed ${report.changed.length} · removed ${report.removed.length} · back ${report.back.length} · conflicts ${report.conflicts.length} · moved ${report.moved.length}`);
-  console.log(`  ${words.filter(needsEnrichment).length} words need enrichment → run: node scripts/vocab.mjs batches`);
   console.log(`  report: vocab/changes/${version}.md`);
+  writeBatches(words, spanish);
 }
 
-function writeBatches() {
-  const words = loadWords();
+// Batches are the only place where Emilio's Spanish meaning is written out; they are deleted after `merge`.
+function writeBatches(words, spanish) {
   const pending = words.filter(needsEnrichment);
   fs.mkdirSync(TODO, { recursive: true });
   const already = new Set(
     fs.readdirSync(TODO).filter((f) => f.endsWith('.json')).flatMap((f) => JSON.parse(fs.readFileSync(path.join(TODO, f), 'utf8')).map((x) => `${x.id}#${x.fp}`)),
   );
   const fresh = pending.filter((w) => !already.has(`${w.id}#${w.fp}`));
+  const unknown = fresh.filter((w) => !spanish.has(w.id));
+  if (unknown.length) throw new Error(`${unknown.length} words need enrichment but are not in this Word file (e.g. ${unknown[0].id}). Import the version they came from again.`);
   let n = fs.readdirSync(TODO).filter((f) => /^batch-\d+\.json$/.test(f)).length;
   for (let i = 0; i < fresh.length; i += BATCH_SIZE) {
-    const items = fresh.slice(i, i + BATCH_SIZE).map((w) => ({ id: w.id, fp: w.fp, de: w.src.de, second: w.src.second, es: w.src.es, level: w.src.level, ...(w.variants ? { also: w.variants.map((v) => `${v.second || '—'} · ${v.es} · ${v.level}`) } : {}), out: null }));
+    const items = fresh.slice(i, i + BATCH_SIZE).map((w) => {
+      const { src, others } = spanish.get(w.id);
+      return { id: w.id, fp: w.fp, de: src.de, second: src.second, es: src.es, level: src.level, ...(others.length ? { also: others.map((v) => `${v.second || '—'} · ${v.es} · ${v.level}`) } : {}), out: null };
+    });
     const name = `batch-${String(++n).padStart(3, '0')}.json`;
     fs.writeFileSync(path.join(TODO, name), `[\n${items.map((x) => JSON.stringify(x)).join(',\n')}\n]\n`);
   }
   const files = fs.readdirSync(TODO).filter((f) => f.endsWith('.json'));
-  console.log(`${pending.length} words need enrichment; ${fresh.length} newly put into batches. Batches waiting: ${files.length ? files.join(', ') : 'none'}`);
+  console.log(`  ${pending.length} words need enrichment; ${fresh.length} newly put into batches. Batches waiting: ${files.length ? files.join(', ') : 'none'}`);
 }
 
 // Checks one enrichment result; returns a list of problems (empty = fine).
@@ -360,10 +393,10 @@ function review() {
 }
 
 const [cmd, ...args] = process.argv.slice(2);
-const commands = { import: () => importDocx(args[0], args[1]), batches: writeBatches, merge, status, review };
+const commands = { import: () => importDocx(args[0], args[1]), merge, status, review };
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (!commands[cmd]) {
-    console.log('Usage: node scripts/vocab.mjs import <file.docx> [vNN] | batches | merge | status | review');
+    console.log('Usage: node scripts/vocab.mjs import <file.docx> [vNN] | merge | status | review');
     process.exit(1);
   }
   try {

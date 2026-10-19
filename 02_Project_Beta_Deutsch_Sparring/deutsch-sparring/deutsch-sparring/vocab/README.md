@@ -7,9 +7,10 @@ does the expensive part (a model adding English, articles, Perfekt …) **only o
 ```
 vocab/
   sources/     every version of the Word file, as Emilio sent it (never edit)
-  words.json   the knowledge base: one word per line (see "Data" below)
+  words.json   the knowledge base: one word per line, English only (see "Data" below)
+  lists.json   English names for every section and list of the Word file (Spanish name → English name)
   changes/     one report per version: new, changed, removed words, things to fix in the list
-  todo/        batches of words waiting for the model (empty when everything is done)
+  todo/        temporary batches of words waiting for the model (the only place with Spanish; each batch is deleted after a successful merge)
   REVIEW.md    corrections the model suggests for the Word list (made by `review`)
 ```
 The script is `scripts/vocab.mjs` (no packages). Run it from the app folder
@@ -31,14 +32,16 @@ Steps:
    - It prints how many words are new / changed / removed and writes `vocab/changes/vNN.md`.
    - If it stops with "Only N rows found", the table layout of the Word file changed: stop and tell
      Emilio which part of the file looks different. Do not guess.
+   - It also writes the batches (`vocab/todo/batch-NNN.json`, 80 words each) for the new or changed words.
+   - If it stops with "No English name yet in vocab/lists.json for: …", a section or list is new in the
+     Word file: add its English name to `vocab/lists.json` (`sections` or `lists`) and run the import again.
    - A removed word is kept in `words.json` (hidden, with `"removed": "vNN"`), so its enrichment is
      not lost if it comes back.
-4. `node scripts/vocab.mjs batches` → writes `vocab/todo/batch-NNN.json` (80 words each).
-5. Fill every batch (rules below), then `node scripts/vocab.mjs merge`. It checks each batch and
+4. Fill every batch (rules below), then `node scripts/vocab.mjs merge`. It checks each batch and
    merges only batches without problems. Fix the problems it lists and run `merge` again until
    `0 still need enrichment`.
-6. `node scripts/vocab.mjs review` (writes `vocab/REVIEW.md`) and `node scripts/vocab.mjs status`.
-7. Commit (`Vocabulary vNN: +X words`), push, and open a pull request titled `Vocabulary vNN`.
+5. `node scripts/vocab.mjs review` (writes `vocab/REVIEW.md`) and `node scripts/vocab.mjs status`.
+6. Commit (`Vocabulary vNN: +X words`), push, and open a pull request titled `Vocabulary vNN`.
    PR text in plain English for Emilio: numbers from step 3, the corrections from `REVIEW.md`
    and the "written differently in two places" list from `changes/vNN.md`, so he can fix his Word file.
 
@@ -54,7 +57,7 @@ Each line of a batch is one word Emilio wrote:
 {"id":"umziehen","fp":"…","de":"umziehen","second":"umgezogen (s)","es":"mudarse","level":"A2","also":["umgezogen · cambiarse de ropa · B1"],"out":null}
 ```
 - `de` German word as written (nouns often as dictionary entry: `der Name, -n`), `second` plural
-  or Partizip II (`(s)` = Perfekt with *sein*), `es` Emilio's Spanish meaning, `level` A1/A2/B1/Kurs.
+  or Partizip II (`(s)` = Perfekt with *sein*), `es` Emilio's Spanish meaning (used only to write `en`; it is never saved in `words.json`), `level` A1/A2/B1/Kurs.
 - `also` (optional): the same word appears elsewhere in the list with another level or meaning.
   Cover all meanings in `en`.
 
@@ -104,20 +107,21 @@ Examples:
 
 One object per line, sorted by `id`:
 ```json
-{"id":"der name","src":{"de":"der Name, -n","second":"Namen","es":"el nombre","level":"A1"},
- "topics":["PERSONA E IDENTIDAD › Datos personales y documentos"],"fp":"9c75bd59b6","since":"v10",
+{"id":"der name","src":{"de":"der Name, -n","second":"Namen","level":"A1"},
+ "topics":["Person & identity › Personal details & documents"],"fp":"9c75bd59b6","since":"v10",
  "enriched":{"type":"noun","en":"the name","article":"der","noun":"Name","plural":"die Namen","number":"","adjective":"lang","note":"n-Dekl.","fp":"9c75bd59b6"}}
 ```
 - `id` = the word in lowercase, without dictionary suffix, with article for nouns. Same id = same word.
-- `src` = what Emilio wrote (always replaced by the latest import). `topics` = section › list in his file.
-- `fp` = fingerprint of Emilio's word, plural/Partizip, Spanish and level. When it changes, the word is
-  enriched again; when only the list/section changes, nothing needs to be redone.
+- `src` = what Emilio wrote, without the Spanish meaning (always replaced by the latest import).
+  `topics` = section › list in his file, with the English names from `lists.json`.
+- `fp` = fingerprint of Emilio's word, plural/Partizip, Spanish meaning and level (only the fingerprint is
+  kept, not the Spanish). When it changes, the word is enriched again; when only the list/section changes, nothing needs to be redone.
 - `enriched` = the model's fields; valid only while `enriched.fp` equals `fp`.
 - `since` / `removed` = first and last version the word appeared in.
 - `variants` = the same word written differently elsewhere in the list (see `changes/vNN.md`).
 
-How the app uses this file is decided in the app revamp (it does not read it yet). The plan: the app
-picks ~40 words per session (level, topic, not practised recently) and sends only those to the tutor.
+The app reads this file through `lib/words.js` and picks only the words a session needs
+(`lib/scores.js`, by the student's word scores); see the main README.
 
 ## If Emilio changes the Word layout
 
