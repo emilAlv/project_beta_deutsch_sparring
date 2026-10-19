@@ -53,7 +53,7 @@ Keine Nebensätze oder komplizierte Vergangenheitsformen.
 > A: Freut mich! Wohnst du auch in Zürich?
 > B: Nein, ich wohne in Winterthur.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Kursinformation: Lara kommt aus der Schweiz. Samir kommt aus Portugal und wohnt in Winterthur.
 
 **Verstehen:** Wo wohnt Samir?

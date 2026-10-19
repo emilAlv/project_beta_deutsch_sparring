@@ -53,7 +53,7 @@ Keine langen formellen Briefe und keine Begründungen mit obwohl.
 > A: Gute Besserung! Kommst du am Freitag?
 > B: Ja, hoffentlich. Danke!
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 SMS: «Hallo! Der Unterricht beginnt heute erst um 18.30 Uhr. Bis später, Lara».
 
 **Verstehen:** Wann beginnt der Unterricht heute?

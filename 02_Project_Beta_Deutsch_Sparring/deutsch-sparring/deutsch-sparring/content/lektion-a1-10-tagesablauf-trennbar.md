@@ -52,7 +52,7 @@ Keine trennbaren Infinitivgruppen mit zu.
 > A: Kaufst du auch ein?
 > B: Ja, nach der Arbeit.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Notiz: «07.00 aufstehen; 08.15 abfahren; 17.30 einkaufen; 19.00 anrufen».
 
 **Verstehen:** Was passiert um 17.30 Uhr?

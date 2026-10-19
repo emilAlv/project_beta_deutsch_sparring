@@ -52,7 +52,7 @@ Noch keine komplexen Relativsätze oder Genitivattribute.
 > A: Und ist das dein Bruder?
 > B: Nein, das ist mein Freund.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Auf einer Einladung steht: «Anna lädt ihren Bruder Leo und ihre Freundin Mira ein».
 
 **Verstehen:** Wen lädt Anna ein?

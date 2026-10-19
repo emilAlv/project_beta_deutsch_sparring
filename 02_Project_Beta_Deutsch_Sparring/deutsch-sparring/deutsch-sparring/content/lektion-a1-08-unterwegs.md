@@ -53,7 +53,7 @@ Keine komplexen Wegbeschreibungen mit Relativsätzen.
 > A: Ist es weit?
 > B: Nein, ungefähr fünf Minuten zu Fuss.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Aushang: «Tram 4: Bahnhof – Central – Universität».
 
 **Verstehen:** Fährt Tram 4 zum Bahnhof?

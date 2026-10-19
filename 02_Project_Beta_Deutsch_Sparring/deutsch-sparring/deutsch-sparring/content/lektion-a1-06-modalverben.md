@@ -53,7 +53,7 @@ Kein Konjunktiv II ausser der festen Wendung «möchte».
 > A: Können wir uns am Freitag treffen?
 > B: Ja, am Freitag kann ich.
 
-## Kurzer authentischer Lesetext
+## Alltagsnaher Modelltext (fiktiv)
 Hinweis in der Bibliothek: «Hier darf man nicht telefonieren. Man kann Bücher ausleihen.»
 
 **Verstehen:** Darf man in der Bibliothek telefonieren?
