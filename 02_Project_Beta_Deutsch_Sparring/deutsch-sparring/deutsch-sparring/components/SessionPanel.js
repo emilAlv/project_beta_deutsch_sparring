@@ -302,10 +302,12 @@ function ProgressView({ session }) {
 }
 
 // One answer: "N · type", the question, what the student wrote, the correction, a right / to-repeat tag.
-// Older saved answers have no question or type: those lines are simply left out.
+// Older saved answers keep the question in line / skippedLine; without any, the line is left out.
 function AnswerRow({ a }) {
   const type = a.qType || a.kind;
-  const meta = [a.n, type && t(`ex_${type}`)].filter(Boolean).join(' · ');
+  const typeName = type && t(`ex_${type}`);
+  const meta = [a.n, typeName !== `ex_${type}` && typeName].filter(Boolean).join(' · ');
+  const question = a.question || a.line || a.skippedLine;
   const tag = a.correct
     ? <span className="answer-tag">✓ {t('tagRight')}</span>
     : <span className="answer-tag">✗ {t('tagRepeat')}</span>;
@@ -315,7 +317,7 @@ function AnswerRow({ a }) {
       <span className="mark" aria-hidden="true">{a.correct ? '✓' : a.skipped ? '–' : '✗'}</span>
       <span>
         <span className="answer-meta"><span>{meta}</span>{tag}</span>
-        {a.question && <span className="answer-question">{a.question}</span>}
+        {question && <span className="answer-question">{question}</span>}
         {a.skipped ? (
           <span className="answer-you">{t('answerYou')} {t('skipped')}</span>
         ) : (
