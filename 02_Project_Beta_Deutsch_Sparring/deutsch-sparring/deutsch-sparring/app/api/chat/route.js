@@ -12,6 +12,7 @@ import {
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
+import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -86,6 +87,8 @@ async function handle(req) {
     direction: ['en-de', 'de-en', 'mixed'].includes(s.direction) ? s.direction : 'en-de',
     grammar,
     sentences: wantsSentenceTasks(grammar),
+    // 'ch' (Swiss: ss) | 'de' (German: ß); anything else = 'ch'
+    variant: cleanVariant(s.variant),
   };
   const ses = body.session || {};
   const lessons = allTopics();
@@ -209,11 +212,12 @@ async function handle(req) {
 
   // --- turn it into clean data for the screen ---
   const parsed = parseModelJson(text);
-  const reply = normalizeReply(parsed, ctx);
+  // the tutor's text in the student's spelling (ss / ß); the student's own answer is never changed
+  const reply = replyToVariant(normalizeReply(parsed, ctx), settings.variant);
   if (!reply) {
     // invalid JSON: the browser shows the text as a normal message and keeps the panel as it is
     console.warn('Tutor answer was not valid JSON:', String(text).slice(0, 300));
-    return Response.json({ reply: null, text: salvageMessage(text) || String(text).slice(0, 2000), words: wordInfo() });
+    return Response.json({ reply: null, text: toVariant(salvageMessage(text) || String(text).slice(0, 2000), settings.variant), words: wordInfo() });
   }
   // modelText = what the browser sends back as this tutor turn next time (without the bulky parts)
   const { grammarFocus, options, ...essentials } = parsed;

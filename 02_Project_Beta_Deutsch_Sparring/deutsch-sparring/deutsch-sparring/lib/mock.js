@@ -12,6 +12,7 @@ import { getExamples } from './content';
 import { detectIntent, detectTopicWish } from './intents';
 import { RULES } from './grammar';
 import { chooseTask, findTask, infinitive } from './word-tasks';
+import { align, localizeWord, toVariant } from './variants';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
 
@@ -38,7 +39,8 @@ const FOCUS = {
 
 // ---------- small helpers ----------
 const norm = (s) => String(s || '').toLowerCase().replace(/ß/g, 'ss').replace(/[.,!?;:„“”"«»()…]/g, ' ').replace(/\s+/g, ' ').trim();
-const has = (hay, needle) => ` ${norm(hay)} `.includes(` ${norm(needle)} `);
+// Swiss and German words count the same (Velo = Fahrrad), ss = ß (norm): lib/variants.js
+const has = (hay, needle) => ` ${norm(align(hay, needle))} `.includes(` ${norm(needle)} `);
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const DIFF_DE = { easy: 'Leicht', medium: 'Mittel', hard: 'Schwer' };
 
@@ -84,7 +86,7 @@ function grammarItem(examples, n) {
 function checkGrammar(item, answer) {
   const a = norm(answer);
   const words = a.split(' ');
-  let correct = item.keys.some((k) => a.includes(norm(k)));
+  let correct = item.keys.some((k) => norm(align(answer, k)).includes(norm(k)));
   let studentAnswer = answer.trim();
   if (item.gaps && words.length <= item.gaps + 3) {
     // only the missing word(s) (maybe with a neighbour word): put them into the sentence
@@ -119,7 +121,9 @@ function grammarQuestion(examples, n, difficulty, strongHint = false) {
 // A picked word (lib/words.js) → the shape this demo works with.
 const splitMeanings = (en) => String(en || '').split(/,\s*(?![^()]*\))/).map((x) => x.trim()).filter(Boolean);
 
-function mockWord(w) {
+// variant = the student's choice: the word is shown the way that variant writes it (the answer may use either)
+function mockWord(word, variant) {
+  const w = localizeWord(word, variant);
   if (w.type === 'noun') {
     return {
       id: w.id, type: 'noun', de: `${w.article} ${w.noun}`, article: w.article, noun: w.noun, variants: [],
@@ -306,7 +310,8 @@ function openVocabQuestion(vocab, n, settings, line, wordId = '', task = null) {
 
 
 function openGrammarItem(examples, n, line) {
-  const i = examples.findIndex((ex) => ex.task === line || line === ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: '));
+  const same = (x, y) => toVariant(x, 'ch') === toVariant(y, 'ch'); // the line may be shown with ß
+  const i = examples.findIndex((ex) => same(ex.task, line) || same(line, ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: ')));
   return grammarItem(examples, i >= 0 ? i + 1 : n);
 }
 
@@ -321,7 +326,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   const lessons = topics;
   const topicId = topic?.id || DEFAULT_GRAMMAR;
   const isVocab = Boolean(topic) && topic.type !== 'Grammatik' && topic.id !== 'free';
-  const vocab = isVocab ? words.map(mockWord) : [];
+  const vocab = isVocab ? words.map((w) => mockWord(w, settings.variant)) : [];
   const examples = getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
   const useVocab = isVocab && vocab.length > 0;
   const total = session.total;

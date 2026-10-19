@@ -11,7 +11,7 @@ the setup screen: *Grammar* or *Vocabulary + grammar*, the topic (grammar lesson
 section + list with word counts), level (A1/A2/B1), difficulty (Easy/Medium/Hard), questions
 (10–50), word source (Goethe list / From the course / Both), flashcard direction, grammar with
 each word (article & plural, Akkusativ, Dativ, Genitiv, adjective endings, Perfekt, verb + case)
-and *Swiss or German Hochdeutsch* (stored; the tutor uses it from Task 5). The screen opens with
+and *Swiss or German Hochdeutsch* (see below). The screen opens with
 the last session's choices. **These settings stay fixed until the session ends**: asking for
 «harder», «20 questions» or another topic in the chat gets a short «end the session to change
 this». Hint, rule, skip and stop still work in the chat (and as chips above the input).
@@ -95,7 +95,24 @@ Rules: one file per topic.
   `Englisch` column is the reference language of the flashcards, the adjective is used for the
   sentence tasks. Swiss words: `das Wohnzimmer / (CH) die Stube` (both are accepted).
 - The first line (`# Title`) is the topic name; the part before ` – ` is the short name on the chips.
-- Write "ss" not "ß", own words, no scanned pages.
+- Write "ss" not "ß" (the word list and lessons stay Swiss; the German variant is made when something is shown), own words, no scanned pages.
+
+## Swiss or German Hochdeutsch
+The setup screen's choice (`variant` = `ch` | `de`) is sent with every `/api/chat` request and checked on the
+server (anything else = `ch`). Everything that differs lives in `lib/variants.js`:
+- **Spelling**: `toVariant(text, variant)`. Swiss = `ss`, never `ß`. German = `ß` only in a list of words
+  that really have it (Strasse→Straße, gross→groß, heissen→heißen, Fuss→Fuß, schliessen→schließen …);
+  words with a short vowel (Klasse, Wasser, muss, dass) are never touched. A missing word? Add its stem to
+  `SS_STEMS`.
+- **Word choice**: one map of Swiss ↔ German words (`PAIRS`: Velo/Fahrrad, Spital/Krankenhaus, Trottoir/Bürgersteig,
+  parkieren/parken, Estrich/Dachboden, Kasten/Schrank, Stube/Wohnzimmer …). Only certain pairs.
+- **Accepting both**: `sameAnswer(a, b)` treats ss/ß and Swiss/German pairs as equal; the answer check of the demo
+  tutor (`lib/mock.js`, `lib/word-tasks.js`) and the corrections diff (`lib/diff.js`) use it. A wrong article still
+  counts as wrong. The student's own answer is never rewritten.
+- **Showing**: the real tutor gets one rule per variant in `lib/prompt.js` (the other variant is always accepted);
+  the route also converts the tutor's text to the chosen spelling (`replyToVariant`). The demo tutor shows
+  flashcards in the variant's form (`localizeWord`). `vocab/words.json` stays Swiss.
+- `node scripts/check-variants.mjs` checks all of this.
 
 ## Change how the tutor behaves
 
@@ -150,7 +167,7 @@ for grammar) and from the same word picker as the real tutor (flashcards) and un
 (asking to change a setting gets «end the session to change this»). It shows every grammar task type
 (noun cases incl. Genitiv, verb Perfekt and verb + case, adjective endings); its German forms live in
 `lib/declension.js` and `lib/word-tasks.js` and `node scripts/check-word-tasks.mjs` checks them on every
-word of the list. Test words: `langsam` (slow answer), `kaputt` (broken JSON),
+word of the list (`node scripts/check-variants.mjs` checks the Swiss/German variants). Test words: `langsam` (slow answer), `kaputt` (broken JSON),
 `rohtext` (plain text), `absturz` (server error), `keine Lust mehr` (stop in own words).
 To start over as a new student: browser DevTools → Application → Local Storage → delete the
 `wort_*` entries (or use the avatar menu → *Change name*). The avatar menu → *Start a new session*

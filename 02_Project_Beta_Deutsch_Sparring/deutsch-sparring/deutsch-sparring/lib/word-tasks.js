@@ -8,6 +8,7 @@
 // Artikel / Wortschatz = the word or its article · Kasus / Adjektivendung / Verbform / Präposition = the grammar)
 // The German in here is written out by hand and checked by scripts/check-word-tasks.mjs.
 
+import { align } from './variants.js';
 import { GRAMMAR_POINTS, CASE_POINTS, RULES } from './grammar.js';
 import {
   nounPhrase, withEnding, genderOf, pluralOf, articlesOfGender, definiteArticle, indefiniteArticle, weakEnding, mixedEnding,
@@ -15,7 +16,8 @@ import {
 
 // ---------- small helpers ----------
 export const norm = (s) => String(s || '').toLowerCase().replace(/ß/g, 'ss').replace(/[.,!?;:„“”"«»()…]/g, ' ').replace(/\s+/g, ' ').trim();
-const has = (hay, needle) => ` ${norm(hay)} `.includes(` ${norm(needle)} `);
+// a Swiss word in the answer counts for its German word and the other way round (lib/variants.js); ss = ß (norm)
+const has = (hay, needle) => ` ${norm(align(hay, needle))} `.includes(` ${norm(needle)} `);
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const GENDER_DE = { m: 'maskulin', f: 'feminin', n: 'neutral', pl: 'Plural' };
 
