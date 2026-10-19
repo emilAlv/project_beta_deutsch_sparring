@@ -45,3 +45,23 @@ Eine Werkstatt erklärt, wie dein Fahrrad repariert wird. Formuliere dazu eine k
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Wann kann ich mein Velo abholen?
+> B: Die Bremsen werden heute kontrolliert. Morgen wird es fertig repariert.
+> A: Bekomme ich eine Nachricht?
+> B: Ja, Sie werden informiert, sobald es bereit ist.
+
+## Lesetext – Information auswählen
+Werkstattinformation: «Am Mittwoch werden die Fahrräder geprüft. Defekte Teile werden bestellt und anschliessend ersetzt.»
+
+**Kernaussage/Detail:** Was passiert mit defekten Teilen?
+
+**Musterantwort:** Sie werden bestellt und ersetzt.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Beschreibe den Ablauf einer Fahrradreparatur mit zwei Passivsätzen.
+2. **Gesprächsinitiative und Reaktion:** Der Kunde fragt, ob das Fahrrad schon fertig ist. Erkläre verständlich, was bereits erledigt wurde.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Formuliere dieselbe Information einmal aktiv, einmal passiv.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

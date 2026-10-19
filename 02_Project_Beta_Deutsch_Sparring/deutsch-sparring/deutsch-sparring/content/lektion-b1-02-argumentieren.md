@@ -46,3 +46,23 @@ Ihr besprecht, ob Homeoffice für euer Team sinnvoll ist. Formuliere dazu eine k
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Soll unsere Firma mehr Homeoffice anbieten?
+> B: Ich finde schon. Man spart Zeit und kann sich besser konzentrieren.
+> A: Andererseits fehlt manchmal der Kontakt im Team.
+> B: Stimmt. Vielleicht wären zwei Tage pro Woche ein Kompromiss.
+
+## Lesetext – Information auswählen
+Kurzbeitrag: «Die Gemeinde diskutiert längere Öffnungszeiten der Bibliothek. Einige begrüssen das Angebot, andere befürchten höhere Kosten.»
+
+**Kernaussage/Detail:** Nenne ein mögliches Argument gegen längere Öffnungszeiten.
+
+**Musterantwort:** Die höheren Kosten.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Vertritt die Position, dass öffentliche Verkehrsmittel attraktiver werden sollten. Nenne zwei Gründe.
+2. **Gesprächsinitiative und Reaktion:** Dein Gesprächspartner nennt ein Gegenargument. Reagiere sachlich mit «allerdings» oder «trotzdem».
+3. **Transfer, Zusammenfassen oder Vermitteln:** Schliesse mit einem Kompromiss oder einer begründeten Empfehlung ab.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

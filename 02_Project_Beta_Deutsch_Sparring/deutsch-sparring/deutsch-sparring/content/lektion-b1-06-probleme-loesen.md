@@ -46,3 +46,23 @@ Dein gebuchter Kurs wurde verschoben; du kontaktierst das Sekretariat. Formulier
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Ihr Kurs wurde leider kurzfristig abgesagt.
+> B: Das ist schwierig, weil ich extra frei genommen habe.
+> A: Wir können Ihnen einen Platz am nächsten Freitag anbieten.
+> B: Wäre auch ein Online-Termin möglich?
+
+## Lesetext – Information auswählen
+Mitteilung: «Wegen Bauarbeiten steht der Gemeinschaftsraum am Samstag nicht zur Verfügung. Der Ersatzraum befindet sich im Erdgeschoss.»
+
+**Kernaussage/Detail:** Welcher Raum kann stattdessen genutzt werden?
+
+**Musterantwort:** Der Ersatzraum im Erdgeschoss.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Melde ein Problem bei einer bereits bezahlten Dienstleistung, sachlich und ohne Vorwürfe.
+2. **Gesprächsinitiative und Reaktion:** Die Mitarbeiterin bietet eine Lösung an, die für dich ungünstig ist. Schlage selbst eine Alternative vor.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Fasse am Ende die getroffene Vereinbarung in einer kurzen Nachricht zusammen.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

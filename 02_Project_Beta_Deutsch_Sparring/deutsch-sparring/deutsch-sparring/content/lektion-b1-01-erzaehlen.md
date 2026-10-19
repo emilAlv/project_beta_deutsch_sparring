@@ -46,3 +46,23 @@ Du berichtest von einem unerwarteten Erlebnis unterwegs. Formuliere dazu eine ku
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Wie war die Velotour?
+> B: Am Anfang lief alles gut. Dann fing es an zu regnen.
+> A: Und was habt ihr gemacht?
+> B: Wir haben in einem Café gewartet. Danach sind wir weitergefahren.
+
+## Lesetext – Information auswählen
+Reisetagebuch: «Wir wollten um sieben losfahren, aber der Zug hatte Verspätung. Deshalb kamen wir erst mittags an. Zum Glück war das Wetter danach schön.»
+
+**Kernaussage/Detail:** Warum kamen die Reisenden später an?
+
+**Musterantwort:** Weil der Zug Verspätung hatte.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Erzähle in vier verbundenen Sätzen von einer Reise, bei der etwas Unerwartetes passiert ist.
+2. **Gesprächsinitiative und Reaktion:** Dein Gesprächspartner fragt: «Was hast du dann gemacht, und warum?» Erkläre die Entscheidung.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Fasse das Erlebnis aus der Sicht einer Person zusammen, die nicht dabei war.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

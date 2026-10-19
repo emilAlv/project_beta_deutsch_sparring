@@ -45,3 +45,23 @@ Ihr besprecht, wie sich das Leben in der Stadt verändern könnte. Formuliere da
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Wie stellst du dir Zürich in zehn Jahren vor?
+> B: Vermutlich wird es mehr Velowege geben.
+> A: Denkst du, dass die Mieten sinken werden?
+> B: Eher nicht, aber hoffentlich entstehen neue Wohnungen.
+
+## Lesetext – Information auswählen
+Stadtplanung (fiktiv): «In den nächsten fünf Jahren sollen mehr Grünflächen entstehen. Die Bauarbeiten beginnen voraussichtlich im Frühling.»
+
+**Kernaussage/Detail:** Was ist geplant?
+
+**Musterantwort:** Mehr Grünflächen.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Beschreibe zwei realistische Veränderungen in deiner Stadt in den nächsten Jahren.
+2. **Gesprächsinitiative und Reaktion:** Dein Gesprächspartner ist skeptisch. Reagiere mit einer vorsichtigen Vermutung statt einer absoluten Behauptung.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Unterscheide einen festen persönlichen Plan von einer unsicheren Prognose.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

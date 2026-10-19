@@ -37,7 +37,7 @@ Seit + Dativ, Perfekt/Präteritum für Erfahrung, weil für Motivation; Konjunkt
 | 3 | Ich bin ___ die Planung verantwortlich. | für | Lückentext |
 | 4 | Ich interessiere mich ___ diese Stelle. | für | Lückentext |
 | 5 | Ich habe früher in Madrid ___. (arbeiten) | gearbeitet | Lückentext |
-| 6 | Ich würde mich freuen, Sie persönlich ___ kennenzulernen. | kennenzulernen | Lückentext |
+| 6 | Ich würde mich freuen, Sie persönlich ___ . (kennenlernen) | kennenzulernen | Lückentext |
 | 7 | Finde den Fehler: Seit drei Jahren habe ich in Zürich gearbeitet. (weiterhin dort tätig) | Seit drei Jahren arbeite ich in Zürich. | Fehler finden |
 | 8 | Übersetze: I am responsible for organising the project. | Ich bin für die Organisation des Projekts verantwortlich. | Übersetzung |
 
@@ -46,3 +46,23 @@ Du führst ein Vorstellungsgespräch für eine Stelle in der Schweiz. Formuliere
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Erzählen Sie etwas über Ihre Berufserfahrung.
+> B: Ich habe mehrere Jahre in der Datenanalyse gearbeitet und Teams koordiniert.
+> A: Warum interessiert Sie diese Stelle?
+> B: Weil ich meine Erfahrung langfristig in einem Team einbringen möchte.
+
+## Lesetext – Information auswählen
+Stellenanzeige (fiktiv): «Gesucht: Projektassistenz, 80–100 %. Erfahrung mit Office-Programmen und gute Deutschkenntnisse erwünscht. Bewerbungen bis 30. November.»
+
+**Kernaussage/Detail:** Bis wann kann man sich bewerben?
+
+**Musterantwort:** Bis zum 30. November.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Antworte in drei zusammenhängenden Sätzen auf «Erzählen Sie etwas über sich».
+2. **Gesprächsinitiative und Reaktion:** Die Interviewerin fragt nach einem Beispiel für Zusammenarbeit. Beschreibe eine konkrete Erfahrung.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Formuliere anschliessend eine kurze E-Mail, in der du dein Interesse an der Stelle erklärst.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

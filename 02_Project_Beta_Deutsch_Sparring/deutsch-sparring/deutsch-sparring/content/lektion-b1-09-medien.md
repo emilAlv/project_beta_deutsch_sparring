@@ -46,3 +46,23 @@ Du erzählst einer Kollegin von einem kurzen Zeitungsartikel. Formuliere dazu ei
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Hast du den Bericht über den neuen Fahrplan gelesen?
+> B: Ja. Darin steht, dass ab Dezember mehr Züge fahren.
+> A: Was bedeutet das für uns?
+> B: Wir können abends länger unterwegs bleiben.
+
+## Lesetext – Information auswählen
+Kurznachricht (fiktiv): «Die Stadt eröffnet drei zusätzliche Veloparkplätze am Bahnhof. Laut Verwaltung sollen damit mehr Menschen das Fahrrad für ihren Arbeitsweg nutzen.»
+
+**Kernaussage/Detail:** Was ist das Ziel der zusätzlichen Veloparkplätze?
+
+**Musterantwort:** Mehr Menschen sollen mit dem Fahrrad zur Arbeit fahren.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Fasse den Modelltext mit eigenen Worten in zwei bis drei Sätzen zusammen.
+2. **Gesprächsinitiative und Reaktion:** Dein Gesprächspartner fragt, welche Information sicher und welche nur ein geplantes Ziel ist.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Erkläre die Hauptaussage anschliessend einer Person mit A2-Niveau in besonders einfachem Deutsch.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

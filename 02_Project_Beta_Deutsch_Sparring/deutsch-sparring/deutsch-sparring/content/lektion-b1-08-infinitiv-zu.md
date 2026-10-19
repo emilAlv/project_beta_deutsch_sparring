@@ -45,3 +45,23 @@ Du planst deine Deutschlernzeit neben der Arbeit. Formuliere dazu eine kurze Ant
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Warum besuchst du den Kurs?
+> B: Ich möchte mich im Beruf besser ausdrücken können.
+> A: Und was machst du dafür?
+> B: Ich versuche, jeden Tag 20 Minuten zu üben.
+
+## Lesetext – Information auswählen
+Kursbeschreibung: «Der Abendkurs hilft dabei, im Alltag sicherer zu sprechen. Die Übungen eignen sich, um typische Gespräche zu trainieren.»
+
+**Kernaussage/Detail:** Wofür eignen sich die Übungen?
+
+**Musterantwort:** Um typische Gespräche zu trainieren.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Erkläre zwei persönliche Lernziele mit «um … zu».
+2. **Gesprächsinitiative und Reaktion:** Eine Freundin fragt, wie du dein Ziel erreichen willst. Antworte mit «versuchen, … zu».
+3. **Transfer, Zusammenfassen oder Vermitteln:** Plane eine konkrete Lernwoche mit drei Aktivitäten und ihrem Zweck.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.
