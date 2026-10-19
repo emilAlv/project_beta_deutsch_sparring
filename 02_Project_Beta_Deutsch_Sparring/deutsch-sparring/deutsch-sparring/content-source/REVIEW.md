@@ -11,6 +11,9 @@
 - The list I worked from is v10 (13 sections), not v9 as CONVERSION.md describes. I mapped the sections to files myself (see the summary) and split the big section «Verbos, adjetivos y palabras funcionales» into two files (verbs; adjectives and small words) because it has about 470 rows.
 - I used the Wortart values «Eigenname» (Deutschland, Ostern …), «Fragewort» (wer, wo …) and «Pronomen/Artikelwort» (kein, welch- …) in addition to the ones in CONVERSION.md.
 - Many words appear in several places (for example der Anschluss, die Gebühr, der Herd, kündigen, entfernt). I kept every row exactly where Emilio put it, so the same word is in more than one file; the Englisch and Spanisch cells are the same each time.
+- lektion-02-wohnen-im-haus.md: The existing lesson file has no level per word, so I could not compare Emilio's levels with it. I added A1 to the Niveau line because Emilio's list has A1 words for this topic (Haus, Zimmer, Bett …).
+- lektion-02-wohnen-im-haus.md: Das Erdgeschoss: the existing table has no plural («–»), Emilio wrote «Erdgeschosse». I did not change the existing row.
+- lektion-02-wohnen-im-haus.md: 37 of Emilio's 105 rows were already in the lesson (same noun or verb) and were not added again. The other 68 are in the new tables «aus der Masterliste» (51 nouns, 5 verbs, 11 words, 1 phrase).
 
 ## Open questions (code)
 - Nothing so far.
