@@ -33,4 +33,5 @@
 - wortschatz-14-aus-dem-kurs.md: «tischdecken» (hat tischgedeckt) is not a standard verb; it is usually «den Tisch decken» (hat den Tisch gedeckt). I kept Emilio's version.
 
 ## Open questions (code)
-- Nothing so far.
+- The biggest lesson files (Adjektive & Wörter, about 290 rows; Verben, about 210 rows) are long. If the real tutor reads the whole file for every answer this costs more; the files could be split by topic if needed.
+- The extra «Spanisch» column and the table headings «Verben –», «Wörter –», «Ausdrücke –» are new. check-content.mjs reads them, but the app code was not changed or tested beyond that.
