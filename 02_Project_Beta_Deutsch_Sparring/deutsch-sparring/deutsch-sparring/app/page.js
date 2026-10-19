@@ -825,7 +825,9 @@ export default function Home() {
         onChangeName={account ? null : changeName}
         onLogOut={account ? logOut : null}
       />
-      {stage === 'home' ? (
+      {stage === 'loading' ? (
+        <main className="workspace" aria-busy="true" /> // nothing yet: don't flash the chat before Home
+      ) : stage === 'home' ? (
         <HomePage
           name={profile.name}
           streak={currentStreak(history.streak)}
