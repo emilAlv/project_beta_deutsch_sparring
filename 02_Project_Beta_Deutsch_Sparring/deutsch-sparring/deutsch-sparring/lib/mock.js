@@ -10,6 +10,8 @@
 import { ModelError } from './gemini';
 import { getExamples } from './content';
 import { detectIntent, detectTopicWish } from './intents';
+import { RULES } from './grammar';
+import { chooseTask, findTask, infinitive } from './word-tasks';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
 
@@ -30,7 +32,7 @@ const FOCUS = {
       { label: 'der', value: 'maskulin', note: 'der Tisch, der Schrank (CH: der Kasten)' },
       { label: 'die / das', value: 'feminin / neutral', note: 'die Lampe · das Bett' },
     ],
-    watchOut: 'Im Dativ: dem alten Schrank, der hellen Lampe, dem breiten Bett – das Adjektiv endet auf -en.',
+    watchOut: 'Im Dativ und Genitiv endet das Adjektiv auf -en: mit dem alten Schrank, wegen des alten Schranks.',
   },
 };
 
@@ -110,8 +112,10 @@ function grammarQuestion(examples, n, difficulty, strongHint = false) {
   };
 }
 
-// ---------- vocabulary: flashcards + sentence tasks ----------
+// ---------- vocabulary: flashcards + grammar tasks ----------
 // The words come from the picker (lib/scores.js, vocab/words.json) – the same words the real tutor gets.
+// With grammar on (settings.grammar), every noun, verb and adjective gets a card and then ONE grammar task
+// with the same word (lib/word-tasks.js); phrases and other words only get the card.
 // A picked word (lib/words.js) → the shape this demo works with.
 const splitMeanings = (en) => String(en || '').split(/,\s*(?![^()]*\))/).map((x) => x.trim()).filter(Boolean);
 
@@ -119,18 +123,43 @@ function mockWord(w) {
   if (w.type === 'noun') {
     return {
       id: w.id, type: 'noun', de: `${w.article} ${w.noun}`, article: w.article, noun: w.noun, variants: [],
-      en: splitMeanings(w.en), plural: w.plural, adjective: w.adjective,
+      en: splitMeanings(w.en), plural: w.plural, adjective: w.adjective, raw: w,
     };
   }
-  const de = w.de.split(/\s*→\s*/)[0].split(',')[0].trim();
-  return { id: w.id, type: w.type, de, article: '', noun: de, variants: [], en: splitMeanings(w.en), plural: '', adjective: '', perfekt: w.perfekt };
+  const de = infinitive(w);
+  return { id: w.id, type: w.type, de, article: '', noun: de, variants: [], en: splitMeanings(w.en), plural: '', adjective: '', perfekt: w.perfekt, raw: w };
 }
 const isNoun = (w) => w.type === 'noun';
+const grammarOf = (settings) => settings.grammar || [];
+// grammar on → the article is checked on every noun card (in both directions)
+const articleChecked = (settings) => grammarOf(settings).length > 0;
+const asksPlural = (settings, w) => isNoun(w) && Boolean(w.plural) && (settings.difficulty === 'hard' || grammarOf(settings).includes('article-plural'));
+const meaningOf = (w) => w.en[0].replace(/^the /, '');
 
-// with sentences: odd questions are cards, even ones a sentence with the card just before
-function vocabSlot(n, sentences) {
-  if (!sentences || n % 2 === 1) return { kind: 'card', idx: n - 1, cardNo: sentences ? (n - 1) / 2 : n - 1 };
-  return { kind: 'sentence', idx: n - 2, cardNo: (n - 2) / 2 };
+// Which word and which kind of question is question n? Deterministic, so the demo needs no memory:
+// word after word: its card, then (grammar on, the word has a task) its grammar task.
+const taskCache = new Map();
+function taskOf(word, settings, idx) {
+  if (!settings.sentences) return null;
+  const key = `${word.id}|${idx}|${grammarOf(settings).join(',')}`;
+  if (!taskCache.has(key)) taskCache.set(key, chooseTask(word.raw, grammarOf(settings), idx));
+  return taskCache.get(key);
+}
+
+function plan(vocab, settings, n) {
+  let q = 0;
+  let cardNo = -1;
+  for (let i = 0; i < 400; i += 1) {
+    const idx = i % vocab.length;
+    q += 1;
+    cardNo += 1;
+    if (q === n) return { idx, kind: 'card', cardNo };
+    if (settings.sentences && taskOf(vocab[idx], settings, idx)) {
+      q += 1;
+      if (q === n) return { idx, kind: 'sentence', cardNo };
+    }
+  }
+  return { idx: (n - 1) % vocab.length, kind: 'card', cardNo: n - 1 };
 }
 
 function cardDirection(settings, cardNo) {
@@ -138,79 +167,31 @@ function cardDirection(settings, cardNo) {
   return settings.direction === 'de-en' ? 'de-en' : 'en-de';
 }
 
-const CASES = ['Nominativ', 'Akkusativ', 'Dativ'];
-const FRAME = {
-  Nominativ: (phrase, plural) => `${cap(phrase)} ${plural ? 'gefallen' : 'gefällt'} mir.`,
-  Akkusativ: (phrase) => `Ich brauche ${phrase}.`,
-  Dativ: (phrase) => `Ich bin zufrieden mit ${phrase}.`,
-};
-const FRAME_HINT = { Nominativ: 'z. B. … gefällt mir.', Akkusativ: 'z. B. Ich brauche …', Dativ: 'z. B. mit …' };
-
-function adjStem(adj) {
-  const a = adj || 'neu';
-  if (a === 'hoch') return 'hoh';
-  if (/[^aeiou]el$/.test(a)) return a.replace(/el$/, 'l');
-  return a;
-}
-
-// definite article + adjective (weak ending) + noun in the asked case
-function declined(word, kase) {
-  const plural = word.article === 'die' && !word.plural && /en$/.test(word.noun);
-  const g = plural ? 'pl' : { der: 'm', die: 'f', das: 'n' }[word.article];
-  const art = {
-    Nominativ: { m: 'der', f: 'die', n: 'das', pl: 'die' },
-    Akkusativ: { m: 'den', f: 'die', n: 'das', pl: 'die' },
-    Dativ: { m: 'dem', f: 'der', n: 'dem', pl: 'den' },
-  }[kase][g];
-  const end = g === 'pl' || kase === 'Dativ' || (kase === 'Akkusativ' && g === 'm') ? 'en' : 'e';
-  const noun = word.noun === 'Nachbar' && kase !== 'Nominativ' ? 'Nachbarn' : word.noun;
-  return { phrase: `${art} ${adjStem(word.adjective)}${end} ${noun}`, plural: g === 'pl', g };
-}
-
-// indefinite variants are fine too ("einen alten Schrank")
-function indefinite(word, kase, g) {
-  const stem = adjStem(word.adjective);
-  const table = {
-    Nominativ: { m: ['ein', 'er'], f: ['eine', 'e'], n: ['ein', 'es'] },
-    Akkusativ: { m: ['einen', 'en'], f: ['eine', 'e'], n: ['ein', 'es'] },
-    Dativ: { m: ['einem', 'en'], f: ['einer', 'en'], n: ['einem', 'en'] },
-  }[kase][g];
-  if (!table) return null;
-  const noun = word.noun === 'Nachbar' && kase !== 'Nominativ' ? 'Nachbarn' : word.noun;
-  return `${table[0]} ${stem}${table[1]} ${noun}`;
-}
-
-// pin = { word, kind?, kase? }: keep the word (and kind) of a question that is asked again
+// pin = { word, kind?, task? }: keep the word (and kind) of a question that is asked again
 function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
-  const slot = { ...vocabSlot(n, settings.sentences), ...(pin?.kind ? { kind: pin.kind } : {}) };
-  const word = pin?.word || vocab[slot.idx % vocab.length];
+  const p = plan(vocab, settings, n);
+  const word = pin?.word || vocab[p.idx];
+  const idx = Math.max(0, vocab.indexOf(word));
+  const kind = pin?.kind || p.kind;
   const d = settings.difficulty;
-  // only nouns get a sentence task here; any other word gets its card again, the other way round
-  if (slot.kind === 'sentence' && !isNoun(word)) {
-    const back = cardDirection({ direction: 'mixed' }, slot.cardNo + 1);
-    return vocabQuestion(vocab, n, { ...settings, sentences: false, direction: back }, strongHint, { word, kind: 'card' });
+  if (kind === 'sentence') {
+    const task = pin?.task || taskOf(word, settings, idx);
+    if (task) {
+      return {
+        exercise: { number: n, type: task.type, direction: null, line: task.line, hint: task.hint(strongHint, d) },
+        options: task.options(d),
+        word,
+        task,
+      };
+    }
   }
-  if (slot.kind === 'sentence') {
-    const kase = pin?.kase || CASES[slot.idx % 3];
-    const adj = word.adjective || 'neu';
-    return {
-      exercise: {
-        number: n,
-        type: 'Satzbau',
-        direction: null,
-        line: `Bilde einen Satz: ${word.de} + ${adj} · ${kase}`,
-        hint: strongHint ? `(${declined(word, kase).phrase} …)` : d === 'hard' ? null : `(${FRAME_HINT[kase]})`,
-      },
-      options: [],
-      word,
-      kase,
-    };
-  }
-  const dir = cardDirection(settings, slot.cardNo);
+  const dir = cardDirection(settings, p.cardNo);
   const others = vocab.filter((w) => w !== word);
-  const pick = (k) => (others.length ? others[(slot.idx * 7 + k * 13) % others.length] : word);
+  const pick = (k) => (others.length ? others[(idx * 7 + k * 13) % others.length] : word);
+  const withArticle = isNoun(word) && articleChecked(settings);
   if (dir === 'en-de') {
     const choices = isNoun(word) ? ['der', 'die', 'das'].map((a) => `${a} ${word.noun}`) : [];
+    const plural = asksPlural(settings, word);
     return {
       exercise: {
         number: n,
@@ -218,10 +199,26 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         direction: 'en-de',
         line: word.en[0],
         hint: strongHint ? `(${word.article ? `${word.article} …, ` : ''}Anfang: ${word.noun.slice(0, 3)}…)`
-          : d === 'hard' ? null : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : 'mit Artikel',
+          : d === 'hard' ? null : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : isNoun(word) ? (plural ? 'mit Artikel und Plural' : 'mit Artikel') : null,
       },
       options: d === 'easy' ? choices : [],
       word,
+    };
+  }
+  // German → English. With grammar on, a noun comes WITHOUT its article: the student gives article and meaning.
+  if (withArticle) {
+    const wrong = ['der', 'die', 'das'];
+    return {
+      exercise: {
+        number: n,
+        type: 'Karteikarte',
+        direction: 'de-en',
+        line: word.noun,
+        hint: strongHint ? `(Artikel: ${word.article}, ${meaningOf(word).slice(0, 3)}…)` : d === 'hard' ? null : d === 'easy' ? '(Wähle Artikel und Bedeutung.)' : 'mit Artikel, auf Englisch',
+      },
+      options: d === 'easy' ? wrong.map((a) => `${a} – ${meaningOf(word)}`) : [],
+      word,
+      bare: true,
     };
   }
   const choices = [word.en[0], pick(1).en[0], pick(2).en[0]].sort();
@@ -241,35 +238,9 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
 function checkVocab(q, answer, settings) {
   const a = norm(answer);
   const w = q.word;
-  if (q.exercise.type === 'Satzbau') {
-    const { phrase, plural, g } = declined(w, q.kase);
-    const nouns = [w.noun, w.noun === 'Nachbar' ? 'Nachbarn' : null].filter(Boolean);
-    const okPhrases = [phrase, indefinite(w, q.kase, g)].filter(Boolean);
-    if (q.kase === 'Dativ' && g !== 'f' && g !== 'pl') okPhrases.push(phrase.replace(/^dem /, 'im '), phrase.replace(/^dem /, 'am '));
-    const correct = okPhrases.some((p) => a.includes(norm(p)));
-    let corrected = FRAME[q.kase](phrase, plural);
-    const original = answer.trim();
-    const nounAt = original.toLowerCase().split(/\s+/).findIndex((x) => nouns.some((nn) => norm(x) === norm(nn)));
-    const from = Math.max(0, nounAt - 2);
-    // keep the student's sentence and fix only "article + adjective + noun" – if the phrase sits
-    // where that case belongs (subject at the start for Nominativ, an object later otherwise)
-    if (!correct && nounAt >= 0 && (q.kase === 'Nominativ' ? from === 0 : from > 0)) {
-      const parts = original.split(/\s+/);
-      const punct = (parts[nounAt].match(/[.!?,]+$/) || [''])[0];
-      parts.splice(from, nounAt - from + 1, `${phrase}${punct}`);
-      corrected = parts.join(' ');
-      if (from === 0) corrected = cap(corrected);
-    }
-    return {
-      correct,
-      corrected: correct ? original : corrected,
-      changedWords: correct ? [] : [phrase],
-      explanation: `${q.kase}: ${phrase}.${q.kase === 'Dativ' ? ' Im Dativ endet das Adjektiv auf -en.' : ''}`,
-      rule: `${q.kase} + Adjektiv`,
-      errorType: correct ? null : 'Adjektivendung',
-    };
-  }
-  const card = `${w.de}${settings.difficulty === 'hard' && w.plural ? `, ${w.plural}` : ''}`;
+  if (q.task) return q.task.check(answer);
+  const plural = asksPlural(settings, w);
+  const card = `${w.de}${plural ? `, ${w.plural}` : ''}`;
   const extra = isNoun(w)
     ? [w.plural ? `Plural: ${w.plural}.` : 'Nur Plural.', w.variants.length ? `Auch: ${w.variants.join(', ')}.` : ''].filter(Boolean).join(' ')
     : w.perfekt ? `Perfekt: ${w.perfekt}.` : '';
@@ -277,49 +248,62 @@ function checkVocab(q, answer, settings) {
     const forms = [w.de, ...w.variants];
     const right = forms.some((f) => has(a, f));
     const nounOnly = forms.some((f) => has(a, f.replace(/^(der|die|das) /, '')));
-    const plural = settings.difficulty !== 'hard' || !w.plural || has(a, w.plural);
-    const correct = right && plural;
+    const pluralOk = !plural || has(a, w.plural);
+    const correct = right && pluralOk;
     return {
       correct,
       corrected: correct ? answer.trim() : card,
       changedWords: correct ? [] : right ? [w.plural] : [nounOnly ? w.article : w.de],
-      explanation: correct ? extra : nounOnly && !right ? `Das Nomen stimmt, aber der Artikel ist «${w.article}». ${extra}` : extra,
-      rule: w.de,
-      errorType: correct ? null : nounOnly ? 'Artikel' : 'Wortschatz',
+      explanation: correct ? extra : nounOnly && !right ? `Das Nomen stimmt, aber der Artikel ist «${w.article}». ${extra}` : right ? `Der Plural fehlt oder stimmt nicht. ${extra}` : extra,
+      rule: right && !pluralOk ? RULES.plural : w.de,
+      errorType: correct ? null : right ? 'Wortschatz' : nounOnly ? 'Artikel' : 'Wortschatz',
     };
   }
   const meanings = w.en.map((e) => e.replace(/^the /, ''));
-  const correct = meanings.some((m) => a.includes(norm(m)));
+  const meaningOk = meanings.some((m) => a.includes(norm(m)));
+  if (q.bare) {
+    // article + meaning of a noun shown without its article
+    const arts = a.split(' ').filter((t) => ['der', 'die', 'das'].includes(t));
+    const articleOk = arts.length > 0 && arts.every((t) => t === w.article);
+    const correct = meaningOk && articleOk;
+    return {
+      correct,
+      corrected: correct ? answer.trim() : `${w.de} – ${w.en.join(' / ')}`,
+      changedWords: correct ? [] : meaningOk ? [w.article] : [w.en[0]],
+      explanation: correct ? `${w.de}: ${w.en.join(', ')}. ${extra}` : meaningOk ? `Die Bedeutung stimmt, aber der Artikel ist «${w.article}». ${extra}` : `${w.de}: ${w.en.join(', ')}. ${extra}`,
+      rule: w.de,
+      errorType: correct ? null : meaningOk ? 'Artikel' : 'Wortschatz',
+    };
+  }
   return {
-    correct,
-    corrected: correct ? answer.trim() : w.en.join(' / '),
-    changedWords: correct ? [] : [w.en[0]],
+    correct: meaningOk,
+    corrected: meaningOk ? answer.trim() : w.en.join(' / '),
+    changedWords: meaningOk ? [] : [w.en[0]],
     explanation: `${w.de}: ${w.en.join(', ')}. ${extra}`,
     rule: w.de,
-    errorType: correct ? null : 'Wortschatz',
+    errorType: meaningOk ? null : 'Wortschatz',
   };
 }
 
 // The open question as it was asked (settings may have changed since then): found by its text.
 function openVocabQuestion(vocab, n, settings, line, wordId = '', task = null) {
   const byId = wordId && vocab.find((w) => w.id === wordId);
-  if (byId) {
-    const sentence = String(line || '').match(/· (Nominativ|Akkusativ|Dativ)/);
-    if (task === 'grammar' && sentence && isNoun(byId)) return { exercise: { number: n, type: 'Satzbau', direction: null, line }, word: byId, kase: sentence[1] };
-    const dir = byId.en.includes(line) || byId.en[0] === line ? 'en-de' : 'de-en';
-    return { exercise: { number: n, type: 'Karteikarte', direction: dir, line }, word: byId };
+  if (byId && task === 'grammar') {
+    const t = findTask(byId.raw, line);
+    if (t) return { exercise: { number: n, type: t.type, direction: null, line }, word: byId, task: t };
   }
-  const sentence = String(line || '').match(/^Bilde einen Satz: (.+?) \+ (.+?) · (Nominativ|Akkusativ|Dativ)/);
-  if (sentence) {
-    const word = vocab.find((w) => w.de === sentence[1]);
-    if (word) return { exercise: { number: n, type: 'Satzbau', direction: null, line }, word, kase: sentence[3] };
+  const word = byId || vocab.find((w) => w.en[0] === line || w.de === line || (isNoun(w) && w.noun === line));
+  if (word) {
+    const dir = word.en.includes(line) ? 'en-de' : 'de-en';
+    return { exercise: { number: n, type: 'Karteikarte', direction: dir, line }, word, bare: dir === 'de-en' && isNoun(word) && line === word.noun };
   }
-  const byEn = vocab.find((w) => w.en[0] === line);
-  if (byEn) return { exercise: { number: n, type: 'Karteikarte', direction: 'en-de', line }, word: byEn };
-  const byDe = vocab.find((w) => w.de === line);
-  if (byDe) return { exercise: { number: n, type: 'Karteikarte', direction: 'de-en', line }, word: byDe };
+  for (const w of vocab) {
+    const t = findTask(w.raw, line);
+    if (t) return { exercise: { number: n, type: t.type, direction: null, line }, word: w, task: t };
+  }
   return vocabQuestion(vocab, n, settings);
 }
+
 
 function openGrammarItem(examples, n, line) {
   const i = examples.findIndex((ex) => ex.task === line || line === ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: '));
@@ -362,14 +346,15 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   const openQ = useVocab && open && session.openLine ? openVocabQuestion(vocab, open, settings, session.openLine, session.openWordId, session.openTask) : null;
   const ask = (n, strongHint = false) => {
     let pin = null;
-    if (openQ && n === open) pin = { word: openQ.word, kind: openQ.exercise.type === 'Satzbau' ? 'sentence' : 'card', kase: openQ.kase };
-    else if (openQ && settings.sentences && openQ.exercise.type !== 'Satzbau') pin = { word: openQ.word, kind: 'sentence' };
-    else if (openQ) pin = { kind: 'card' };
+    if (openQ && n === open) pin = { word: openQ.word, kind: openQ.task ? 'sentence' : 'card', task: openQ.task };
+    // grammar was switched on while a card was open: the card's own grammar task comes next
+    else if (openQ && settings.sentences && !openQ.task && taskOf(openQ.word, settings, vocab.indexOf(openQ.word))) pin = { word: openQ.word, kind: 'sentence' };
+    else if (openQ && !settings.sentences) pin = { kind: 'card' };
     const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint);
     out.exercise = q.exercise;
     if (q.word?.id) {
       out.exercise.wordId = q.word.id;
-      out.exercise.task = q.exercise.type === 'Satzbau' ? 'grammar' : 'flashcard';
+      out.exercise.task = q.task ? 'grammar' : 'flashcard';
     }
     out.options = q.options;
   };
@@ -407,8 +392,8 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     const k = session.skippedNumber;
     const sq = useVocab ? openVocabQuestion(vocab, k, settings, session.skippedLine, session.skippedWordId, session.skippedTask) : null;
     const solution = useVocab
-      ? sq.exercise.type === 'Satzbau' ? FRAME[sq.kase](declined(sq.word, sq.kase).phrase, declined(sq.word, sq.kase).plural)
-        : sq.exercise.direction === 'en-de' ? sq.word.de : sq.word.en[0]
+      ? sq.task ? sq.task.solution
+        : sq.exercise.direction === 'en-de' ? sq.word.de : sq.bare ? `${sq.word.de} = ${sq.word.en[0]}` : sq.word.en[0]
       : openGrammarItem(examples, k, session.skippedLine).solved;
     out.message = `Kein Problem. Die Lösung: **${solution}**`;
     if (k < total) ask(k + 1);
@@ -432,7 +417,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   const q = openQ;
   if (intent0?.type === 'rule' || /^(erklär|erklaer|explain|regel|rule)/.test(say)) {
     out.message = useVocab
-      ? 'Merke dir jedes Nomen mit **Artikel** und Plural. Im Dativ enden Adjektive nach dem Artikel auf -en.'
+      ? 'Merke dir jedes Nomen mit **Artikel** und Plural. Im Dativ und im Genitiv enden Adjektive nach dem Artikel auf -en.'
       : 'Die Regel: Bei den Wechselpräpositionen fragst du **Wo?** (Position) → Dativ oder **Wohin?** (Bewegung) → Akkusativ.';
     out.grammarFocus = useVocab ? FOCUS.vocab : FOCUS.grammar;
     out.panelView = 'grammar';

@@ -19,6 +19,7 @@ import SessionPanel from '../components/SessionPanel';
 import { t, dirKey } from '../lib/ui-text';
 import { detectIntent, detectTopicWish, topicGroupIn, extractName, QUESTION_MIN, QUESTION_MAX } from '../lib/intents';
 import { score, summaryOf } from '../lib/stats';
+import { GRAMMAR_POINTS } from '../lib/grammar';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
   recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount,
@@ -734,7 +735,8 @@ export default function Home() {
     const body = {
       name: profileRef.current.name,
       classCode: profileRef.current.classCode,
-      settings: { level: p.level, difficulty: p.difficulty, direction: p.direction, sentences: p.sentences },
+      // grammar points per word: all of them while "sentences" is on (the setup screen will let the student choose)
+      settings: { level: p.level, difficulty: p.difficulty, direction: p.direction, sentences: p.sentences, grammar: p.grammar || (p.sentences ? GRAMMAR_POINTS : []) },
       session: {
         topicId: s.topicId,
         total: s.total,

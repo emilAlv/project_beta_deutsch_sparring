@@ -2,6 +2,7 @@ import { getLesson, getKnownGrammar, guessTopic, FREE_TOPIC } from '../../../lib
 import { allTopics } from '../../../lib/topics';
 import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEADER } from '../../../lib/words';
 import { pickWords, wordsNeeded } from '../../../lib/scores';
+import { GRAMMAR_POINTS, cleanGrammar, wantsSentenceTasks } from '../../../lib/grammar';
 import { buildSystemPrompt } from '../../../lib/prompt';
 import { generate } from '../../../lib/gemini';
 import { mockReply } from '../../../lib/mock';
@@ -75,11 +76,16 @@ async function handle(req) {
   // --- what the browser says about the current state (all values checked) ---
   // The browser owns the session: it counts the questions and decides when it ends.
   const s = body.settings || {};
+  // grammar = the grammar points chosen for each word (lib/grammar.js). A browser that only knows the old
+  // "sentences" switch sends no list: switched on = all points. "sentences" is derived from the points:
+  // true when a sentence task follows each flashcard.
+  const grammar = cleanGrammar(s.grammar) ?? (s.sentences === true ? GRAMMAR_POINTS : []);
   const settings = {
     level: LEVELS.includes(s.level) ? s.level : 'B1',
     difficulty: DIFFICULTY_DE[s.difficulty] ? s.difficulty : 'medium',
     direction: ['en-de', 'de-en', 'mixed'].includes(s.direction) ? s.direction : 'en-de',
-    sentences: s.sentences === true,
+    grammar,
+    sentences: wantsSentenceTasks(grammar),
   };
   const ses = body.session || {};
   const lessons = allTopics();
@@ -148,7 +154,7 @@ async function handle(req) {
       if (!words.length) words = pickWords({ ...query, level: undefined });
     }
   }
-  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)) };
+  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), openTask: session.openTask };
 
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;

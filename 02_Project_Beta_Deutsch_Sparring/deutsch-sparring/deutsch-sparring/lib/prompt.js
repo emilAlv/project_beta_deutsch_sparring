@@ -4,6 +4,8 @@
 // The APP owns the session: it counts the questions, decides when the session ends and when the
 // topic changes. The model only writes the content (exercises, feedback, explanations).
 
+import { wantsSentenceTasks } from './grammar.js';
+
 const LEVEL_GUIDE = {
   A1: 'Very short main clauses, present tense, the most common words. You may add a short English translation in brackets for new words.',
   A2: 'Short, clear sentences, Perfekt, simple connectors (weil, dass, wenn), everyday vocabulary.',
@@ -25,9 +27,53 @@ const DIRECTION = {
   mixed: 'Mixed: alternate English → German and German → English from card to card.',
 };
 
+const POINT_NAME = {
+  'article-plural': 'article & plural',
+  akkusativ: 'Akkusativ',
+  dativ: 'Dativ',
+  genitiv: 'Genitiv',
+  'adjective-endings': 'adjective endings',
+  perfekt: 'Perfekt (verbs)',
+  'verb-case': 'verb + case',
+};
+
+// The rules for "each word with its grammar" (the chosen grammar points, lib/grammar.js).
+// Empty when no grammar point is chosen: then it is flashcards only.
+function wordGrammarRules(grammar, name) {
+  if (!grammar.length) return '';
+  const g = new Set(grammar);
+  const sentences = wantsSentenceTasks(grammar);
+  const cases = ['akkusativ', 'dativ', 'genitiv'].filter((p) => g.has(p)).map((p) => POINT_NAME[p]);
+  const lines = [
+    `EACH WORD WITH ITS GRAMMAR (grammar points ${name} chose: ${grammar.map((p) => POINT_NAME[p]).join(', ')})`,
+    `- The flashcard of a word ALWAYS comes first and ALWAYS checks the article of a noun. English → German: the right article is required. German → English (this replaces "with article" in the flashcard direction above): show the noun WITHOUT its article (line = "Schrank") and ${name} gives the article AND the meaning, e.g. "der – wardrobe"; a missing or wrong article = wrong, errorType "Artikel", rule = the word (e.g. "der Schrank"); a wrong meaning = errorType "Wortschatz".`,
+  ];
+  if (g.has('article-plural')) {
+    lines.push('- "Article & plural" is chosen: on every English → German noun card also ask for the plural, the answer is "der Schrank, die Schränke" (nouns without plural: article + noun only). A wrong or missing plural = wrong card, errorType "Wortschatz", rule "Plural". Say in the hint "mit Artikel und Plural".');
+  }
+  if (sentences) {
+    lines.push(
+      `- After the flashcard of a noun, a verb or an adjective comes ONE grammar task (exercise.task = "grammar") with the SAME word and the same wordId. Phrases and all other word types (adverbs, conjunctions, prepositions …) get no grammar task: go on with the next word. Every flashcard and every grammar task is one question. Take the case, frame and Perfekt/case task from the chosen points; change them from word to word, never the same frame twice in a row.`,
+      `- NOUNS: exercise.type "Satzbau", line "Bilde einen Satz: der Schrank + alt · Genitiv nach wegen" (the word${g.has('adjective-endings') ? ' + its adjective from the table' : ''}, then · and the rule name). Use ${cases.length ? `one of the chosen cases (${cases.join(', ')})` : 'Akkusativ or Dativ'}. Check the article${g.has('adjective-endings') ? ', the adjective ending' : ''} and the noun ending: masculine and neuter nouns take -s/-es in the Genitiv (des Schranks, des Hauses), weak nouns -n/-en (des Nachbarn, des Studenten); plural nouns stay as they are in the Genitiv. ${g.has('adjective-endings') ? '' : 'The line has no adjective ("der Schrank · Dativ nach mit"). '}Correct example sentences with "alt + der Schrank" (check your own German as carefully):
+    Akkusativ nach brauchen: "Ich brauche den alten Schrank."
+    Akkusativ nach in (Wohin?): "Ich stelle das Buch in den alten Schrank."
+    Dativ nach mit: "Ich bin zufrieden mit dem alten Schrank."
+    Dativ nach in (Wo?): "Das Buch liegt im alten Schrank." ("in dem" is also right)
+    Genitiv nach wegen: "Wegen des alten Schranks bleiben wir zu Hause."
+    Genitiv nach trotz: "Trotz der alten Lampe kommen wir pünktlich."`,
+      `- VERBS: use the Perfekt from the table.${g.has('perfekt') ? ' Perfekt task: exercise.type "Satzbau", line "Bilde das Perfekt: wir + abbiegen" (pronoun + infinitive); the answer needs the right form of haben/sein and the Partizip: "Wir sind abgebogen." / "Ich habe gegessen." / reflexive: "Er hat sich gefreut." rule "Perfekt mit sein" or "Perfekt mit haben", errorType Verbform.' : ''}${g.has('verb-case') ? ' Verb + case task: exercise.type "Satzbau", line "Bilde einen Satz mit «helfen» und «der Freund»": the student builds a sentence in which the verb takes the case it needs (column "case": Akk, Dat or preposition + case); do not name the case on Mittel and Schwer. Example: "Ich möchte dem Freund helfen." rule "Verb + Dativ" (or "Verb + Akkusativ"); with a preposition the rule is "<Kasus> nach <Präposition>", e.g. "Akkusativ nach auf" for "Ich möchte auf den Garten achten." Wrong case = Kasus, wrong or missing preposition = Präposition. A verb without a case in the table gets the Perfekt task.' : ''}${g.has('perfekt') || g.has('verb-case') ? '' : ' Perfekt task as described above (the usual task for verbs).'}`,
+      `- ADJECTIVES: exercise.type "Lückentext", line "Ergänze die Endung: Ich sehe den ___ (alt) Mann." – a short sentence with a person noun (der Mann, die Frau, das Kind, die Kinder), vary case, gender and definite/indefinite article. The answer is the adjective with its ending ("alten"; writing only the ending is fine too). rule "Adjektivendung nach der/die/das" or "Adjektivendung nach ein/eine"; wrong ending = errorType Adjektivendung, wrong adjective = Wortschatz. Adjectives without an ending (lila, rosa, orange, online) or that never stand before a noun (egal, fit): flashcard only.`,
+      '- feedback.rule of a grammar task: use EXACTLY these names (the stats group by them): "Akkusativ nach brauchen", "Akkusativ nach in (Wohin?)", "Dativ nach mit", "Dativ nach in (Wo?)", "Genitiv nach wegen", "Genitiv nach trotz", "Perfekt mit haben", "Perfekt mit sein", "Verb + Akkusativ", "Verb + Dativ", "Adjektivendung nach der/die/das", "Adjektivendung nach ein/eine". For other cases use the same pattern "<Kasus> nach <Wort>". A mistake in the word or its article: rule = the word ("der Schrank").',
+      '- errorType of a wrong grammar task: Kasus (wrong case or noun ending), Adjektivendung, Verbform (Perfekt), Präposition = grammar mistakes. If the word itself or its article is wrong: Wortschatz / Artikel (these cost the vocabulary score too, so use them only when the word really is wrong).',
+    );
+  }
+  return `${lines.join('\n')}\n\n`;
+}
+
 export function buildSystemPrompt({
   name, lesson, words = null, knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
 }) {
+  const grammar = settings.grammar || [];
   const topic = catalog.find((t) => t.id === session.topicId);
   const vocab = topic && topic.type !== 'Grammatik' && topic.id !== 'free';
   const next = progress.done + 1;
@@ -46,7 +92,7 @@ CURRENT STATE (from the app – authoritative, the app counts everything)
 - Topic: ${topic ? `${topic.title} (id "${topic.id}", ${topic.type})` : 'not chosen yet'}
 - Questions this session: ${session.total}. Done: ${progress.done} (${progress.correct} right, ${progress.answered - progress.correct} wrong, ${progress.skipped} skipped).
 - Open question: ${open}.
-${session.skippedNumber ? `- The student just SKIPPED question ${session.skippedNumber}${session.skippedLine ? ` ("${session.skippedLine}")` : ''}. The app counted it. Give its solution in one line in message, feedback = null, then ${session.skippedNumber >= session.total ? 'exercise = null (it was the last question)' : `question ${next}`}.\n` : ''}${!session.openNumber && progress.done && !session.finished && !session.skippedNumber ? `- There is no open question: give question ${next} now (after answering what the student wrote).\n` : ''}${session.finished ? '- The session is FINISHED. Answer questions about it briefly, exercise = null. If the student wants more, tell them to tap «Same topic again» or choose a new topic.\n' : ''}${last && !session.finished ? `- This is the LAST question. After the feedback: exercise = null and a short closing message (well done + 1 tip). Do not count yourself, the app shows the score.\n` : ''}${notes.length ? `- The student just changed in the app: ${notes.join('; ')}. The app ALREADY applied it – follow it from now on and confirm it in a few words. If the student's message is this command (e.g. "schwieriger"), do NOT change the setting again.\n` : ''}${vocab ? `- Flashcards: ${DIRECTION[settings.direction]}\n- Sentence building: ${settings.sentences ? 'ON' : 'OFF'}.\n` : ''}
+${session.skippedNumber ? `- The student just SKIPPED question ${session.skippedNumber}${session.skippedLine ? ` ("${session.skippedLine}")` : ''}. The app counted it. Give its solution in one line in message, feedback = null, then ${session.skippedNumber >= session.total ? 'exercise = null (it was the last question)' : `question ${next}`}.\n` : ''}${!session.openNumber && progress.done && !session.finished && !session.skippedNumber ? `- There is no open question: give question ${next} now (after answering what the student wrote).\n` : ''}${session.finished ? '- The session is FINISHED. Answer questions about it briefly, exercise = null. If the student wants more, tell them to tap «Same topic again» or choose a new topic.\n' : ''}${last && !session.finished ? `- This is the LAST question. After the feedback: exercise = null and a short closing message (well done + 1 tip). Do not count yourself, the app shows the score.\n` : ''}${notes.length ? `- The student just changed in the app: ${notes.join('; ')}. The app ALREADY applied it – follow it from now on and confirm it in a few words. If the student's message is this command (e.g. "schwieriger"), do NOT change the setting again.\n` : ''}${vocab ? `- Flashcards: ${DIRECTION[settings.direction]}\n- Grammar per word: ${grammar.length ? grammar.map((p) => POINT_NAME[p]).join(', ') : 'none (flashcards only)'}.\n` : ''}
 HOW A SESSION WORKS
 - One question per message. When you give a new question, it is question ${next}${session.openNumber ? ` (or ${session.openNumber + 1} after the open one is answered)` : ''}; put that number in exercise.number.
 - Never reveal the answer before ${name} has replied.
@@ -68,10 +114,10 @@ VOCABULARY TOPICS = FLASHCARDS (reference language: English)
 - German → English: accept any fitting English meaning; ignore "the".
 - feedback.corrected = the full card: "der Schrank, die Schränke" (English → German) or the English meaning (German → English). feedback.explanation = one short line (plural, Swiss variant or a memory tip).
 - Hints: Leicht = first letters + answer choices in options; Mittel = "mit Artikel" / "auf Englisch"; Schwer = null.
-- Sentence building ON: after each flashcard, the NEXT question is a sentence task (task = "grammar") with the SAME word and the same wordId (phrases get no sentence task – go to the next word): exercise.type = "Satzbau", line e.g. "Bilde einen Satz: der Schrank + alt · Dativ (Wo? → in …)". Vary the case (Nominativ, Akkusativ, Dativ), use the word's typical adjective from the table and check article AND adjective ending (errorType Artikel / Kasus / Adjektivendung). Every flashcard and every sentence task is one question.
-- Noun drill (only if ${name} asks for it): article + plural first, then sentences in Nominativ, Akkusativ, Dativ with an adjective.
+- Noun drill (only if ${name} asks for it): article + plural first, then sentences in Akkusativ, Dativ, Genitiv with an adjective.
+- Phrases (and other word types without grammar task): English → German, a close answer is fine (same meaning, small differences in small words); errorType Wortschatz if wrong.
 
-JSON FIELDS
+${vocab ? wordGrammarRules(grammar, name) : ''}JSON FIELDS
 - message: what you say, 1–2 short sentences in simple German at ${name}'s level, warm and encouraging. Do NOT repeat the exercise or the corrected sentence – they get their own cards. **bold** is allowed for one key word.
 - feedback: ONLY when ${name}'s message answers the open question, otherwise null.
   forNumber = the open question's number. correct = true only if the practised point is right.
