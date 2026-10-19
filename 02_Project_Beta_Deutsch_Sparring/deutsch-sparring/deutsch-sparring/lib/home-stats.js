@@ -153,5 +153,30 @@ export function computeHome({ goals, scores, agg }) {
     progress: Object.fromEntries(goals.map((g) => [g.id, goalProgress(g, scores, agg)])),
     strengths,
     gaps,
+    rules: items.filter((x) => x.kind === 'rule').sort((a, b) => b.n - a.n),
+    vocab: vocabProgress2(words, scores),
   };
+}
+
+// Where the student stands with the words, per level and per list – so the coach can plan with real content
+// ("Home & living › Furniture: 12 of 45 learnt") instead of percentages.
+//   byLevel: { A1: { total, practised, learnt } … }
+//   byList:  [{ topic, total, practised, learnt, levels: { A1: n … } }] in the order of the word list
+function vocabProgress2(words, scores) {
+  const byLevel = {};
+  const lists = new Map();
+  for (const w of words) {
+    const rec = scores[w.id];
+    const practised = rec ? 1 : 0;
+    const learnt = rec && vScore(rec) >= LEARNT_FROM ? 1 : 0;
+    const lv = (byLevel[w.level] ||= { total: 0, practised: 0, learnt: 0 });
+    lv.total += 1; lv.practised += practised; lv.learnt += learnt;
+    for (const topic of w.topics || []) {
+      const l = lists.get(topic) || { topic, total: 0, practised: 0, learnt: 0, levels: {} };
+      l.total += 1; l.practised += practised; l.learnt += learnt;
+      l.levels[w.level] = (l.levels[w.level] || 0) + 1;
+      lists.set(topic, l);
+    }
+  }
+  return { byLevel, byList: [...lists.values()] };
 }

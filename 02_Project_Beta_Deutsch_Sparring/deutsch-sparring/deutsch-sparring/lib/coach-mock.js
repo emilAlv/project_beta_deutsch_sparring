@@ -38,7 +38,22 @@ function suggestionFor(home, topics, goalLevel) {
   return first ? { ...base, kind: first.type === 'Wortschatz' ? 'vocab' : 'grammar', topicId: first.id, grammar: [] } : null;
 }
 
-// a plan for fewer minutes: the next two open milestones move 14 days, plus one check-in halfway
+// A milestone with real content, like a teacher would set it: the weakest grammar rule of the goal
+// ("Genitiv nach wegen: 80 % right"), else the word list of the goal's level with the most words still to learn
+// ("Furniture: all 45 words learnt").
+function concreteStep(home, goal) {
+  const rule = home.gaps.find((x) => x.kind === 'rule' && (!x.goalId || x.goalId === goal.id));
+  if (goal.type !== 'vocab' && rule) return `${rule.label}: 80 % right`;
+  const lists = (home.vocab?.byList || [])
+    .filter((l) => (l.levels[goal.level] || 0) > 0 && l.learnt < l.total)
+    .filter((l) => !goal.scope.section || l.topic.startsWith(goal.scope.section))
+    .sort((a, b) => (b.total - b.learnt) - (a.total - a.learnt));
+  const l = lists[0];
+  if (l) return `${l.topic.split(' › ').pop()}: all ${l.total} words learnt`;
+  return rule ? `${rule.label}: 80 % right` : `${goal.level} words: next 40 learnt`;
+}
+
+// a plan for fewer minutes: the next two open milestones move 14 days, plus one concrete step halfway
 function replan(home, today, minutes) {
   const open = home.goals.filter((g) => g.endDate >= today);
   if (!open.length) return null;
@@ -52,14 +67,14 @@ function replan(home, today, minutes) {
     const date = dayOf(Math.min(dayNum(goal.endDate), dayNum(m.date) + 14));
     if (date !== m.date) changes.push({ action: 'move', milestoneId: m.id, date, title: null, target: null });
   }
-  // one check-in on the way to the first open milestone (after it was moved), so the targets still rise with the date
+  // one concrete step on the way to the first open milestone (after it was moved), so the targets still rise with the date
   const first = next[0];
   const firstDate = first ? (changes.find((c) => c.milestoneId === first.id)?.date || first.date) : goal.endDate;
   const firstTarget = first ? first.target : 100;
   const gap = dayNum(firstDate) - dayNum(today);
   const target = Math.round((progress + firstTarget) / 2);
   if (gap >= 6 && target > progress && target < firstTarget && goal.milestones.length < MAX_MILESTONES) {
-    changes.push({ action: 'add', milestoneId: null, date: addDays(today, Math.round(gap / 2)), title: `Check-in: ${target} % reached`, target });
+    changes.push({ action: 'add', milestoneId: null, date: addDays(today, Math.round(gap / 2)), title: concreteStep(home, goal), target });
   }
   if (!changes.length) return { goal, planChanges: null, minutes };
   return { goal, planChanges: { goalId: goal.id, changes }, minutes };
@@ -101,7 +116,7 @@ export function mockCoach({ text, kind, name, home, topics, today }) {
     }
     const how = minutes ? `${minutes} minutes a day is about ${Math.max(10, Math.round((minutes / 1.5) / 10) * 10)} questions.` : 'A calmer plan is fine.';
     return {
-      message: `${how} For "${r.goal.title}" I would move your next milestones a little later and add one check-in halfway. Do you want these changes?`,
+      message: `${how} For "${r.goal.title}" I would move your next milestones a little later and add one concrete step on the way: \"${r.planChanges.changes.find((c) => c.action === 'add')?.title || 'the next list'}\". Do you want these changes?`,
       suggestedSession: null,
       planChanges: r.planChanges,
       quickReplies: ['What should I practise today?'],
