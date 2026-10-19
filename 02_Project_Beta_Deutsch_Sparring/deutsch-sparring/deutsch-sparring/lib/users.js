@@ -1,8 +1,8 @@
 // Where accounts are kept: the Postgres database (Neon) – or, with AUTH_MEMORY=1 for local
 // tests, a list in memory that is gone after a restart. Server only.
 import { randomUUID } from 'node:crypto';
-import { neon } from '@neondatabase/serverless';
-import { SCHEMA, databaseUrl } from './schema.mjs';
+import { databaseUrl } from './schema.mjs';
+import { sql, ensureSchema, UUID } from './db';
 
 const COLUMNS = 'id, username, password_hash, salt';
 
@@ -30,23 +30,6 @@ const memoryStore = {
 };
 
 // ---------- Postgres (Neon) ----------
-let sqlClient = null;
-const sql = () => (sqlClient ??= neon(databaseUrl()));
-
-// the tiny migration, once per server start (tried again if it failed)
-let ready = null;
-function ensureSchema() {
-  ready ??= (async () => {
-    for (const statement of SCHEMA) await sql().query(statement);
-  })().catch((e) => {
-    ready = null;
-    throw e;
-  });
-  return ready;
-}
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 const dbStore = {
   async findByUsername(username) {
     await ensureSchema();

@@ -12,6 +12,7 @@ import {
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
+import { progress, cleanScores } from '../../../lib/progress';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -22,25 +23,6 @@ const MAX_CHARS = 1500;
 const MAX_MODEL_CHARS = 4000; // the tutor's own (JSON) turns are longer
 
 const MAX_WORD_IDS = 60;
-const MAX_SCORE_ROWS = 2000; // the browser sends its scores only when a vocabulary session starts
-
-// The browser's scores for the candidate words, checked: only known word ids, only numbers.
-function cleanScores(raw) {
-  const out = {};
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
-  const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : null);
-  for (const id of Object.keys(raw).slice(0, MAX_SCORE_ROWS)) {
-    if (!getWord(id) || !raw[id] || typeof raw[id] !== 'object') continue;
-    const rec = {};
-    for (const kind of ['v', 'g']) {
-      const x = raw[id][kind];
-      if (x && num(x.s) != null) rec[kind] = { s: num(x.s), k: num(x.k) ?? 0, due: num(x.due) };
-    }
-    if (rec.v || rec.g) out[id] = rec;
-  }
-  return out;
-}
-
 const fail = (error, status, code) => Response.json({ error, code }, { status });
 
 export async function POST(req) {
@@ -140,9 +122,21 @@ async function handle(req) {
     if (sent.length) {
       words = sent;
     } else {
+      // logged in: the scores come from the database (the browser is not trusted); else the browser's own
+      let scores;
+      if (user) {
+        try {
+          scores = await progress().scores(user.id, null);
+        } catch (e) {
+          console.error('word scores unavailable:', e?.message);
+          scores = {};
+        }
+      } else {
+        scores = cleanScores(body.scores);
+      }
       const query = {
         words: getWords(),
-        scores: cleanScores(body.scores),
+        scores,
         level: settings.level,
         sources: sourcesFor(['goethe', 'kurs'].includes(body.source) ? body.source : 'both'),
         ...filter,

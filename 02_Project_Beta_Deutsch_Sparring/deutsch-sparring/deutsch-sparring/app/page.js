@@ -27,6 +27,7 @@ import { score, summaryOf } from '../lib/stats';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
   recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount,
+  initProgress, progressSaved, startSessionRecord,
 } from '../lib/storage';
 
 const VIEWS = ['glance', 'progress', 'grammar'];
@@ -204,6 +205,7 @@ export default function Home() {
     if (!prefsLoaded.current) setPrefs(sanitizePrefs(loadPrefs()));
     prefsLoaded.current = true;
 
+    let progressReady = null; // logged in: history + scores come from the server
     fetch('/api/topics')
       .then((r) => {
         if (r.status === 401) {
@@ -222,6 +224,7 @@ export default function Home() {
         if (username) {
           // logged in: the username is the name, no name / class-code questions in the chat
           setStorageAccount(username);
+          progressReady = initProgress();
           setAccount({ username });
           p = { ...p, name: username };
           profileRef.current = p;
@@ -229,6 +232,7 @@ export default function Home() {
         }
         setHistory(loadHistory());
         begin(p);
+        progressReady?.then(() => { if (!cancelled) setHistory(loadHistory()); });
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -321,6 +325,7 @@ export default function Home() {
       ...sc,
       total: s.total,
       endedEarly: s.endedEarly,
+      finished: Boolean(s.finished),
       updatedAt: Date.now(),
       mistakes: s.answers.filter((a) => !a.correct && !a.skipped).slice(-5)
         .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule })),
@@ -434,6 +439,7 @@ export default function Home() {
     setError(null);
     setSetupError(null);
     const s = newSession(topic, settings);
+    startSessionRecord(s);
     const start = { id: uid(), at: Date.now(), role: 'user', text: t('tutorStartTopic', { topic: s.topicName || topic.short }), hidden: true, ai: true };
     const fresh = { ...EMPTY_CONVO, stage: 'practice', session: s, messages: [start], historyFrom: start.at };
     convoRef.current = fresh;
@@ -475,7 +481,8 @@ export default function Home() {
 
   // the open question is skipped: counted at once, the tutor gives the solution + the next one
   function skipOpen() {
-    scoreAnswer(convoRef.current.session, convoRef.current.session.exercise, { skipped: true });
+    const open = convoRef.current.session;
+    scoreAnswer(open, open.exercise, { skipped: true }, { n: open.answers.length + 1, question: open.exercise?.line || '' });
     updateSession((s) => ({
       ...s,
       answers: [...s.answers, { n: s.answers.length + 1, skipped: true, correct: false, studentAnswer: '', corrected: '', changedWords: [], explanation: '', rule: '', skippedLine: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null, wordId: s.exercise?.wordId || '', task: s.exercise?.task || null }],
@@ -484,15 +491,15 @@ export default function Home() {
   }
 
   // Word scores: the APP updates them (lib/scores.js), never the model. Called once per answer.
-  function scoreAnswer(session, exercise, { correct = false, errorType = null, skipped = false } = {}) {
-    if (!exercise?.wordId) return;
-    const type = session.words?.find((w) => w.id === exercise.wordId)?.type;
-    recordWordAnswer(exercise.wordId, {
-      task: exercise.task || 'flashcard',
+  // record = the answer's details, saved with it in the account (lib/storage.js)
+  function scoreAnswer(session, exercise, { correct = false, errorType = null, skipped = false } = {}, record = null) {
+    const type = session.words?.find((w) => w.id === exercise?.wordId)?.type;
+    recordWordAnswer(exercise?.wordId || '', {
+      task: exercise?.task || 'flashcard',
       correct, errorType, skipped,
-      hinted: Boolean(exercise.hinted) || session.settings?.difficulty === 'easy', // a hint, or "Leicht" (multiple choice)
+      hinted: Boolean(exercise?.hinted) || session.settings?.difficulty === 'easy', // a hint, or "Leicht" (multiple choice)
       hasG: type !== 'phrase',
-    });
+    }, record && { ...record, sessionId: session.id });
   }
 
   // stop waiting for the tutor (button in the input, or "Stopp" while it is writing)
@@ -641,6 +648,7 @@ export default function Home() {
       messages: aiHistory(c),
     };
 
+    await progressSaved(); // logged in: the word picker reads the scores saved so far
     setBusy(true);
     setWaiting(true);
     const request = { controller: new AbortController(), cancelled: false };
@@ -710,7 +718,9 @@ export default function Home() {
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
       feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
       // word scores: updated by the app from the tutor's verdict (correct, errorType), a hint and "Leicht"
-      scoreAnswer(s, s.exercise, { correct: feedback.correct, errorType: feedback.errorType });
+      scoreAnswer(s, s.exercise, { correct: feedback.correct, errorType: feedback.errorType }, {
+        n: s.answers.length + 1, question: s.exercise?.line || '', studentAnswer: feedback.studentAnswer, corrected: feedback.corrected, rule: feedback.rule,
+      });
       s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false, line: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null, wordId: s.exercise?.wordId || '', task: s.exercise?.task || null }];
       s.exercise = null;
       s.started = true;

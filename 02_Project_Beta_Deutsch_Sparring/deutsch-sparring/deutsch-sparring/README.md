@@ -125,14 +125,24 @@ Rules: one file per topic.
   each list with its word counts per level and word source (for the setup screen).
   The old `wortschatz-*.md` lesson files are no longer used as topics.
 - `/api/chat` – for a vocabulary topic the server picks the session's words once (`pickWords` in
-  `lib/scores.js`, using the scores the browser sends with the first request), puts only those
+  `lib/scores.js`; the scores come from the database for a logged-in student, from the browser's
+  request without accounts), puts only those
   words into the prompt as compact lines and sends their ids back; the browser returns them with
   every later request. Builds the prompt, calls Gemini with `responseMimeType: application/json` +
   `responseSchema`, cleans the answer (`normalizeReply`) and returns it. Safety nets in
   `lib/gemini.js`: low thinking (retried without it on HTTP 400), 25 s timeout per call,
   fallback model, `maxDuration = 60`, every error as JSON. Broken JSON → shown as a normal message.
-- The browser keeps the session: answers, score (counted by the app, not the model), the gap
-  card, last 5 sessions (with their settings) and the streak (`lib/storage.js`, localStorage only).
+- The browser keeps the running session: answers, score (counted by the app, not the model), the
+  gap card. `lib/storage.js` is the one interface for history, streak and word scores:
+  - **without accounts / MOCK=1 / no database**: localStorage only (last 5 sessions + streak + scores).
+  - **logged in**: they live in the database (`lib/progress.js`, tables `sessions`, `answers`,
+    `word_scores` in `lib/schema.mjs`; memory with `AUTH_MEMORY=1`). `lib/progress-client.js` sends
+    each answer (queued, retried) to `/api/progress/answer`, session start / end to
+    `/api/progress/session`, loads `/api/progress/history` (last 5 + streak) after login,
+    `/api/progress/scores?ids=` and imports the old localStorage data once via
+    `/api/progress/import`. The server calculates the word scores (`applyAnswer`); `lib/progress-api.js`
+    = login check, same-origin check, size limit for all of these routes. localStorage only keeps
+    the current conversation (`wort_chat@user`) and a flag that the import happened.
 - Design: colours, fonts (Lora + Inter) and spacing from the Figma file "wort.", tokens at the
   top of `app/globals.css`. Desktop layout = ribbon on top, chat + right panel below; the phone
   layout is not done yet.
