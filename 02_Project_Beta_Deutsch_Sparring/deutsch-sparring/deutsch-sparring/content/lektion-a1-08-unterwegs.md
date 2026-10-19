@@ -39,7 +39,7 @@ Höfliche Fragen: Wo ist …? Wie komme ich zu …? Richtungsangaben: geradeaus,
 | 4 | A: Ist es weit? B: Nein, nur fünf ___. | Minuten | Lückentext |
 | 5 | A: Wie komme ich ___ Bahnhof? | zum | Lückentext |
 | 6 | Gehen Sie bis ___ Ampel. (die) | zur | Lückentext |
-| 7 | Bilde einen Satz: Sie / rechts / bitte / gehen | Gehen Sie bitte rechts. | Satzbau |
+| 7 | Bilde einen Satz: Sie / bitte / biegen / rechts / ab | Biegen Sie bitte rechts ab. | Satzbau |
 | 8 | Finde den Fehler: Wo ist die Bahnhof? | Wo ist der Bahnhof? | Fehler finden |
 | 9 | Übersetze: Is the bus stop nearby? | Ist die Bushaltestelle in der Nähe? | Übersetzung |
 | 10 | A: Danke! B: ___ geschehen. | Gern | Lückentext |

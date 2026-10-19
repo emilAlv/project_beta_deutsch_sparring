@@ -37,7 +37,7 @@ weil: finites Verb am Nebensatzende. deshalb steht im Hauptsatz oft auf Position
 | 3 | Ich lerne Deutsch, weil ich in der Schweiz ___. (leben) | lebe | Lückentext |
 | 4 | Sie ist müde. Deshalb ___ sie früh schlafen. (gehen) | geht | Lückentext |
 | 5 | A: Warum kommst du später? B: ___ mein Zug Verspätung hat. | Weil | Lückentext |
-| 6 | Bilde einen Satz: ich / heute / arbeite / weil / Zeit / keine / habe / ich | Ich arbeite heute, weil ich keine Zeit habe. | Satzbau |
+| 6 | Bilde einen Satz: nicht / mit / ich / gehe / weil / ich / keine Zeit / habe | Ich gehe nicht mit, weil ich keine Zeit habe. | Satzbau |
 | 7 | Finde den Fehler: Weil ich bin krank, bleibe ich zu Hause. | Weil ich krank bin, bleibe ich zu Hause. | Fehler finden |
 | 8 | Übersetze: I am late because the train was delayed. | Ich komme zu spät, weil mein Zug Verspätung hatte. | Übersetzung |
 
