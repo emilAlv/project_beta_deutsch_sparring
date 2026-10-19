@@ -290,33 +290,42 @@ function ProgressView({ session }) {
         {sc.answered === 0 ? (
           <p className="detail">{t('noAnswers')}</p>
         ) : (
-          <ol className="answer-list">
-            {session.answers.map((a) => {
-              if (a.skipped) {
-                return (
-                  <li key={a.n} className="skipped">
-                    <span className="mark" aria-hidden="true">–</span>
-                    <span>{a.skippedLine || '…'} <span className="you-wrote">({t('skipped')})</span></span>
-                  </li>
-                );
-              }
-              const d = compareAnswer(a.studentAnswer, a.corrected, a.changedWords);
-              return (
-                <li key={a.n} className={a.correct ? 'right' : 'wrong'}>
-                  <span className="mark" aria-hidden="true">{a.correct ? '✓' : '✗'}</span>
-                  <span>
-                    {a.correct ? a.corrected : <Marked segments={d.corrected} as="strong" />}
-                    {!a.correct && d.removed && <span className="you-wrote"> {t('youWrote', { words: d.removed })}</span>}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
+          <ul className="answer-list">
+            {[...session.answers].reverse().map((a) => <AnswerRow key={a.n} a={a} />)}
+          </ul>
         )}
         <hr />
         <LessonProgress session={session} />
       </section>
     </>
+  );
+}
+
+// One answer: "N · type", the question, what the student wrote, the correction, a right / to-repeat tag.
+// Older saved answers have no question or type: those lines are simply left out.
+function AnswerRow({ a }) {
+  const type = a.qType || a.kind;
+  const meta = [a.n, type && t(`ex_${type}`)].filter(Boolean).join(' · ');
+  const tag = a.correct
+    ? <span className="answer-tag">✓ {t('tagRight')}</span>
+    : <span className="answer-tag">✗ {t('tagRepeat')}</span>;
+  const state = a.skipped ? 'skipped' : a.correct ? 'right' : 'wrong';
+  return (
+    <li className={state}>
+      <span className="mark" aria-hidden="true">{a.correct ? '✓' : a.skipped ? '–' : '✗'}</span>
+      <span>
+        <span className="answer-meta"><span>{meta}</span>{tag}</span>
+        {a.question && <span className="answer-question">{a.question}</span>}
+        {a.skipped ? (
+          <span className="answer-you">{t('answerYou')} {t('skipped')}</span>
+        ) : (
+          <span className="answer-you">
+            {t('answerYou')} <span className={a.correct ? undefined : 'struck'}>{a.studentAnswer}</span>
+          </span>
+        )}
+        {!a.correct && a.corrected && <span className="answer-right">{t('answerRight')} {a.corrected}</span>}
+      </span>
+    </li>
   );
 }
 
