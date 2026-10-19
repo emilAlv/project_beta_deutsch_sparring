@@ -1,8 +1,10 @@
 # wort. – Deutsch Sparring
 
 A German practice chatbot built on our course book (*Schritte plus Neu – Ausgabe Schweiz*).
-Next.js on Vercel + Google Gemini (free tier). No database: everything a student does is
-remembered in their own browser.
+Next.js on Vercel + Google Gemini (free tier). Optional **accounts** (username + password,
+stored in Vercel's Postgres / Neon) – see `docs/security-accounts.md` at the repository root.
+Without a database the app works without login; the practice history is remembered in each
+student's own browser either way.
 
 **One screen, the chat is the control panel.** Students type (or tap an option) to give their
 name and the class code, pick a topic, change level or difficulty, ask for a hint or a rule,
@@ -37,6 +39,12 @@ Optional variables: `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_FALLBAC
 (default `gemini-3.5-flash-lite`), `DAILY_LIMIT` (messages per student per day, default 150 – counted
 per browser, so a whole class on one school network is not locked out; only wrong class codes count as tries),
 `MOCK=1` (demo tutor without AI, see below).
+
+**Accounts** switch on when a database (`DATABASE_URL` or `POSTGRES_URL`, set by Vercel → Storage →
+Neon) **and** `SESSION_SECRET` are set. Then the app opens with *Log in* / *Create account*
+(the class code is asked once at sign-up), the student's name is their username, *Log out* is in
+the avatar menu and the daily limit counts per account. Step-by-step setup, what is stored and
+how to reset a password: `docs/security-accounts.md`.
 After changing a variable: Vercel → Deployments → ⋯ → Redeploy.
 
 **Preview links:** every branch you push gets its own Vercel preview. Find it in Vercel →
@@ -75,6 +83,12 @@ Rules: one file per topic.
   switches topics; the AI only writes exercises and feedback. Onboarding (name, class code via
   `/api/code`) runs without AI; short commands ("stop", "20 questions", "English to German",
   "harder", "change topic" …) are understood by `lib/intents.js`; everything else goes to `/api/chat`.
+- **Accounts** (only when switched on): `proxy.js` sends visitors without a valid login cookie to
+  `/login` (API routes answer 401); `lib/session.js` = on/off switch + signed cookie,
+  `lib/auth.js` = checks in each API route, `lib/password.mjs` = scrypt, `lib/users.js` = the
+  `users` table (or memory with `AUTH_MEMORY=1`), `lib/schema.mjs` = the table (created on first
+  use or with `node scripts/db-migrate.mjs`), `app/api/auth/*` = log in / sign up / log out,
+  `components/AuthCard.js` = the login card. Tries are limited in `lib/guard.js`.
 - `/api/chat` – builds the prompt, calls Gemini with `responseMimeType: application/json` +
   `responseSchema`, cleans the answer (`normalizeReply`) and returns it. Safety nets in
   `lib/gemini.js`: low thinking (retried without it on HTTP 400), 25 s timeout per call,
@@ -98,5 +112,8 @@ level and direction changes. Test words: `langsam` (slow answer), `kaputt` (brok
 `rohtext` (plain text), `absturz` (server error), `keine Lust mehr` (stop in own words).
 To start over as a new student: browser DevTools → Application → Local Storage → delete the
 `wort_*` entries (or use the avatar menu → *Change name*).
+
+Accounts locally without a database: add `AUTH_MEMORY=1` and `SESSION_SECRET=test` to
+`.env.local` (users live in memory until the server stops).
 
 Before pushing: `npm run build` must pass, otherwise Vercel fails too.

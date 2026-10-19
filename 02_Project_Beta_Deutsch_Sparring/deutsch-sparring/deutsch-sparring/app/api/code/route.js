@@ -1,10 +1,13 @@
 import { checkClassCode, countWrongCode, tooManyCodeTries } from '../../../lib/guard';
+import { requireUser } from '../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // The chat asks for the class code; the browser checks it here before the first AI call.
 export async function POST(req) {
   try {
+    const { response } = await requireUser(req);
+    if (response) return response;
     const { classCode, clientId } = await req.json().catch(() => ({}));
     if (tooManyCodeTries(req, clientId)) {
       return Response.json({ ok: false, error: 'Zu viele falsche Versuche. Bitte versuche es morgen wieder.' }, { status: 429 });

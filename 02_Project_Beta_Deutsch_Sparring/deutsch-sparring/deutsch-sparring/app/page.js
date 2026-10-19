@@ -21,7 +21,7 @@ import { detectIntent, detectTopicWish, topicGroupIn, extractName, QUESTION_MIN,
 import { score, summaryOf } from '../lib/stats';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
-  recordSession, recentMistakes, currentStreak,
+  recordSession, recentMistakes, currentStreak, setStorageAccount,
 } from '../lib/storage';
 
 const LEVELS = ['A1', 'A2', 'B1'];
@@ -151,6 +151,8 @@ export default function Home() {
   const [topics, setTopics] = useState([]);
   const topicsRef = useRef([]);
   const needsCodeRef = useRef(false);
+  // with accounts: { username } of the logged-in student (their name in the app), else null
+  const [account, setAccount] = useState(null);
   const topicById = (id) => topicsRef.current.find((x) => x.id === id)
     || (id === 'free' ? { id: 'free', short: 'Freies Üben', type: 'Gemischt' } : null);
 
@@ -208,21 +210,50 @@ export default function Home() {
     setProfileState(p);
     if (!prefsLoaded.current) setPrefs(sanitizePrefs(loadPrefs()));
     prefsLoaded.current = true;
-    setHistory(loadHistory());
 
     fetch('/api/topics')
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) {
+          toLogin();
+          return null;
+        }
+        return r.json();
+      })
       .catch(() => ({}))
       .then((d) => {
-        if (cancelled) return;
+        if (cancelled || !d) return;
         topicsRef.current = Array.isArray(d.topics) ? d.topics : [];
         needsCodeRef.current = Boolean(d.needsCode);
         setTopics(topicsRef.current);
+        const username = typeof d.account?.username === 'string' ? d.account.username : '';
+        if (username) {
+          // logged in: the username is the name, no name / class-code questions in the chat
+          setStorageAccount(username);
+          setAccount({ username });
+          p = { ...p, name: username };
+          profileRef.current = p;
+          setProfileState(p);
+        }
+        setHistory(loadHistory());
         begin(p);
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // not (or no longer) logged in: to the login page
+  function toLogin() {
+    window.location.replace('/login');
+  }
+
+  async function logOut() {
+    closeSession(false);
+    dropRequest();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    toLogin();
+  }
 
   function begin(p) {
     const saved = loadChat();
@@ -257,7 +288,7 @@ export default function Home() {
       update(() => ({ ...start, stage: 'topic' }));
       const last = loadHistory().sessions[0];
       tutorSay([
-        t('tutorWelcomeBack', { name: p.name }),
+        t(last ? 'tutorWelcomeBack' : 'tutorHelloTopic', { name: p.name }),
         last && last.answered ? t('tutorLastTime', { topic: last.topicName, score: `${last.correct}/${last.answered}` }) : null,
       ]);
     }
@@ -707,6 +738,10 @@ export default function Home() {
       // the student started something else meanwhile (new session, other topic): drop this answer
       if (convoRef.current.session.id !== sent.sessionId) return;
       if (!res.ok || data.error) {
+        if (res.status === 401 && data.code === 'auth') {
+          toLogin();
+          return;
+        }
         if (data.code === 'bad_code') {
           setProfile({ ...profileRef.current, classCode: '' });
           update((x) => ({ ...x, stage: 'code' }));
@@ -882,7 +917,8 @@ export default function Home() {
         name={profile.name}
         streak={currentStreak(history.streak)}
         onNewSession={restart}
-        onChangeName={changeName}
+        onChangeName={account ? null : changeName}
+        onLogOut={account ? logOut : null}
       />
       <main className="workspace">
         <OptionsPanel
