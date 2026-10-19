@@ -45,3 +45,23 @@ Du erklärst, wann du einen Kurs besuchst und erinnerst dich an deinen ersten Ta
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Wann hast du angefangen, Deutsch zu lernen?
+> B: Als ich in die Schweiz gezogen bin. Damals verstand ich fast nichts.
+> A: Und wie lernst du heute?
+> B: Wenn ich Zeit habe, spreche ich mit Kollegen.
+
+## Lesetext – Information auswählen
+Notiz: «Wenn das Wetter schlecht ist, findet das Quartierfest im Gemeindehaus statt. Als wir es letztes Jahr organisiert haben, hat es geregnet.»
+
+**Kernaussage/Detail:** Wo findet das Fest bei schlechtem Wetter statt?
+
+**Musterantwort:** Im Gemeindehaus.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Erzähle, was einmal passierte, als du neu in einer Stadt warst.
+2. **Gesprächsinitiative und Reaktion:** Die andere Person fragt, was du machst, wenn du heute Hilfe brauchst.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Beschreibe den Unterschied zwischen damals und heute.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

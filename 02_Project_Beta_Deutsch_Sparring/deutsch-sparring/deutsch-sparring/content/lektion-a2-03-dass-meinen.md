@@ -46,3 +46,23 @@ Du sprichst mit einer Freundin über einen Deutschkurs. Antworte in ein oder zwe
 
 ## Nicht verwenden (off-limits)
 Keine komplexe indirekte Rede.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Findest du den neuen Kurs gut?
+> B: Ja. Ich glaube, dass wir viel sprechen.
+> A: Ich hoffe, dass wir auch mehr Hörübungen machen.
+> B: Das fände ich gut.
+
+## Alltagsnaher Modelltext
+Kursfeedback: «Viele Teilnehmende finden, dass die Hausaufgaben hilfreich sind. Einige wünschen sich mehr Gespräche.»
+
+**Informationsfrage:** Was wünschen sich einige Teilnehmende?
+
+**Beispielantwort:** Mehr Gespräche.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Erzähle, was dir am Sprachkurs gefällt. Beginne mit «Ich finde, dass …».
+2. **Unerwartete Wendung:** Ein Mitschüler widerspricht. Reagiere freundlich und formuliere deine eigene Meinung erneut.
+3. **Wiedergabe/Transfer:** Nenne eine Hoffnung für den nächsten Kursmonat mit «Ich hoffe, dass …».
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

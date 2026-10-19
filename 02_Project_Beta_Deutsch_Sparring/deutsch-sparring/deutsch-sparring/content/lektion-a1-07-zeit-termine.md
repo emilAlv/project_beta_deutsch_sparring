@@ -40,9 +40,29 @@ Uhrzeit: um 9 Uhr; Wochentag: am Montag; Dauer: von 9 bis 10 Uhr. Bei Fragen nac
 | 5 | Ich arbeite ___ acht bis zwölf Uhr. | von | Lückentext |
 | 6 | Der Termin ist ___ Freitag um zehn. | am | Lückentext |
 | 7 | Bilde einen Satz: wir / uns / um sechs / treffen | Wir treffen uns um sechs. | Satzbau |
-| 8 | Finde den Fehler: Am 18 Uhr habe ich Zeit. | Um | Fehler finden |
+| 8 | Finde den Fehler: Am 18 Uhr habe ich Zeit. | Um 18 Uhr habe ich Zeit. | Fehler finden |
 | 9 | Übersetze: See you on Monday. | Bis Montag. | Übersetzung |
 | 10 | A: Geht es auch um elf? B: Ja, ___ Problem. | kein | Lückentext |
 
 ## Nicht verwenden (off-limits)
 Keine komplexen Zeitformen oder indirekte Rede.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Hast du am Donnerstag Zeit?
+> B: Ja, aber erst ab sechs Uhr.
+> A: Treffen wir uns um halb sieben?
+> B: Das passt gut.
+
+## Kurzer authentischer Lesetext
+Öffnungszeiten: «Mo–Fr 09.00–17.00, Sa 09.00–13.00, So geschlossen».
+
+**Verstehen:** Ist das Geschäft am Sonntag geöffnet?
+
+**Musterantwort:** Nein, am Sonntag ist es geschlossen.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Schlage deiner Freundin ein Treffen am Mittwoch um 18 Uhr vor.
+2. **Reaktion auf eine neue Information:** Sie kann erst um 19 Uhr. Bestätige die neue Uhrzeit.
+3. **Transfer:** Sage, wann ein Kurs beginnt und wann er endet.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

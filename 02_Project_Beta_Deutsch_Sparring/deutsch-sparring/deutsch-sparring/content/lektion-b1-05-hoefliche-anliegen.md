@@ -46,3 +46,23 @@ Du fragst bei einer Behörde nach einem Termin und benötigten Unterlagen. Formu
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Guten Tag, ich würde gern einen Termin vereinbaren.
+> B: Worum geht es denn?
+> A: Ich hätte eine Frage zu meinen Unterlagen.
+> B: Könnten Sie am Donnerstag um zehn Uhr kommen?
+
+## Lesetext – Information auswählen
+Behördenmitteilung: «Termine sind ausschliesslich online buchbar. Bitte bringen Sie einen gültigen Ausweis sowie das ausgefüllte Formular mit.»
+
+**Kernaussage/Detail:** Welche zwei Dinge soll man mitbringen?
+
+**Musterantwort:** Einen gültigen Ausweis und das ausgefüllte Formular.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Formuliere ein höfliches Anliegen an eine Behörde mit «Könnten Sie …?».
+2. **Gesprächsinitiative und Reaktion:** Die Mitarbeiterin erklärt, dass der gewünschte Termin ausgebucht ist. Bitte um eine Alternative.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Schreibe eine kurze formelle E-Mail mit Anrede, Anliegen, Dank und Abschluss.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

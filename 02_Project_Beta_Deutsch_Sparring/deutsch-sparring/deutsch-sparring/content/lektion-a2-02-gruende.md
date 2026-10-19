@@ -46,3 +46,23 @@ Du sagst ab, weil du krank bist, und schlägst einen neuen Termin vor. Antworte 
 
 ## Nicht verwenden (off-limits)
 Noch keine komplexen Kausalketten mit mehreren Nebensätzen.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Kommst du heute mit ins Kino?
+> B: Leider nicht, weil ich morgen früh arbeiten muss.
+> A: Schade. Wie wäre es mit Samstag?
+> B: Samstag passt. Da habe ich frei.
+
+## Alltagsnaher Modelltext
+Aushang: «Wegen einer technischen Störung fährt der Bus heute nur alle 30 Minuten. Bitte planen Sie mehr Zeit ein.»
+
+**Informationsfrage:** Warum fahren die Busse seltener?
+
+**Beispielantwort:** Wegen einer technischen Störung.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Sage eine Einladung ab. Nenne einen Grund mit «weil».
+2. **Unerwartete Wendung:** Die andere Person fragt: «Könnten wir uns stattdessen am Sonntag treffen?» Antworte und begründe deine Wahl.
+3. **Wiedergabe/Transfer:** Erkläre dieselbe Entscheidung alternativ mit «deshalb» statt «weil».
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

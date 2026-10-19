@@ -1,4 +1,4 @@
-// Integration checks for the 36 A1–B1 curriculum units and their tutor/coach wiring.
+// Integration checks for the complete ordered A1–B1 curriculum and its tutor/coach wiring.
 // Plain Node: npm run check:curriculum
 process.removeAllListeners('warning');
 
@@ -20,15 +20,21 @@ function check(name, ok, detail = '') {
 
 const lessons = listLessons();
 const units = lessons.filter((lesson) => /^lektion-(a1|a2|b1)-\d{2}-/.test(lesson.id));
-check('all 36 curriculum units load', units.length === 36, `loaded ${units.length}`);
+check('the complete curriculum loads (at least the original 36 units)', units.length >= 36, `loaded ${units.length}`);
 
+const counts = [];
 for (const level of ['A1', 'A2', 'B1']) {
   const levelUnits = units.filter((lesson) => lesson.levels.length === 1 && lesson.levels[0] === level);
   const numbers = levelUnits.map((lesson) => lesson.unit).sort((a, b) => a - b);
-  check(`${level}: 12 ordered units`, levelUnits.length === 12 && numbers.join(',') === '1,2,3,4,5,6,7,8,9,10,11,12');
+  const expected = Array.from({ length: levelUnits.length }, (_, index) => index + 1);
+  counts.push(levelUnits.length);
+  check(`${level}: at least 12 contiguous ordered units`,
+    levelUnits.length >= 12 && numbers.join(',') === expected.join(','));
   check(`${level}: level filter includes only ${level} curriculum units`,
-    topicsForLevel(units, level).length === 12 && topicsForLevel(units, level).every((lesson) => lesson.levels.includes(level)));
+    topicsForLevel(units, level).length === levelUnits.length
+      && topicsForLevel(units, level).every((lesson) => lesson.levels.includes(level)));
 }
+check('A1, A2 and B1 contain the same number of units', new Set(counts).size === 1);
 
 check('every unit exposes objective, situation and rule',
   units.every((lesson) => lesson.objective && lesson.situation && lesson.rule));
@@ -111,7 +117,7 @@ const home = {
   strengths: [], gaps: [], rules: [], vocab: null,
 };
 const context = coachContext({ home, topics: [...units, FREE_TOPIC], today: '2026-10-19' });
-check('coach receives all 36 ordered curriculum units',
+check('coach receives every ordered curriculum unit',
   units.every((lesson) => context.includes(lesson.id) && context.includes(lesson.objective)));
 const correctedSuggestion = cleanSuggestion(
   { topicId: samples.A1, level: 'B1', difficulty: 'medium', questions: 10 },

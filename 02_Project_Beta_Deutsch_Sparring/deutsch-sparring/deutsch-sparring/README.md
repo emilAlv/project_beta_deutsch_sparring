@@ -143,8 +143,8 @@ Rules: one file per topic.
 
 ## A1–B1 communicative curriculum
 
-The app loads 36 ordered curriculum units from `content/lektion-a1-*.md`, `lektion-a2-*.md` and
-`lektion-b1-*.md`: 12 units per CEFR level. The setup screen shows only units for the selected
+The app loads every ordered curriculum unit from `content/lektion-a1-*.md`, `lektion-a2-*.md` and
+`lektion-b1-*.md` (currently 48 units: 16 per CEFR level). The setup screen shows only units for the selected
 level. `lib/content.js` also exposes each lesson's learning objective, situation, rule and
 communicative transfer task to the tutor and coach; the complete Markdown lesson stays the source
 of truth.
@@ -154,7 +154,7 @@ exercise form. Sessions move from a meaningful situation through guided practice
 independent production and a natural follow-up. Feedback judges communicative meaning first,
 accepts natural alternatives and keeps the existing error categories and score contract.
 
-Run `npm run check:curriculum` to verify all 36 units, level filtering, A1/A2/B1 mock sessions,
+Run `npm run check:curriculum` to verify every unit, level filtering, A1/A2/B1 mock sessions,
 curriculum context, deterministic variation, final-question completion, and both Standard German
 variants.
 

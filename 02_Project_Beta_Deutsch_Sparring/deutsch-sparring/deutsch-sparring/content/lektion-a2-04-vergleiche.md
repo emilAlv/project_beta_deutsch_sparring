@@ -39,7 +39,7 @@ Komparativ + als: grösser als. Gleichheit mit so … wie. Superlativ: am besten
 | 4 | Ich finde die zweite Lösung ___. (gut, Komparativ) | besser | Lückentext |
 | 5 | Von allen Optionen ist diese am ___. (günstig) | günstigsten | Lückentext |
 | 6 | Der blaue Mantel ist ___ als der rote. (teuer) | teurer | Lückentext |
-| 7 | Finde den Fehler: Zürich ist grösser wie Luzern. | als | Fehler finden |
+| 7 | Finde den Fehler: Zürich ist grösser wie Luzern. | Zürich ist grösser als Luzern. | Fehler finden |
 | 8 | Übersetze: This room is quieter than the other one. | Dieses Zimmer ist ruhiger als das andere. | Übersetzung |
 
 ## Offene kommunikative Aufgabe
@@ -47,3 +47,23 @@ Du suchst eine Wohnung und vergleichst zwei Angebote. Antworte in ein oder zwei 
 
 ## Nicht verwenden (off-limits)
 Keine komplexen Vergleichssätze oder statistische Analysen.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Welche Wohnung findest du besser?
+> B: Die zweite. Sie ist heller und ruhiger.
+> A: Aber sie ist auch teurer.
+> B: Stimmt. Dafür liegt sie näher am Bahnhof.
+
+## Alltagsnaher Modelltext
+Inserate: «Studio A: 28 m², CHF 1'150, 10 Minuten zum Bahnhof. Studio B: 35 m², CHF 1'390, 3 Minuten zum Bahnhof.»
+
+**Informationsfrage:** Welche Wohnung ist grösser?
+
+**Beispielantwort:** Studio B ist grösser.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Vergleiche die beiden Wohnungen und wähle eine aus.
+2. **Unerwartete Wendung:** Deine Freundin sagt: «Mir ist die Miete wichtiger als der Weg.» Reagiere verständnisvoll.
+3. **Wiedergabe/Transfer:** Vergleiche zwei andere Verkehrsmittel mit «schneller als» und «günstiger als».
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

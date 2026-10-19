@@ -39,9 +39,29 @@ Mein/dein/sein/ihr/unser vor Nomen. Endung wie ein/eine: mein Bruder, meine Schw
 | 5 | A: Ist das ___ Tasche? (du) | deine | Lückentext |
 | 6 | Meine Familie ___ in Bern. (wohnen) | wohnt | Lückentext |
 | 7 | Bilde einen Satz: meine / in Luzern / Schwester / wohnt | Meine Schwester wohnt in Luzern. | Satzbau |
-| 8 | Finde den Fehler: Das ist mein Mutter. | meine | Fehler finden |
+| 8 | Finde den Fehler: Das ist mein Mutter. | Das ist meine Mutter. | Fehler finden |
 | 9 | Übersetze: Her brother lives in Zurich. | Ihr Bruder wohnt in Zürich. | Übersetzung |
 | 10 | A: Wer ist das? B: Das ist ___ Vater. (ich) | mein | Lückentext |
 
 ## Nicht verwenden (off-limits)
 Noch keine komplexen Relativsätze oder Genitivattribute.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Wer ist das auf dem Foto?
+> B: Das ist meine Schwester. Sie heisst Nadine.
+> A: Und ist das dein Bruder?
+> B: Nein, das ist mein Freund.
+
+## Kurzer authentischer Lesetext
+Auf einer Einladung steht: «Anna lädt ihren Bruder Leo und ihre Freundin Mira ein».
+
+**Verstehen:** Wen lädt Anna ein?
+
+**Musterantwort:** Ihren Bruder Leo und ihre Freundin Mira.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Zeige deiner Freundin ein erfundenes Foto und beschreibe zwei Personen.
+2. **Reaktion auf eine neue Information:** Sie fragt: «Wohnt deine Schwester auch hier?» Antworte natürlich.
+3. **Transfer:** Frage deine Freundin nach einer Person auf ihrem Foto.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

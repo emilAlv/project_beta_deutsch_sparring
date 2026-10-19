@@ -39,7 +39,7 @@ Temporale Reihenfolge: zuerst, dann, danach; Modalverben; höfliche Bitte; Perfe
 | 4 | Wir müssen die Aufgabe bis morgen ___. (erledigen) | erledigen | Lückentext |
 | 5 | Zuerst telefoniere ich, ___ schreibe ich eine E-Mail. | danach | Lückentext |
 | 6 | Ich gebe dir morgen ___. (Bescheid) | Bescheid | Lückentext |
-| 7 | Finde den Fehler: Ich habe die Aufgabe erledigen. | erledigt | Fehler finden |
+| 7 | Finde den Fehler: Ich habe die Aufgabe erledigen. | Ich habe die Aufgabe erledigt. | Fehler finden |
 | 8 | Übersetze: Could you help me this afternoon? | Kannst du mir heute Nachmittag helfen? | Übersetzung |
 
 ## Offene kommunikative Aufgabe
@@ -47,3 +47,23 @@ Du fragst einen Kollegen, ob ihr Schichten tauschen könnt. Antworte in ein oder
 
 ## Nicht verwenden (off-limits)
 Keine fachsprachlichen Vertragsverhandlungen.
+
+## Alltagsdialog – sinngemäss verstehen
+> A: Kannst du am Freitag meine Schicht übernehmen?
+> B: Am Vormittag nicht, aber am Nachmittag hätte ich Zeit.
+> A: Das hilft mir sehr. Ich frage kurz unsere Teamleiterin.
+> B: Gib mir Bescheid.
+
+## Alltagsnaher Modelltext
+Dienstplan: «Mo–Do 08.00–17.00; Freitag Teammeeting um 14 Uhr; Änderungen bitte bis Mittwoch melden.»
+
+**Informationsfrage:** Bis wann muss man Änderungen melden?
+
+**Beispielantwort:** Bis Mittwoch.
+
+## Szenarien: reagieren, aushandeln, weitergeben
+1. **Anliegen:** Bitte einen Kollegen, eine Schicht zu tauschen. Begründe kurz.
+2. **Unerwartete Wendung:** Er schlägt einen anderen Zeitpunkt vor. Reagiere und finde eine Lösung.
+3. **Wiedergabe/Transfer:** Informiere danach die Teamleitung knapp über die vereinbarte Änderung.
+
+**Feedback:** Ist die kommunikative Absicht erreicht? Danach höchstens ein bis zwei relevante sprachliche Korrekturen und eine passende Anschlussfrage. Gleichwertige Lösungen zulassen. Bei Verständnisproblemen um Klärung bitten statt die Aufgabe abzubrechen.

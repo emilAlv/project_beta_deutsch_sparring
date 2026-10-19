@@ -46,3 +46,23 @@ Du planst mit Nachbarn eine gemeinsame Nutzung der Waschküche. Formuliere dazu 
 
 ## Nicht verwenden (off-limits)
 Unnötig komplexe akademische Syntax, Konjunktiv I oder C1/C2-Ausdrucksweisen.
+
+## Modellgespräch – zusammenhängend reagieren
+> A: Die Waschküche ist am Samstag oft besetzt.
+> B: Wir könnten einen Wochenplan machen.
+> A: Gute Idee, aber wir sollten auch kurzfristige Änderungen erlauben.
+> B: Einverstanden. Ich mache einen Vorschlag.
+
+## Lesetext – Information auswählen
+Hausordnung (fiktiv): «Bitte tragen Sie Ihren gewünschten Waschtermin bis Donnerstag in die Liste ein. Änderungen sollen den anderen Bewohnerinnen und Bewohnern mitgeteilt werden.»
+
+**Kernaussage/Detail:** Bis wann soll man den Waschtermin eintragen?
+
+**Musterantwort:** Bis Donnerstag.
+
+## Handlungsorientierte Aufgaben – Aushandeln und Vermitteln
+1. **Eigene Position/Erfahrung:** Du organisierst mit Nachbarn eine gemeinsame Aktivität. Schlage eine Regel und einen Ablauf vor.
+2. **Gesprächsinitiative und Reaktion:** Eine Nachbarin hat einen berechtigten Einwand. Höre zu und biete einen Kompromiss an.
+3. **Transfer, Zusammenfassen oder Vermitteln:** Schreibe die gemeinsam vereinbarten Regeln in drei klaren Sätzen.
+
+**Feedbackkriterium:** Verständlichkeit, angemessene Begründung, Zusammenhalt der Äusserung und erfolgreiche Interaktion haben Vorrang vor geringfügigen Formfehlern. Biete eine gezielte Korrektur und fordere eine passende Weiterführung. Akzeptiere gleichwertige Lösungen.

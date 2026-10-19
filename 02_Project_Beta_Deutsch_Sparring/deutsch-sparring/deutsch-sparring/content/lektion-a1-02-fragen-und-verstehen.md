@@ -39,10 +39,30 @@ Fragewort + finites Verb + Person: Wo wohnst du? Ja/Nein-Frage: Verb + Person: K
 | 4 | A: ___ wohnst du? B: In Bern. | Wo | Lückentext |
 | 5 | A: ___ heisst du? B: Elena. | Wie | Lückentext |
 | 6 | Bilde eine Ja/Nein-Frage: du / morgen / kommst | Kommst du morgen? | Satzbau |
-| 7 | Finde den Fehler: Wo du arbeitest? | arbeitest du | Fehler finden |
+| 7 | Finde den Fehler: Wo du arbeitest? | Wo arbeitest du? | Fehler finden |
 | 8 | A: Bitte sprechen Sie ___! Ich lerne Deutsch. | langsam | Lückentext |
 | 9 | B: ___ Sie das bitte wiederholen? | Können | Lückentext |
 | 10 | A: ___ schreibt man Ihren Namen? B: M-E-I-E-R. | Wie | Lückentext |
 
 ## Nicht verwenden (off-limits)
 Noch keine indirekten Fragen (Könnten Sie mir sagen, wann …).
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Entschuldigung, wie heisst das auf Deutsch?
+> B: Das ist eine Quittung.
+> A: Wie bitte? Können Sie das wiederholen?
+> B: Natürlich: eine Quittung.
+
+## Kurzer authentischer Lesetext
+Am Kursraum steht: «Zimmer 204, 2. Stock, Beginn: 18.30 Uhr».
+
+**Verstehen:** Wann beginnt der Kurs?
+
+**Musterantwort:** Um 18.30 Uhr.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Du verstehst ein neues Wort im Kurs nicht. Bitte deine Lehrperson um Wiederholung.
+2. **Reaktion auf eine neue Information:** Die Lehrperson wiederholt das Wort zu schnell. Bitte sie, langsamer zu sprechen.
+3. **Transfer:** Formuliere zwei unterschiedliche W-Fragen zu Ort und Zeit.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

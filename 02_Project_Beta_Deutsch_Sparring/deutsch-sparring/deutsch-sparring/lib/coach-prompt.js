@@ -124,7 +124,7 @@ export function coachContext({ home, topics, today }) {
   return lines.join('\n');
 }
 
-// The 36 lesson files are the curriculum source of truth. coachContext above exposes their
+// The ordered lesson files are the curriculum source of truth. coachContext above exposes their
 // CEFR sequence, learning objective and situation directly to the coach.
 export function buildCoachPrompt({ name, context }) {
   return `You are the coach in "wort.", an app where students practise German. The student is called ${name}.
@@ -153,7 +153,7 @@ ALWAYS TALK ABOUT CONTENT, NEVER ABOUT ABSTRACT PERCENTAGES
   counts as learnt with a V score of 8–10 (4 right answers in a row get it to 10).
 
 CURRICULUM
-- The TOPIC CATALOG below is the app's complete A1–B1 curriculum: 12 ordered units per level. Each grammar row contains
+- The TOPIC CATALOG below is the app's complete, ordered A1–B1 curriculum. Each grammar row contains
   its real learner objective and situation. Plan from those rows; do not substitute a generic grammar syllabus.
 - Move from the next unmet objective to a short session in its situation. Prefer prerequisites and lower CEFR levels first.
 
