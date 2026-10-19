@@ -84,12 +84,21 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const vocab = form.kind === 'vocab';
 
-  const grammarTopics = useMemo(() => topics.filter(isGrammarTopic), [topics]);
+  const grammarTopics = useMemo(
+    () => topics.filter((x) => isGrammarTopic(x) && (!x.levels?.length || x.levels.includes(form.level))),
+    [topics, form.level],
+  );
   const allSections = useMemo(() => topics.filter((x) => x.type === 'Wortschatz' && !x.parent), [topics]);
   const sections = allSections.filter((x) => countOf(x, form.level, form.source) > 0);
 
   // the choice that is really used: a remembered choice that no longer fits falls back to the first
   const grammarTopic = grammarTopics.find((x) => x.id === form.grammarTopic) || grammarTopics[0] || null;
+  const grammarHelp = grammarTopic
+    ? [
+        grammarTopic.objective ? `Ziel: ${grammarTopic.objective}` : '',
+        grammarTopic.situation ? `Situation: ${grammarTopic.situation}` : '',
+      ].filter(Boolean).join(' · ') || t('setupGrammarLevels', { levels: grammarTopic.levels.join(', ') })
+    : '';
   const section = sections.find((x) => x.id === form.section) || sections[0] || null;
   const lists = section ? topics.filter((x) => x.parent === section.id && countOf(x, form.level, form.source) > 0) : [];
   const list = lists.find((x) => x.id === form.list) || null;
@@ -190,7 +199,7 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
                 onChange={(id) => set({ grammarTopic: id })}
               />
             ) : <p className="setup-help">{t('setupNoGrammar')}</p>}
-            {!vocab && grammarTopic && <p className="setup-help">{t('setupGrammarLevels', { levels: grammarTopic.levels.join(', ') })}</p>}
+            {!vocab && grammarTopic && <p className="setup-help">{grammarHelp}</p>}
           </Section>
 
           <Section title={t('setupLevelPace')} help={t(`diffHelp_${form.difficulty}`)}>

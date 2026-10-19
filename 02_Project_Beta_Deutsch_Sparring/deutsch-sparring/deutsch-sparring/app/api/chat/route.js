@@ -1,4 +1,4 @@
-import { getLesson, getKnownGrammar, guessTopic, FREE_TOPIC } from '../../../lib/content';
+import { getLesson, getKnownGrammar, guessTopic, topicsForLevel, FREE_TOPIC } from '../../../lib/content';
 import { allTopics } from '../../../lib/topics';
 import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEADER } from '../../../lib/words';
 import { pickWords, wordsNeeded } from '../../../lib/scores';
@@ -69,13 +69,16 @@ async function handle(req) {
     direction: ['en-de', 'de-en', 'mixed'].includes(s.direction) ? s.direction : 'en-de',
     grammar,
     sentences: wantsSentenceTasks(grammar),
-    // 'ch' (Swiss: ss) | 'de' (German: ß); anything else = 'ch'
+    // 'ch' (Swiss Standard German: ss, Velo, Spital) | 'de' (German Standard German: ß);
+    // anything else = 'ch'. Neither option is dialect.
     variant: cleanVariant(s.variant),
   };
   const ses = body.session || {};
   const lessons = allTopics();
-  const catalog = [...lessons, FREE_TOPIC];
-  const topicIds = new Set(catalog.map((t) => t.id));
+  const selectableLessons = topicsForLevel(lessons, settings.level);
+  // Keep every old id valid for a session already in progress, but only offer/guess topics for its CEFR level.
+  const allCatalog = [...lessons, FREE_TOPIC];
+  const topicIds = new Set(allCatalog.map((t) => t.id));
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.text || '';
   const count = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
 
@@ -103,10 +106,14 @@ async function handle(req) {
   // nothing chosen yet: guess the lesson from the wish ("Dativ und Akkusativ, Stufe mittel")
   let guessed = false;
   if (!session.topicId && !session.openNumber && !progress.done) {
-    session.topicId = guessTopic(lastUser, lessons);
+    session.topicId = guessTopic(lastUser, selectableLessons);
     guessed = Boolean(session.topicId);
   }
   const topicId = session.topicId;
+  const currentTopic = allCatalog.find((t) => t.id === topicId) || null;
+  const catalog = [...selectableLessons];
+  if (currentTopic && currentTopic.id !== FREE_TOPIC.id && !catalog.some((t) => t.id === currentTopic.id)) catalog.push(currentTopic);
+  catalog.push(FREE_TOPIC);
   const mistakes = (Array.isArray(body.mistakes) ? body.mistakes : []).slice(0, 8).map((m) => ({
     studentAnswer: String(m?.studentAnswer || '').slice(0, 200),
     corrected: String(m?.corrected || '').slice(0, 200),

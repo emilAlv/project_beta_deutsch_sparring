@@ -40,16 +40,19 @@ export function cleanSuggestion(raw, topics = null) {
   const topicId = clip(raw.topicId, 160);
   if (!topicId || topicId === 'free') return null;
   let kind = KINDS.includes(raw.kind) ? raw.kind : 'vocab';
+  let level = LEVELS.includes(raw.level) ? raw.level : 'B1';
   if (topics) {
     const topic = topics.find((x) => x.id === topicId);
     if (!topic) return null;
     kind = topic.type === 'Wortschatz' ? 'vocab' : 'grammar';
+    // A coach suggestion must open a setup in which its topic is actually selectable.
+    if (topic.levels?.length && !topic.levels.includes(level)) level = topic.levels.find((x) => LEVELS.includes(x)) || level;
   }
   const grammar = Array.isArray(raw.grammar) ? GRAMMAR_POINTS.filter((g) => raw.grammar.includes(g)) : [];
   return {
     kind,
     topicId,
-    level: LEVELS.includes(raw.level) ? raw.level : 'B1',
+    level,
     difficulty: DIFFICULTIES.includes(raw.difficulty) ? raw.difficulty : 'medium',
     questions: nearestStep(Math.round(Number(raw.questions))),
     grammar: kind === 'vocab' ? grammar : [],
