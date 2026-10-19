@@ -23,6 +23,8 @@ import SessionPanel from '../components/SessionPanel';
 import SetupScreen from '../components/SetupScreen';
 import SessionRibbon from '../components/SessionRibbon';
 import HomePage from '../components/Home';
+import SessionSummary from '../components/SessionSummary';
+import { goalSnapshot } from '../lib/home-client';
 import { t } from '../lib/ui-text';
 import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
@@ -268,7 +270,8 @@ export default function Home() {
       && (saved.stage === 'setup' || saved.stage === 'home' || saved.session?.settings) // a running session always has its settings
     ) {
       const restored = { ...EMPTY_CONVO, ...saved, session: { ...newSession(), ...saved.session } };
-      if (restored.stage !== 'practice') restored.stage = restored.stage === 'setup' ? 'setup' : 'home';
+      if (restored.stage === 'summary' && !(restored.session.finished && restored.session.answers.length)) restored.stage = 'home';
+      if (restored.stage !== 'practice' && restored.stage !== 'summary') restored.stage = restored.stage === 'setup' ? 'setup' : 'home';
       convoRef.current = restored;
       setConvo(restored);
       const last = restored.messages[restored.messages.length - 1];
@@ -295,7 +298,7 @@ export default function Home() {
 
   // ---------- remember things ----------
   useEffect(() => {
-    if (convo.stage === 'setup' || convo.stage === 'practice' || convo.stage === 'home') {
+    if (convo.stage === 'setup' || convo.stage === 'practice' || convo.stage === 'home' || convo.stage === 'summary') {
       saveChat({ ...convo, version: CHAT_VERSION, messages: convo.messages.slice(-80), savedAt: Date.now() });
     }
   }, [convo]);
@@ -367,8 +370,8 @@ export default function Home() {
       tutorSay(t('tutorAlreadyFinished', { again: t('summaryAgain') }));
       return;
     }
-    const done = { ...s, total: total || s.total, finished: true, endedEarly: early && s.answers.length < s.total, exercise: null };
-    update((c) => ({ ...c, session: done, modelOptions: [] }));
+    const done = { ...s, total: total || s.total, finished: true, endedAt: Date.now(), endedEarly: early && s.answers.length < s.total, exercise: null };
+    update((c) => ({ ...c, session: done, modelOptions: [], stage: done.answers.length ? 'summary' : c.stage }));
     remember(done);
     tutorSay(line || t('tutorStopped', { name: profileRef.current.name }), { summary: summaryOf(done) });
   }
@@ -434,7 +437,7 @@ export default function Home() {
   function cancelSetup() {
     setSetupError(null);
     const s = convoRef.current.session;
-    update((c) => ({ ...c, stage: s.settings && s.started ? 'practice' : 'home' }));
+    update((c) => ({ ...c, stage: s.finished && s.answers.length ? 'summary' : s.settings && s.started ? 'practice' : 'home' }));
   }
 
   // ---------- the header menu: Home ⇄ Sparring ----------
@@ -463,8 +466,10 @@ export default function Home() {
     dropRequest();
     setError(null);
     setSetupError(null);
-    const s = newSession(topic, settings);
+    const s = { ...newSession(topic, settings), startedAt: Date.now() };
     startSessionRecord(s);
+    // the goal progress before this session, for "Towards your goals" on the summary screen
+    goalSnapshot().then((snap) => { if (snap) updateSession((x) => (x.id === s.id ? { ...x, goalsBefore: snap } : x)); });
     const start = { id: uid(), at: Date.now(), role: 'user', text: t('tutorStartTopic', { topic: s.topicName || topic.short }), hidden: true, ai: true };
     const fresh = { ...EMPTY_CONVO, stage: 'practice', session: s, messages: [start], historyFrom: start.at };
     convoRef.current = fresh;
@@ -561,7 +566,7 @@ export default function Home() {
     }
     setError(null);
     const c = convoRef.current;
-    if (c.stage === 'loading' || c.stage === 'setup' || c.stage === 'home') return false;
+    if (c.stage === 'loading' || c.stage === 'setup' || c.stage === 'home' || c.stage === 'summary') return false;
     if (c.stage === 'name') return onName(text);
     if (c.stage === 'code') return onCode(text);
 
@@ -772,11 +777,13 @@ export default function Home() {
     if (reply.grammarFocus) s.grammarFocus = reply.grammarFocus;
 
     const justFinished = s.finished && !wasFinished;
+    if (justFinished) s.endedAt = Date.now();
     const shown = { ...reply, feedback, exercise };
     const message = { id: uid(), at: Date.now(), role: 'tutor', reply: shown, modelText, summary: justFinished ? summaryOf(s) : null };
     update((c) => ({
       ...c,
       session: s,
+      stage: justFinished && s.answers.length ? 'summary' : c.stage,
       modelOptions: s.finished ? [] : reply.options,
       messages: [...c.messages, message],
     }));
@@ -805,7 +812,8 @@ export default function Home() {
 
   const summaryActions = session.finished
     ? [
-      { text: t('summaryAgain'), onClick: again, primary: true },
+      { text: t('sumBackToSummary'), onClick: () => update((c) => ({ ...c, stage: 'summary' })), primary: true },
+      { text: t('summaryAgain'), onClick: again },
       { text: t('summaryNew'), onClick: () => openSetup(session.settings) },
     ]
     : null;
@@ -827,7 +835,7 @@ export default function Home() {
       <Header
         name={profile.name}
         streak={currentStreak(history.streak)}
-        nav={stage === 'home' ? 'home' : stage === 'setup' || stage === 'practice' ? 'sparring' : null}
+        nav={stage === 'home' ? 'home' : stage === 'setup' || stage === 'practice' || stage === 'summary' ? 'sparring' : null}
         onNav={(k) => (k === 'home' ? goHome() : stage === 'practice' ? undefined : goSparring())}
         onNewSession={() => openSetup(session.settings)}
         onChangeName={account ? null : changeName}
@@ -848,6 +856,16 @@ export default function Home() {
           onContinue={goSparring}
           onAgain={(settings) => startSession(settings)}
           onSetupSuggested={openSetupSuggested}
+        />
+      ) : stage === 'summary' ? (
+        <SessionSummary
+          session={session}
+          name={profile.name}
+          topicType={session.topicType}
+          onHome={goHome}
+          onAgain={again}
+          onNew={() => openSetup(session.settings)}
+          onChat={() => update((c) => ({ ...c, stage: 'practice' }))}
         />
       ) : stage === 'setup' ? (
         <SetupScreen

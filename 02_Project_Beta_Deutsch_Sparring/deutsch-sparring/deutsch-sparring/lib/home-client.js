@@ -34,6 +34,13 @@ export async function loadHome() {
   }
 }
 
+// A small copy of the goal progress, taken when a session starts: the summary screen compares it with the
+// numbers after the session. → { progress: { [goalId]: percent }, learnt } or null
+export async function goalSnapshot() {
+  const d = await loadHome();
+  return d ? { progress: d.progress || {}, learnt: d.tiles?.learnt ?? 0 } : null;
+}
+
 // → true when saved
 export async function saveGoal(goal) {
   if (!usesServer()) {

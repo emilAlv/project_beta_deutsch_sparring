@@ -21,8 +21,12 @@ this». Hint, rule, skip and stop still work in the chat (and as chips above the
   *Progress & gaps*, *Grammar focus*.
 - **Sessions of 10–50 questions.** The app counts the questions itself and ends the session when
   they are done – or at once when the student says «Stopp», «genug», «I'm done» or taps
-  *End session*. A summary card shows the score with *Same settings again* and *New session*
-  (back to the setup screen).
+  *End session*. The app then switches to the **session summary screen** (stage `summary`, kept on
+  reload): score, one segment per question, *Words you know* / *Words to repeat* (with a short reason such
+  as "article" or "Genitiv"; grammar topics show *Questions you got right* / *To repeat*), grammar rules
+  with right/total (red under 50 %), a *Towards your goals* line per goal (progress before → after, same
+  numbers as Home, `/api/stats`) and the buttons *Back to home*, *Same settings again*, *New session*. The
+  link *See the conversation* opens the chat, which keeps a short closing line and a *Back to summary* button.
 - **Grammar topics:** gap fill, choose the form, build a sentence, translate, find the mistake.
 - **Vocabulary topics = flashcards** from the word list (`vocab/words.json`, see `vocab/README.md`).
   The topics are the word list's sections and lists (e.g. *Home & living › Furniture & objects*);
@@ -164,7 +168,7 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
 ## How it works (for developers)
 
 - `app/page.js` – the screen and its state, in stages: name / class code (chat, no AI, only
-  without accounts) → `home` (`components/Home.js`) → `setup` (`components/SetupScreen.js`) → `practice` (chat + ribbon
+  without accounts) → `home` (`components/Home.js`) → `setup` (`components/SetupScreen.js`) → `practice` → `summary` (`components/SessionSummary.js`; numbers from `summaryDetails()` in `lib/stats.js`; the goal progress at session start is stored in `session.goalsBefore` via `goalSnapshot()` in `lib/home-client.js`) (practice = chat + ribbon
   `components/SessionRibbon.js` + right panel `components/SessionPanel.js`). **The app owns the
   session**: it numbers the questions, counts the score and ends the session; the AI only writes
   exercises and feedback. Each session carries its fixed settings (`session.settings`, helpers in

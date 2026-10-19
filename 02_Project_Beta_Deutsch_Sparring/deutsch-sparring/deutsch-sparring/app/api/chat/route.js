@@ -217,8 +217,8 @@ async function handle(req) {
   const { grammarFocus, options, ...essentials } = parsed;
   return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo() });
 
-  // the picked words for the browser to keep: id + type (phrases have no grammar score)
+  // the picked words for the browser to keep: id + type + the word as shown on the summary screen (phrases have no grammar score)
   function wordInfo() {
-    return filter ? words.map((w) => ({ id: w.id, type: w.type })) : undefined;
+    return filter ? words.map((w) => ({ id: w.id, type: w.type, label: (w.noun ? `${w.article} ${w.noun}` : w.de || w.id).slice(0, 60) })) : undefined;
   }
 }
