@@ -18,7 +18,7 @@ One row per student in the table `users`:
 | `created_at` | when the account was made |
 | `settings` | one small note, only after an import: that the old browser data was handed over once (and the old streak) |
 
-**Progress (new, three more tables).** For a logged-in student the app saves its learning progress
+**Progress (three more tables, plus two for goals).** For a logged-in student the app saves its learning progress
 in the database, so it follows the student to any device:
 
 | Table | One row per | What is in it |
@@ -26,6 +26,8 @@ in the database, so it follows the student to any device:
 | `sessions` | practice session | the settings chosen (level, difficulty, topic …), start and end time, number of questions, the result card (done / correct / skipped, topic name, the last 5 mistakes) |
 | `answers` | answered or skipped question | question number, task type, the word, the question text, **what the student typed**, the corrected sentence, the rule, the kind of error, right / wrong / skipped, the time |
 | `word_scores` | student and word | the two scores 1–10 (word itself / grammar), the right-answers-in-a-row counters, when the word comes back, when it was last practised |
+| `goals` | goal | the student's goal: name, type (exam / vocabulary / grammar), level, start and end date, and what it covers (word section / list, grammar rules) |
+| `milestones` | milestone of a goal | date, title, target in percent, reached or not; deleted with its goal |
 
 All rows are tied to the account (`user_id`) and deleted with it. Every request checks that you
 are logged in and only ever reads or writes **your own** rows; the id of the student is taken from

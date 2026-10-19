@@ -8,6 +8,7 @@ import { databaseUrl } from './schema.mjs';
 import { sql, ensureSchema } from './db';
 import { applyAnswer } from './scores';
 import { getWord } from './words';
+import { aggregateAnswers, WINDOW_DAYS } from './home-stats';
 
 const MAX_SCORE_ROWS = 2000;
 const DAY = 86_400_000;
@@ -219,6 +220,10 @@ const memoryStore = {
     for (const [id, rec] of b.scores) if (!ids || ids.includes(id)) out[id] = rec;
     return out;
   },
+  async answerStats(userId) {
+    const since = Date.now() - WINDOW_DAYS * DAY;
+    return aggregateAnswers(box(userId).answers.filter((a) => a.createdAt >= since));
+  },
   async hasData(userId) {
     const b = box(userId);
     return b.imported || b.sessions.size > 0 || b.scores.size > 0;
@@ -298,6 +303,30 @@ const dbStore = {
       ? await sql().query(`SELECT ${SCORE_COLUMNS} FROM word_scores WHERE user_id = $1 AND word_id = ANY($2::text[])`, [userId, ids])
       : await sql().query(`SELECT ${SCORE_COLUMNS} FROM word_scores WHERE user_id = $1 LIMIT ${MAX_SCORE_ROWS * 4}`, [userId]);
     return Object.fromEntries(rows.map((r) => [r.word_id, rowToRec(r)]));
+  },
+  async answerStats(userId) {
+    await ensureSchema();
+    const window = `user_id = $1 AND created_at > now() - interval '${WINDOW_DAYS} days'`;
+    const [tot, rules, words] = await Promise.all([
+      sql().query(
+        `SELECT count(DISTINCT session_id)::int AS sessions, count(*)::int AS total,
+                count(*) FILTER (WHERE correct)::int AS correct, count(*) FILTER (WHERE skipped)::int AS skipped
+         FROM answers WHERE ${window}`,
+        [userId],
+      ),
+      sql().query(
+        `SELECT rule, count(*)::int AS n, count(*) FILTER (WHERE correct)::int AS ok FROM answers
+         WHERE ${window} AND NOT skipped AND COALESCE(rule, '') <> '' GROUP BY rule ORDER BY n DESC LIMIT 80`,
+        [userId],
+      ),
+      sql().query(
+        `SELECT word_id AS id, count(*)::int AS n, count(*) FILTER (WHERE correct)::int AS ok FROM answers
+         WHERE ${window} AND NOT skipped AND word_id IS NOT NULL GROUP BY word_id ORDER BY n DESC LIMIT 1000`,
+        [userId],
+      ),
+    ]);
+    const t = tot[0] || {};
+    return { sessions: t.sessions || 0, total: t.total || 0, correct: t.correct || 0, skipped: t.skipped || 0, rules, words };
   },
   async hasData(userId) {
     await ensureSchema();

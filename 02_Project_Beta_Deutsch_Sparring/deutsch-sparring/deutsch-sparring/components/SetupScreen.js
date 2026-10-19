@@ -79,7 +79,7 @@ function Section({ title, children, help }) {
   );
 }
 
-export default function SetupScreen({ topics, initial, onStart, onCancel, error }) {
+export default function SetupScreen({ topics, initial, onStart, onCancel, cancelLabel, error }) {
   const [form, setForm] = useState(initial);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const vocab = form.kind === 'vocab';
@@ -124,7 +124,7 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, error 
     <div className="setup-page">
       <div className="setup-column">
         {onCancel && (
-          <button type="button" className="text-button setup-back" onClick={onCancel}>{t('setupBack')}</button>
+          <button type="button" className="text-button setup-back" onClick={onCancel}>{t(cancelLabel || 'setupBack')}</button>
         )}
         <h1 className="setup-title">{t('setupTitle')}</h1>
         <p className="setup-sub">{t('setupSubtitle')}</p>

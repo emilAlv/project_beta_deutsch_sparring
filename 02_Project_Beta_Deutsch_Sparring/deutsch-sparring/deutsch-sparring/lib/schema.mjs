@@ -54,6 +54,30 @@ export const SCHEMA = [
     last_practised timestamptz,
     PRIMARY KEY (user_id, word_id)
   )`,
+  // Goals and their milestones (Task 9). The id of a goal comes from the browser, so it is only unique per student.
+  `CREATE TABLE IF NOT EXISTS goals (
+    id text NOT NULL,
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type text NOT NULL,
+    level text NOT NULL,
+    title text NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    scope jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS milestones (
+    id text NOT NULL,
+    goal_id text NOT NULL,
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    due_date date NOT NULL,
+    title text NOT NULL,
+    target smallint NOT NULL,
+    status text NOT NULL DEFAULT 'open',
+    PRIMARY KEY (user_id, goal_id, id),
+    FOREIGN KEY (user_id, goal_id) REFERENCES goals (user_id, id) ON DELETE CASCADE
+  )`,
 ];
 
 // Vercel's Neon integration sets DATABASE_URL and POSTGRES_URL; either works.

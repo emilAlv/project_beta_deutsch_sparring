@@ -12,12 +12,14 @@ const KEYS = {
   prefs: 'wort_prefs', // { view, setup } – setup = the last setup screen choices (prefill)
   history: 'wort_history', // { sessions: [...last 5], streak: { count, lastDay } }
   chat: 'wort_chat', // the current conversation, so a reload doesn't lose it
+  goals: 'wort_goals', // [goal, …] – the goals with their milestones (lib/goals.js); with an account they live on the server
+  alog: 'wort_answerlog', // the last answers (compact) for the Home page's 30-day stats; with an account the server has them
   scores: 'wort_scores', // { [wordId]: { v, g, last } } – the word scores (lib/scores.js); with an account they live on the server
 };
 
 // With accounts, the conversation and the session history are kept per username, so two
 // students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
-const PER_ACCOUNT = new Set(['history', 'chat', 'scores']);
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog']);
 let account = '';
 const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
 
@@ -120,6 +122,32 @@ export function startSessionRecord(s) {
   if (server) queuePost('/api/progress/session', { id: s.id, settings: s.settings || {}, total: s.total });
 }
 
+// logged in: goals, history and scores are on the server (lib/home-client.js talks to it)
+export const usesServer = () => server;
+
+// ---------- goals (without accounts; with an account see lib/home-client.js) ----------
+export const loadGoalsLocal = () => {
+  const g = read('goals', []);
+  return Array.isArray(g) ? g : [];
+};
+export const saveGoalLocal = (goal) => {
+  const all = loadGoalsLocal();
+  write('goals', all.some((x) => x.id === goal.id) ? all.map((x) => (x.id === goal.id ? goal : x)) : [...all, goal]);
+};
+export const deleteGoalLocal = (id) => write('goals', loadGoalsLocal().filter((x) => x.id !== id));
+
+// the last answers, kept small: { i: session, r: rule, o: right, s: skipped, w: word id, t: time }
+const LOG_MAX = 1500;
+const LOG_DAYS = 30;
+export const loadAnswerLog = () => {
+  const l = read('alog', []);
+  return Array.isArray(l) ? l : [];
+};
+function logAnswer(entry) {
+  const since = entry.t - LOG_DAYS * 86_400_000;
+  write('alog', [...loadAnswerLog(), entry].filter((x) => x && x.t >= since).slice(-LOG_MAX));
+}
+
 export const loadProfile = () => read('profile', {});
 export const saveProfile = (p) => write('profile', p);
 export const loadPrefs = () => read('prefs', {});
@@ -196,6 +224,9 @@ export function recordWordAnswer(wordId, answer, extra = null, now = Date.now())
       });
     }
     return null;
+  }
+  if (extra) {
+    logAnswer({ i: extra.sessionId || '', r: String(extra.rule || '').slice(0, 200), o: answer.correct === true, s: answer.skipped === true, w: wordId || '', t: now });
   }
   if (!wordId) return null;
   const all = loadScores();
