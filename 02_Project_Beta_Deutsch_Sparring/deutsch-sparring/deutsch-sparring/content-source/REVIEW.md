@@ -11,6 +11,8 @@
 | wortschatz-09-arbeit-bildung.md | Plural column empty for: der Leiter, der Chef, der Direktor, der Absender, der Empfänger, das Abitur, der Azubi, der Fachmann, die Kleinkindererzieherin | Plural filled in: die Leiter / die Leiterinnen, die Chefs / die Chefinnen, die Direktoren / die Direktorinnen, die Absender / die Absenderinnen, die Empfänger / die Empfängerinnen, – (nur Singular), die Azubis / die Auszubildenden, die Fachleute, die Kleinkindererzieherinnen | The Plural column needs a value for the plural exercises; please check |
 | wortschatz-10-freizeit-natur.md | Plural column empty for: das Selbstgemachte | Plural filled in: – (nur Singular) | The Plural column needs a value for the plural exercises; please check |
 | wortschatz-11-kommunikation-dienste.md | Plural column empty for: der Briefträger, der Minister, der User | Plural filled in: die Briefträger / die Briefträgerinnen, die Minister / die Ministerinnen, die User / die Userinnen | The Plural column needs a value for the plural exercises; please check |
+| wortschatz-12-verben.md | wortschatz-12-verben.md | möchten – Partizip «—» | möchten – Perfekt «–» | Emilio gave no Partizip for «möchten» (special form of mögen); the Perfekt cell is empty |
+| wortschatz-12-verben.md | Partizip with "sich": sich setzen → sich gesetzt, sich drehen → sich gedreht, sich bedanken → sich bedankt, sich entschuldigen → sich entschuldigt, sich beschweren → sich beschwert, sich anwenden → sich angewendet, sich verhalten → sich verhalten, sich beeilen → sich beeilt, sich ausruhen → sich ausgeruht, sich amüsieren → sich amüsiert, sich ärgern → sich geärgert, sich freuen → sich gefreut, sich fühlen → sich gefühlt, sich befinden → sich befunden, sich eignen → sich geeignet, sich bewegen → sich bewegt | Perfekt without "sich" in the Partizip, e.g. hat sich gesetzt | Partizip II is only the verb part (unterhalten, bedankt …); "sich" belongs to the Perfekt form |
 | all files | der/die Bekannte (one cell with «der/die») | der Bekannte / die Bekannte | The app only reads «der», «die» or «das» at the start of a noun cell |
 
 ## Questions
@@ -21,6 +23,8 @@
 - lektion-02-wohnen-im-haus.md: Das Erdgeschoss: the existing table has no plural («–»), Emilio wrote «Erdgeschosse». I did not change the existing row.
 - lektion-02-wohnen-im-haus.md: 37 of Emilio's 105 rows were already in the lesson (same noun or verb) and were not added again. The other 68 are in the new tables «aus der Masterliste» (51 nouns, 5 verbs, 11 words, 1 phrase).
 - wortschatz-07-zeit-kalender.md: no plural given and none added (shown as «–»): der Montag, der Dienstag, der Mittwoch, der Donnerstag, der Freitag, der Samstag, der Sonntag, der Januar, der Februar, der März, der April, der Mai, der Juni, der Juli, der August, der September, der Oktober, der November, der Dezember, der Frühling, der Sommer, der Herbst, der Winter.
+- wortschatz-12-verben.md: «sich anwenden» (hat sich angewendet) is not a common verb; «anwenden» is usually not reflexive. I kept Emilio's row. Please check.
+- wortschatz-12-verben.md: «stossen» uses «hat gestossen» as written by Emilio; with movement («an etwas stossen») it can also be «ist gestossen».
 
 ## Open questions (code)
 - Nothing so far.
