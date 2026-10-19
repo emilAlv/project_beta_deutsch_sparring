@@ -1,4 +1,4 @@
-import { listLessons } from '../../../lib/content';
+import { allTopics } from '../../../lib/topics';
 import { needsCode } from '../../../lib/guard';
 
 export const dynamic = 'force-dynamic';
@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     return Response.json({
-      topics: listLessons().map(({ keywords, ...t }) => t),
+      topics: allTopics().map(({ keywords, ...t }) => t),
       needsCode: needsCode(),
       mock: process.env.MOCK === '1',
     });

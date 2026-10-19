@@ -1,4 +1,7 @@
-import { getLesson, getKnownGrammar, listLessons, guessTopic, FREE_TOPIC } from '../../../lib/content';
+import { getLesson, getKnownGrammar, guessTopic, FREE_TOPIC } from '../../../lib/content';
+import { allTopics } from '../../../lib/topics';
+import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEADER } from '../../../lib/words';
+import { pickWords, wordsNeeded } from '../../../lib/scores';
 import { buildSystemPrompt } from '../../../lib/prompt';
 import { generate } from '../../../lib/gemini';
 import { mockReply } from '../../../lib/mock';
@@ -15,6 +18,26 @@ const DEADLINE_MS = 55_000; // stay below maxDuration so we can still answer wit
 const MAX_HISTORY = 30;
 const MAX_CHARS = 1500;
 const MAX_MODEL_CHARS = 4000; // the tutor's own (JSON) turns are longer
+
+const MAX_WORD_IDS = 60;
+const MAX_SCORE_ROWS = 2000; // the browser sends its scores only when a vocabulary session starts
+
+// The browser's scores for the candidate words, checked: only known word ids, only numbers.
+function cleanScores(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : null);
+  for (const id of Object.keys(raw).slice(0, MAX_SCORE_ROWS)) {
+    if (!getWord(id) || !raw[id] || typeof raw[id] !== 'object') continue;
+    const rec = {};
+    for (const kind of ['v', 'g']) {
+      const x = raw[id][kind];
+      if (x && num(x.s) != null) rec[kind] = { s: num(x.s), k: num(x.k) ?? 0, due: num(x.due) };
+    }
+    if (rec.v || rec.g) out[id] = rec;
+  }
+  return out;
+}
 
 const fail = (error, status, code) => Response.json({ error, code }, { status });
 
@@ -53,7 +76,7 @@ async function handle(req) {
     sentences: s.sentences === true,
   };
   const ses = body.session || {};
-  const lessons = listLessons();
+  const lessons = allTopics();
   const catalog = [...lessons, FREE_TOPIC];
   const topicIds = new Set(catalog.map((t) => t.id));
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.text || '';
@@ -72,9 +95,13 @@ async function handle(req) {
     openNumber: count(ses.openNumber, 60),
     openLine: String(ses.openLine || '').slice(0, 300),
     openDirection: ['en-de', 'de-en'].includes(ses.openDirection) ? ses.openDirection : null,
+    openWordId: String(ses.openWordId || '').slice(0, 120),
+    openTask: ['flashcard', 'grammar'].includes(ses.openTask) ? ses.openTask : null,
     finished: ses.finished === true,
     skippedNumber: count(ses.skippedNumber, 60),
     skippedLine: String(ses.skippedLine || '').slice(0, 300),
+    skippedWordId: String(ses.skippedWordId || '').slice(0, 120),
+    skippedTask: ['flashcard', 'grammar'].includes(ses.skippedTask) ? ses.skippedTask : null,
   };
   // nothing chosen yet: guess the lesson from the wish ("Dativ und Akkusativ, Stufe mittel")
   let guessed = false;
@@ -90,13 +117,38 @@ async function handle(req) {
   }));
   const asked = (Array.isArray(body.asked) ? body.asked : []).slice(-50).map((x) => String(x).slice(0, 120)).filter(Boolean);
   const notes = (Array.isArray(body.notes) ? body.notes : []).slice(0, 6).map((n) => String(n).slice(0, 80));
-  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId };
+
+  // --- vocabulary: only the words this session needs, picked by the app from the student's scores ---
+  // The first request of a session has no word ids yet: the server picks them (lib/scores.js) and
+  // sends the ids back; the browser returns them with every later request, so the words stay the same.
+  let words = [];
+  const filter = topicId ? wordTopicFilter(topicId) : null;
+  if (filter) {
+    const sent = (Array.isArray(body.wordIds) ? body.wordIds : []).slice(0, MAX_WORD_IDS).map((id) => getWord(String(id))).filter(Boolean);
+    if (sent.length) {
+      words = sent;
+    } else {
+      const query = {
+        words: getWords(),
+        scores: cleanScores(body.scores),
+        level: settings.level,
+        sources: sourcesFor(['goethe', 'kurs'].includes(body.source) ? body.source : 'both'),
+        ...filter,
+        count: wordsNeeded(session.total, settings.sentences),
+        now: Date.now(),
+      };
+      words = pickWords(query);
+      // nothing at this level in this list: use the other levels rather than an empty session
+      if (!words.length) words = pickWords({ ...query, level: undefined });
+    }
+  }
+  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)) };
 
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;
   try {
     text = process.env.MOCK === '1'
-      ? await mockReply({ text: lastUser, settings, session, progress, topic: catalog.find((t) => t.id === topicId) || null })
+      ? await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null })
       : await askGemini();
   } catch (e) {
     console.error('Tutor failed:', e.status, e.message);
@@ -128,7 +180,8 @@ async function handle(req) {
 
     const system = buildSystemPrompt({
       name: String(name || 'du').slice(0, 40),
-      lesson: getLesson(topicId),
+      lesson: filter ? null : getLesson(topicId),
+      words: filter ? { header: WORD_LINE_HEADER, lines: words.map(wordLine) } : null,
       knownGrammar: getKnownGrammar(),
       catalog,
       settings: { ...settings, difficulty: DIFFICULTY_DE[settings.difficulty] },
@@ -148,9 +201,14 @@ async function handle(req) {
   if (!reply) {
     // invalid JSON: the browser shows the text as a normal message and keeps the panel as it is
     console.warn('Tutor answer was not valid JSON:', String(text).slice(0, 300));
-    return Response.json({ reply: null, text: salvageMessage(text) || String(text).slice(0, 2000) });
+    return Response.json({ reply: null, text: salvageMessage(text) || String(text).slice(0, 2000), words: wordInfo() });
   }
   // modelText = what the browser sends back as this tutor turn next time (without the bulky parts)
   const { grammarFocus, options, ...essentials } = parsed;
-  return Response.json({ reply, modelText: JSON.stringify(essentials) });
+  return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo() });
+
+  // the picked words for the browser to keep: id + type (phrases have no grammar score)
+  function wordInfo() {
+    return filter ? words.map((w) => ({ id: w.id, type: w.type })) : undefined;
+  }
 }

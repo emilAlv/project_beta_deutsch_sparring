@@ -31,7 +31,8 @@ function parseLevels(text) {
   return found.length ? LEVELS.filter((l) => found.includes(l)) : LEVELS;
 }
 
-// Every .md file in /content (except the template) becomes a topic.
+// Every .md file in /content (except the template) becomes a topic. Vocabulary lesson files
+// (Typ: Wortschatz) are no longer topics: vocabulary now comes from vocab/words.json (lib/words.js).
 export function listLessons() {
   let files = [];
   try {
@@ -57,7 +58,8 @@ export function listLessons() {
         // title, theme, type – plus only the long, specific words of the rule (e.g. "Wechselpräpositionen")
         keywords: `${title} ${meta(text, 'Thema')} ${meta(text, 'Typ')} ${meta(text, 'Stichwörter')} ${(section(text, 'Regel').match(/[A-Za-zÄÖÜäöüß]{11,}/g) || []).join(' ')}`.toLowerCase(),
       };
-    });
+    })
+    .filter((l) => l.type !== 'Wortschatz');
 }
 
 export function getLesson(id) {
