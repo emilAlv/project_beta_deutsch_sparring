@@ -8,7 +8,8 @@ does the expensive part (a model adding English, articles, Perfekt …) **only o
 vocab/
   sources/     every version of the Word file, as Emilio sent it (never edit)
   words.json   the knowledge base: one word per line, English only (see "Data" below)
-  lists.json   English names for every section and list of the Word file (Spanish name → English name)
+  lists.json   English names for every section and list of the Word file (Spanish name → English name),
+               plus "sourceSections": sections that are a source, not a topic (AUS DEM KURS → "kurs")
   changes/     one report per version: new, changed, removed words, things to fix in the list
   todo/        temporary batches of words waiting for the model (the only place with Spanish; each batch is deleted after a successful merge)
   REVIEW.md    corrections the model suggests for the Word list (made by `review`)
@@ -35,9 +36,11 @@ Steps:
    - It also writes the batches (`vocab/todo/batch-NNN.json`, 80 words each) for the new or changed words.
    - If it stops with "No English name yet in vocab/lists.json for: …", a section or list is new in the
      Word file: add its English name to `vocab/lists.json` (`sections` or `lists`) and run the import again.
+     (A section that is a *source*, like AUS DEM KURS, goes into `sourceSections` instead: its words get that
+     source and no topic from it.)
    - A removed word is kept in `words.json` (hidden, with `"removed": "vNN"`), so its enrichment is
      not lost if it comes back.
-4. Fill every batch (rules below), then `node scripts/vocab.mjs merge`. It checks each batch and
+4. Fill every batch (rules below; "Sources, level and topics" for the extra fields), then `node scripts/vocab.mjs merge`. It checks each batch and
    merges only batches without problems. Fix the problems it lists and run `merge` again until
    `0 still need enrichment`.
 5. `node scripts/vocab.mjs review` (writes `vocab/REVIEW.md`) and `node scripts/vocab.mjs status`.
@@ -103,15 +106,41 @@ Examples:
 
 ---
 
+## Sources, level and topics
+
+The level column of the Word file mixes level and source. The import turns it into two things:
+
+- **`sources`** (array, never empty): `goethe-a1`, `goethe-a2`, `goethe-b1`, `kurs`.
+  Level A1/A2/B1 in any row → that Goethe source. Level `Kurs` (shown by the teacher) → `kurs`.
+  A word in the section *AUS DEM KURS* also gets `kurs` and keeps its Goethe source. A word can have several.
+- **`level`** (`A1`/`A2`/`B1`): the (lowest) Goethe level. Words with **no** Goethe source ("course-only") get a level
+  estimated once by the model, with `"levelEstimated": true`.
+- **Topics**: AUS DEM KURS is a source, not a topic, and never appears in `topics`. The few words that were only
+  in that section ("no topic") get the best fitting existing `Section › List` (English names as in `lists.json`);
+  if nothing fits: `Other words › Other words`. Such words have `"topicsEstimated": true`.
+
+Estimates live in the word's `enriched` block (`enriched.level`, `enriched.topics`, tied to `fp` like all enrichment),
+so they are made once and survive weekly imports; the import copies them to `level` / `topics`.
+New or changed course-only words get `"needsLevel": true` / `"needsTopics": true` in their normal batch: put
+`"level":"A2"` and/or `"topics":["Section › List"]` into `out` too. For words that were enriched before and only
+lack an estimate, the import writes small batches with `"kind":"estimate"` (German word + English meaning, no
+Spanish); fill `out` with `{"level":"B1"}` and/or `{"topics":["…"]}`, then `merge` as usual.
+`merge` rejects topics that do not exist in the list. Levels are a model's estimate: Emilio can correct one by
+giving the word a Goethe level in the Word file.
+
+---
+
 ## Data (`words.json`)
 
 One object per line, sorted by `id`:
 ```json
 {"id":"der name","src":{"de":"der Name, -n","second":"Namen","level":"A1"},
- "topics":["Person & identity › Personal details & documents"],"fp":"9c75bd59b6","since":"v10",
+ "topics":["Person & identity › Personal details & documents"],"sources":["goethe-a1"],"level":"A1","fp":"9c75bd59b6","since":"v10",
  "enriched":{"type":"noun","en":"the name","article":"der","noun":"Name","plural":"die Namen","number":"","adjective":"lang","note":"n-Dekl.","fp":"9c75bd59b6"}}
 ```
 - `id` = the word in lowercase, without dictionary suffix, with article for nouns. Same id = same word.
+- `sources`, `level` (and `levelEstimated`, `topicsEstimated`): see "Sources, level and topics". `src.level` is the
+  raw level column (can be `Kurs`) and only feeds the fingerprint.
 - `src` = what Emilio wrote, without the Spanish meaning (always replaced by the latest import).
   `topics` = section › list in his file, with the English names from `lists.json`.
 - `fp` = fingerprint of Emilio's word, plural/Partizip, Spanish meaning and level (only the fingerprint is
