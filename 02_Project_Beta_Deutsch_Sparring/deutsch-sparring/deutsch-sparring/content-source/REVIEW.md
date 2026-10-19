@@ -16,6 +16,7 @@
 - lektion-02-wohnen-im-haus.md: The existing lesson file has no level per word, so I could not compare Emilio's levels with it. I added A1 to the Niveau line because Emilio's list has A1 words for this topic (Haus, Zimmer, Bett …).
 - lektion-02-wohnen-im-haus.md: Das Erdgeschoss: the existing table has no plural («–»), Emilio wrote «Erdgeschosse». I did not change the existing row.
 - lektion-02-wohnen-im-haus.md: 37 of Emilio's 105 rows were already in the lesson (same noun or verb) and were not added again. The other 68 are in the new tables «aus der Masterliste» (51 nouns, 5 verbs, 11 words, 1 phrase).
+- wortschatz-07-zeit-kalender.md: no plural given and none added (shown as «–»): der Montag, der Dienstag, der Mittwoch, der Donnerstag, der Freitag, der Samstag, der Sonntag, der Januar, der Februar, der März, der April, der Mai, der Juni, der Juli, der August, der September, der Oktober, der November, der Dezember, der Frühling, der Sommer, der Herbst, der Winter.
 
 ## Open questions (code)
 - Nothing so far.
