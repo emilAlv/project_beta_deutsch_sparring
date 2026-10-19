@@ -36,12 +36,39 @@ Figma is on the Starter plan with a small request limit: **read only the frame y
 **Decisions already made**
 - Desktop first; phone layout not in scope.
 - Vocabulary is practised **with its grammar**: flashcard (article, plural / Perfekt), then a sentence with the same word in Akkusativ, Dativ or Genitiv with adjective endings.
-- Each session gets ~40 words picked by the app (level, section/list, not practised recently). Whole lesson files are never sent to Gemini for vocabulary.
-- All settings (type, topic, level, difficulty, questions, direction, reference language EN or EN+ES, grammar per word, **Swiss or German Hochdeutsch**) are chosen on the setup screen and stay fixed during the session.
+- Each session gets only the words it needs, picked by the app from the student's word scores (see "Word scores" below). Whole lesson files are never sent to Gemini for vocabulary.
+- **English is the only reference language.** Nothing the app reads or shows is in Spanish (no Spanish meanings, no Spanish section names). Spanish exists only in Emilio's own Word file and in the temporary batches used to translate it once (Task 1).
+- All settings (type, topic, level, difficulty, questions, direction, grammar per word, **Swiss or German Hochdeutsch**) are chosen on the setup screen and stay fixed during the session. (The Figma setup screen still shows "English + Español" – ignore that option.)
 - Swiss Hochdeutsch ("ss", Velo, Spital …) is the default; the other variant is always accepted as an answer.
 - Accounts: username + password; anyone with the class code can create one. No payments or marketing.
 - Plan view: linear timeline with a "Whole plan / Still to do" switch.
 - **Open:** database. Task 7 needs Emilio's OK for Vercel's free Postgres (Neon) and its one package.
+
+## Word scores (used by Tasks 2, 3, 8, 9)
+Every student has **two scores per word, from 1 to 10**:
+- **V – vocabulary:** the word itself. Nouns: article + noun in the Nominativ (*der Schrank*). Verbs: the infinitive. Adjectives and phrases: the word or phrase.
+- **G – word + grammar:** the word used in its grammar: nouns in Akkusativ / Dativ / Genitiv with adjective endings and the plural; verbs with Perfekt and their case; adjectives with endings. Phrases have no G score.
+
+A word never practised is "new" and counts as score 1. So 4 right answers in a row take a new word 1 → 3 → 5 → 7 → **10**.
+
+| What happens | V score | G score |
+|---|---|---|
+| Flashcard right | +2 | – |
+| Flashcard wrong (wrong word or wrong article) | −3 | – |
+| Grammar task right | +1 (the word was used correctly) | +2 |
+| Grammar task wrong, mistake in the grammar (case, ending, Perfekt …) | unchanged | −3 |
+| Grammar task wrong, mistake in the word or its article | −3 | −3 |
+| Skipped | −1 | −1 (if it was a grammar task) |
+| Right, but after a hint or on "Leicht" (multiple choice) | +1 | +1 |
+
+- **10 needs 4 right answers in a row.** Each score has its own streak (right answers in a row). Without a streak of 4 the score stops at 9; the 4th right answer in a row sets it to 10. A mistake or skip resets that streak to 0. Answers after a hint or on "Leicht" do not count toward the streak.
+- Scores never go below 1 or above 10.
+- In "Vocabulary + grammar" sessions the article is checked every time (flashcard first), so V is always tested; grammar comes on top.
+- Which mistake is which: the tutor already returns `feedback.errorType` (`Artikel`, `Wortschatz` = the word; `Kasus`, `Adjektivendung`, `Verbform`, `Präposition`, … = the grammar).
+- **When a word comes back** (spaced repetition): the better the score, the longer the gap. Score 1–3 → due the next day, 4–6 → after 3 days, 7–9 → after 7 days, 10 → after 21 days. A 10 that is due and answered right stays 10. Answered wrong, it drops to 7 and has to earn the 10 again.
+- **How a session's words are chosen:** words in the chosen level and section / list. First words that are due, lowest score first. Then new words. Then 1–2 words with 10 as a check. Roughly 60 % due or weak, 30 % new, 10 % checks. Fewer words exist → use what there is.
+- **How many words:** only as many as the session needs. Vocabulary only: 1 word per question. Vocabulary + grammar: 1 word per 2 questions (flashcard + grammar task). Plus 3 spare words for skips. A 20-question session with grammar = 13 words.
+- One place in the code (`lib/scores.js`) does all of this, so the rules can be changed later in one file. Until accounts exist (Task 7) the scores are kept in the browser; Task 8 moves them to the database.
 
 ## Common rules (every task prompt points here)
 - Read `CLAUDE.md` (repo root) first and follow it: plain-English explanations for Emilio, ask before any new package, database or login, never print or commit keys or passwords.
@@ -69,31 +96,42 @@ Follow "Common rules" in docs/revamp-tasks.md.
 2. Follow vocab/README.md ("Filling a batch") to fill every batch in vocab/todo/, one batch at a time:
    fill, run `node scripts/vocab.mjs merge`, fix what it reports, next batch. Then run `review` and `status`
    until "0 still need enrichment". Swiss spelling: never "ß".
-3. Do not change the app code in this task.
-4. Report to Emilio in plain English: words enriched, the corrections from vocab/REVIEW.md and the
+3. English only: change scripts/vocab.mjs so vocab/words.json contains no Spanish. The Spanish meaning
+   is only used inside the temporary batches (vocab/todo/) to write the English; words.json keeps only
+   its fingerprint (fp) so a changed Spanish meaning still triggers re-enrichment. Add English names for
+   every section and list (new file vocab/lists.json: Spanish name from the Word file → English name,
+   e.g. "CASA Y VIVIENDA" → "Home & living"); words.json "topics" use the English names. Batches are
+   deleted after a successful merge. Update vocab/README.md accordingly.
+4. Do not change the app code in this task.
+5. Report to Emilio in plain English: words enriched, the corrections from vocab/REVIEW.md and the
    "written differently in two places" list, so he can fix his Word file.
 ```
 
-## Task 2 – The app picks ~40 words per session
-**Model: Sonnet** · effort: medium · you see: vocabulary topics now come from your word list, answers arrive faster
+## Task 2 – Word scores and word picker
+**Model: Sonnet** · effort: medium · you see: vocabulary from your word list, chosen by how well you know each word; answers arrive faster
 
 ```
-Task 2 of docs/revamp-tasks.md: word picker. Follow "Common rules" in docs/revamp-tasks.md.
-Goal: vocabulary sessions use vocab/words.json instead of the wortschatz-*.md lesson files, and only
-~40 words are sent to Gemini per session.
-- New lib/words.js: load words.json once (skip removed/unenriched words), list sections and lists
-  (from "topics": "SECTION › list"), and pick N words by level (A1/A2/B1, option to include "Kurs"),
-  section/list, and "not practised recently" (the browser sends the ids practised recently and how
-  often they were wrong; prefer new and weak words, mix in a few known ones). Deterministic per session.
-- Section names in Emilio's file are Spanish: add a small map to German + English display names.
+Task 2 of docs/revamp-tasks.md: word scores + word picker. Follow "Common rules" and implement exactly
+the section "Word scores" in docs/revamp-tasks.md.
+Goal: vocabulary sessions use vocab/words.json (English only, from Task 1) instead of the wortschatz-*.md
+lesson files, and only the words the session needs are sent to Gemini.
+- New lib/scores.js (no React, no browser APIs, so it can run on the server later): the V and G scores,
+  streaks, the score table, the "10 needs 4 in a row" rule, due dates, and pickWords(). Pure functions
+  with all numbers as named constants at the top.
+- New lib/words.js: load words.json once; leave out words marked "removed" (no longer in Emilio's list)
+  and words without enrichment (no English or article yet – they cannot be checked); list sections and
+  lists with their English names.
+- Each answer must say which word it was about: add wordId and a "task" field ("flashcard" | "grammar")
+  to the tutor's exercise/feedback in lib/reply.js (backwards compatible); the app, not the model,
+  updates the scores from feedback.correct, feedback.errorType, hint/Leicht and skip.
 - /api/topics returns the word sections/lists; /api/chat puts only the picked words (compact lines:
-  de, article, plural or Perfekt, en, es, adjective, case) in the prompt instead of the lesson file.
+  id, de, article, plural or Perfekt, en, adjective, case) in the prompt instead of the lesson file.
   Grammar topics keep their lesson files.
-- The browser remembers per word: last practised, right/wrong count (localStorage for now – a later
-  task moves this to the database; keep it in one place in lib/storage.js).
-- Mock tutor (lib/mock.js) uses the same picker.
-- Add a small check script (node) that proves: ≤ 40 words in the prompt, level and list respected,
-  recently practised words come last.
+- Scores live in the browser for now, in one place in lib/storage.js (Task 8 moves them to the database).
+- Mock tutor (lib/mock.js) uses the same picker and returns wordId/task so scores work with MOCK=1.
+- A node check script that proves: the score table and the 4-in-a-row rule (e.g. 1→3→5→7→10; a mistake
+  at 10 → 7 and streak 0; a hint answer never makes 10), due dates, the word count per session
+  (20 questions with grammar → 13 words), level/list respected, due and weak words first.
 ```
 
 ## Task 3 – Each word practised with its grammar
@@ -107,7 +145,9 @@ Today "Add sentences" (lib/prompt.js, lib/mock.js) only does nouns in Nom/Akk/Da
 - Per word type: nouns → flashcard (article + plural) then a sentence with the chosen case and the word's
   adjective (e.g. "wegen des alten Schranks"); verbs → Perfekt form (hat/ist + Partizip) and a sentence
   using the case the verb needs; adjectives → ending tasks; phrases → EN→DE, close answers accepted.
-- Reference language: English, or English + Spanish (show the Spanish too).
+- Reference language: English only (no Spanish anywhere).
+- Every task keeps the wordId and task type from Task 2 so the V and G scores (section "Word scores")
+  update correctly; the flashcard always comes first and always checks the article.
 - feedback.rule must name the grammar point consistently (e.g. "Genitiv nach wegen") so stats can group it.
 - Keep the JSON schema in lib/reply.js backwards compatible; update the mock tutor so MOCK=1 shows each
   new task type. Check the German in your examples carefully (Swiss spelling, no "ß").
@@ -121,7 +161,8 @@ Task 4 of docs/revamp-tasks.md: session setup screen. Follow "Common rules" in d
 Design: Figma frames 31:42 (setup) and 32:101 (Sparring) – read only these two.
 - New setup screen before a session (route of your choice, e.g. /sparring/new): type (Grammar / Vocabulary
   + grammar), topic (grammar topic, or word section + list from lib/words.js), level (+ "Kurs" words),
-  difficulty, questions (10–50), flashcard direction, reference language, grammar points per word,
+  difficulty, questions (10–50), flashcard direction, grammar points per word (no reference-language
+  choice: English only, although the Figma frame still shows one),
   German variant (Swiss / German Hochdeutsch – store it; Task 5 makes the tutor use it).
   A "Start session" bar with a one-line summary. Prefill from the last session.
 - The Sparring screen (app/page.js, components/*) drops the settings card in SessionPanel.js and the
@@ -189,12 +230,14 @@ tier, package @neondatabase/serverless) and that passwords are stored hashed wit
 Task 8 of docs/revamp-tasks.md: store progress in the database. Follow "Common rules" in docs/revamp-tasks.md.
 Accounts and the database exist (Task 7).
 - Tables: sessions (user, settings, started/ended, score), answers (session, number, type, question, student
-  answer, corrected, rule, error type, correct/skipped, word id), word_progress (user, word id, last practised,
-  right, wrong).
+  answer, corrected, rule, error type, correct/skipped, word id, task), word_scores (user, word id, V score,
+  V streak, V due, G score, G streak, G due, last practised) – rules in section "Word scores"; lib/scores.js
+  stays the only place that calculates them.
 - Save each answer as it happens (small API route); the session summary and lib/storage.js history/streak
   read from the server. Keep the current chat in localStorage for quick reload only.
 - First login on a browser with old localStorage history: import it once.
-- The word picker (lib/words.js) reads word_progress from the server for "not practised recently".
+- The word picker (lib/scores.js pickWords) reads word_scores from the server; the browser's scores are
+  imported once on first login.
 - MOCK=1 / no database: in-memory fallback.
 ```
 
@@ -207,8 +250,9 @@ Design: Figma frames 29:10 (Home) and 32:457 (plan "Still to do") – read only 
 - After log in the user lands on Home; "Start Sparring" opens the setup screen.
 - Goals: create / edit / delete; each goal has a type (exam, vocabulary, grammar), level, start and end
   date, and milestones (date, title, target, status). Table goals + milestones. Progress % is computed from
-  the user's answers and word_progress (never from the model).
-- Stats tiles (sessions, questions, % right, words practised of total, streak), recent sessions with "Again".
+  the user's answers and word_scores (never from the model).
+- Stats tiles (sessions, questions, % right, words learnt = V score 8–10 of total, streak), recent sessions
+  with "Again". Per section/list: average V and G score.
 - Strengths & gaps vs goals: group answers by feedback.rule (and word lists), last 30 days, show the
   strongest and weakest with the goal they belong to.
 - Plan timeline: one line per goal from start to end date, month ticks, milestone dots (reached / next /
