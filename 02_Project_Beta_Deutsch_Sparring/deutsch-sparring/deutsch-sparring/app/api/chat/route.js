@@ -7,6 +7,7 @@ import {
 } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
+import { requireUser } from '../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -29,17 +30,22 @@ export async function POST(req) {
 
 async function handle(req) {
   const deadline = Date.now() + DEADLINE_MS;
+  // with accounts: only for logged-in students (their name = their username)
+  const { user, response } = await requireUser(req);
+  if (response) return response;
   let body;
   try {
     body = await req.json();
   } catch {
     return fail('Ungültige Anfrage.', 400);
   }
-  const { name, classCode, messages } = body || {};
+  const { classCode, messages } = body || {};
+  const name = user ? user.username : body?.name;
 
-  if (!checkClassCode(classCode)) return fail('Falscher Klassen-Code.', 401, 'bad_code');
+  // the class code was checked once at sign-up when accounts are on
+  if (!user && !checkClassCode(classCode)) return fail('Falscher Klassen-Code.', 401, 'bad_code');
   if (!Array.isArray(messages) || messages.length === 0) return fail('Keine Nachricht.', 400);
-  if (overDailyLimit(req, body.clientId)) {
+  if (overDailyLimit(req, body.clientId, user?.id)) {
     return fail('Tageslimit erreicht. Morgen geht es weiter – bis dann! 👋', 429, 'limit');
   }
 
