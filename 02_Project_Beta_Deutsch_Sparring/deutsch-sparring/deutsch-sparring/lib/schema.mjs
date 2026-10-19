@@ -78,6 +78,18 @@ export const SCHEMA = [
     PRIMARY KEY (user_id, goal_id, id),
     FOREIGN KEY (user_id, goal_id) REFERENCES goals (user_id, id) ON DELETE CASCADE
   )`,
+  // The coach's chat on the Home page (Task 10): the last 30 messages of each student. "data" holds the
+  // suggested session / plan changes / quick replies of a coach message. The id comes from the browser.
+  `CREATE TABLE IF NOT EXISTS coach_messages (
+    id text NOT NULL,
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role text NOT NULL,
+    text text NOT NULL,
+    data jsonb NOT NULL DEFAULT '{}'::jsonb,
+    pos int NOT NULL DEFAULT 0,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, id)
+  )`,
 ];
 
 // Vercel's Neon integration sets DATABASE_URL and POSTGRES_URL; either works.

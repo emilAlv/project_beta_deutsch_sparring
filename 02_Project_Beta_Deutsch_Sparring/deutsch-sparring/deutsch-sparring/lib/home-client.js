@@ -7,6 +7,14 @@ import {
 } from './storage';
 import { postNow } from './progress-client';
 
+// Accounts off: the compact copy of the browser's own goals, word scores and answer log, from which the
+// server works out the numbers (nothing is stored there). The coach gets the same copy.
+export function localNumbers() {
+  const scores = {};
+  for (const [id, rec] of Object.entries(loadScores())) scores[id] = [rec?.v?.s ?? 1, rec?.g?.s ?? null];
+  return { goals: loadGoalsLocal(), scores, log: loadAnswerLog() };
+}
+
 // → { goals, tiles, progress, strengths, gaps } or null when the server could not be reached
 export async function loadHome() {
   try {
@@ -15,12 +23,10 @@ export async function loadHome() {
       const res = await fetch('/api/stats', { cache: 'no-store' });
       return res.ok ? await res.json() : null;
     }
-    const scores = {};
-    for (const [id, rec] of Object.entries(loadScores())) scores[id] = [rec?.v?.s ?? 1, rec?.g?.s ?? null];
     const res = await fetch('/api/stats', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goals: loadGoalsLocal(), scores, log: loadAnswerLog() }),
+      body: JSON.stringify(localNumbers()),
     });
     return res.ok ? await res.json() : null;
   } catch {

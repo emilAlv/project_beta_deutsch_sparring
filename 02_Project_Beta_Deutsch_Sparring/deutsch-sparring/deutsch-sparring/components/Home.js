@@ -1,7 +1,7 @@
 'use client';
 
 // The Home page: greeting, stat tiles, goals, the plan timeline, strengths & gaps and the recent
-// sessions; the coach column on the right is a placeholder until Task 10. All numbers come from
+// sessions; the coach column on the right is the coach chat (components/Coach.js). All numbers come from
 // the app (/api/stats, lib/home-stats.js), never from the AI.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,7 +9,9 @@ import { t } from '../lib/ui-text';
 import { goalState, todayKey } from '../lib/goals';
 import { fmtDay } from '../lib/dates';
 import { loadHome, saveGoal, removeGoal } from '../lib/home-client';
+import { applyPlan } from '../lib/coach';
 import GoalForm from './GoalForm';
+import Coach from './Coach';
 import PlanTimeline from './PlanTimeline';
 
 function greeting(name) {
@@ -76,7 +78,7 @@ function SgColumn({ kind, items, goals, empty }) {
   );
 }
 
-export default function Home({ name, streak, sessions, topics, running, onStart, onContinue, onAgain }) {
+export default function Home({ name, classCode, clientId, streak, sessions, topics, running, onStart, onContinue, onAgain, onSetupSuggested }) {
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
   const [mode, setMode] = useState('whole');
@@ -124,6 +126,16 @@ export default function Home({ name, streak, sessions, topics, running, onStart,
   }
 
   const goals = data?.goals || [];
+
+  // the coach proposed changes and the student tapped "Apply": checked again against the goal as it is now
+  async function applyCoachPlan(goalId, changes) {
+    const goal = goals.find((g) => g.id === goalId);
+    const next = goal && applyPlan(goal, changes, today);
+    if (!next) return { ok: false, stale: true };
+    if (!(await saveGoal(next))) return { ok: false };
+    await reload();
+    return { ok: true };
+  }
   const progress = data?.progress || {};
   const behind = goals.filter((g) => goalState(g, progress[g.id], today).tag === 'behind');
   const summary = !goals.length ? t('homeSummaryNone')
@@ -238,10 +250,16 @@ export default function Home({ name, streak, sessions, topics, running, onStart,
       </div>
 
       <aside className="home-side">
-        <section className="card coach-card">
-          <p className="caps brand">{t('coachTitle')}</p>
-          <p className="muted">{t('coachSoon')}</p>
-        </section>
+        <Coach
+          name={name}
+          classCode={classCode}
+          clientId={clientId}
+          goals={goals}
+          topics={topics}
+          today={today}
+          onSetup={onSetupSuggested}
+          onApplyPlan={applyCoachPlan}
+        />
       </aside>
 
       {form && (

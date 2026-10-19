@@ -26,6 +26,7 @@ import HomePage from '../components/Home';
 import { t } from '../lib/ui-text';
 import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
+import { suggestionToSetup } from '../lib/coach';
 import { score, summaryOf } from '../lib/stats';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
@@ -420,6 +421,13 @@ export default function Home() {
     setSetupError(null);
     if (fromSettings) setPrefs({ setup: setupFrom(fromSettings, topicsRef.current, prefsRef.current.setup) });
     update((c) => ({ ...c, stage: 'setup' }));
+  }
+
+  // the coach's suggestion: the setup screen opens with these choices filled in (the rest stays as remembered)
+  function openSetupSuggested(suggestion) {
+    const patch = suggestionToSetup(suggestion, topicsRef.current);
+    if (patch) setPrefs({ setup: sanitizeSetup({ ...prefsRef.current.setup, ...patch }) });
+    openSetup();
   }
 
   // back from the setup screen to the session (only offered when there is one)
@@ -828,6 +836,8 @@ export default function Home() {
       {stage === 'home' ? (
         <HomePage
           name={profile.name}
+          classCode={profile.classCode}
+          clientId={profile.clientId}
           streak={currentStreak(history.streak)}
           sessions={history.sessions}
           topics={topics}
@@ -835,6 +845,7 @@ export default function Home() {
           onStart={() => openSetup()}
           onContinue={goSparring}
           onAgain={(settings) => startSession(settings)}
+          onSetupSuggested={openSetupSuggested}
         />
       ) : stage === 'setup' ? (
         <SetupScreen
