@@ -17,6 +17,27 @@ function grammarFor(rule) {
   return out;
 }
 
+const matchWords = (text) => String(text || '')
+  .toLowerCase()
+  .replace(/ß/g, 'ss')
+  .split(/[^a-zäöü0-9]+/)
+  .filter((word) => word.length >= 4);
+
+function matchingLesson(lessons, label, level) {
+  const words = matchWords(label);
+  const ranked = lessons
+    .filter((lesson) => !lesson.levels?.length || lesson.levels.includes(level))
+    .map((lesson) => {
+      const haystack = `${lesson.title} ${lesson.keywords || ''} ${lesson.objective || ''} ${lesson.rule || ''}`
+        .toLowerCase()
+        .replace(/ß/g, 'ss');
+      const score = words.reduce((sum, word) => sum + (haystack.includes(word.slice(0, 7)) ? 1 : 0), 0);
+      return { lesson, score };
+    })
+    .sort((a, b) => b.score - a.score || (a.lesson.unit || 99) - (b.lesson.unit || 99));
+  return ranked[0]?.score > 0 ? ranked[0].lesson : null;
+}
+
 function suggestionFor(home, topics, goalLevel) {
   const gap = home.gaps[0];
   const vocab = topics.filter((x) => x.type === 'Wortschatz' && !x.parent && x.id !== 'free');
@@ -30,11 +51,14 @@ function suggestionFor(home, topics, goalLevel) {
   }
   if (gap?.kind === 'rule') {
     const points = grammarFor(gap.label);
-    const lesson = /dativ|akkusativ/i.test(gap.label) ? lessons.find((x) => /dativ|akkusativ/i.test(x.title)) : null;
+    const lesson = matchingLesson(lessons, gap.label, level);
     if (lesson) return { ...base, kind: 'grammar', topicId: lesson.id, grammar: [] };
     if (vocab[0]) return { ...base, kind: 'vocab', topicId: vocab[0].id, grammar: points };
   }
-  const first = vocab[0] || lessons[0];
+  // With no measured gap yet, start with the first curriculum unit at the learner's level.
+  const first = lessons
+    .filter((lesson) => !lesson.levels?.length || lesson.levels.includes(level))
+    .sort((a, b) => (a.unit || 99) - (b.unit || 99))[0] || vocab[0] || lessons[0];
   return first ? { ...base, kind: first.type === 'Wortschatz' ? 'vocab' : 'grammar', topicId: first.id, grammar: [] } : null;
 }
 

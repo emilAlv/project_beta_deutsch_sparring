@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "check:curriculum": "node scripts/check-curriculum.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

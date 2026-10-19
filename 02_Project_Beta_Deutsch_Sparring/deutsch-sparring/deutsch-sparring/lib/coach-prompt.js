@@ -108,37 +108,30 @@ export function coachContext({ home, topics, today }) {
     }
   }
 
-  lines.push('', 'TOPIC CATALOG for suggestedSession.topicId (id | name | type | levels):');
+  lines.push('', 'TOPIC CATALOG for planning and suggestedSession.topicId:');
+  lines.push('(grammar: id | CEFR unit | name | learning objective | situation; vocabulary: id | name | levels)');
   for (const x of topics) {
-    if (x.id === 'free') continue;
+    if (x.id === 'free' || (x.type !== 'Wortschatz' && !x.unit)) continue;
     const name = x.parent ? `${topics.find((p) => p.id === x.parent)?.short || ''} › ${x.short}` : x.short;
-    lines.push(`${x.id} | ${name} | ${x.type === 'Wortschatz' ? 'vocab' : 'grammar'} | ${(x.levels || []).join(',')}`);
+    if (x.type === 'Wortschatz') {
+      lines.push(`${x.id} | vocab | ${name} | ${(x.levels || []).join(',')}`);
+      continue;
+    }
+    const level = (x.levels || [])[0] || 'A1–B1';
+    const unit = x.unit ? `${level}.${String(x.unit).padStart(2, '0')}` : level;
+    lines.push(`${x.id} | grammar | ${unit} | ${name} | ${x.objective || 'objective in lesson'} | ${x.situation || 'situation in lesson'}`);
   }
   return lines.join('\n');
 }
 
-// What an experienced teacher expects at each level (CEFR / Goethe-Zertifikat, in the order of "Schritte plus Neu").
-// The coach plans with this; the app can practise the points marked [app] today.
-const CURRICULUM = `A1: articles der/die/das and plural; Nominativ and Akkusativ (ein/einen, kein); personal pronouns; present tense incl.
-  separable verbs and modal verbs (können, müssen, wollen, möchten); word order (verb in position 2, questions); Dativ after
-  mit/bei/von/zu/aus/nach [app: Dativ nach mit]; possessive articles; Perfekt with haben and sein for everyday verbs
-  [app: Perfekt mit haben / sein]; imperative; time and place prepositions (am, um, im). About 650 words.
-A2: Dativ and Akkusativ objects, verbs with Dativ (helfen, gefallen, gehören) [app: Verb + Dativ / Akkusativ];
-  Wechselpräpositionen Wo? → Dativ, Wohin? → Akkusativ [app: Dativ nach in (Wo?), Akkusativ nach in (Wohin?)];
-  adjective endings after der/die/das and ein/eine [app]; comparative and superlative; Präteritum of sein, haben and the modal
-  verbs; reflexive verbs; subordinate clauses with weil, dass, wenn (verb at the end); Konjunktiv II for polite requests (hätte,
-  würde, könnte). About 1300 words in total.
-B1: Genitiv and prepositions with Genitiv (wegen, trotz, während) [app: Genitiv nach wegen / trotz]; verbs with fixed
-  prepositions (warten auf, sich freuen über) [app: Verb + case]; relative clauses; Präteritum of common verbs; Plusquamperfekt;
-  Passiv (Präsens, Präteritum); Konjunktiv II (wäre, hätte, würde + Infinitiv); infinitive with zu, um … zu, damit; two-part
-  connectors (nicht nur … sondern auch, entweder … oder, je … desto); n-Deklination. About 2400 words in total.
-Goethe-Zertifikat B1 = four separate modules: Lesen, Hören, Schreiben, Sprechen. This app practises vocabulary and grammar
-  only; for the four skills, recommend practice outside the app (e.g. a mock exam from goethe.de) as a milestone.`;
-
+// The 36 lesson files are the curriculum source of truth. coachContext above exposes their
+// CEFR sequence, learning objective and situation directly to the coach.
 export function buildCoachPrompt({ name, context }) {
   return `You are the coach in "wort.", an app where students practise German. The student is called ${name}.
 You are an experienced teacher of German as a foreign language (CEFR A1–B1, Goethe-Zertifikat, Swiss students using
-"Schritte plus Neu"). You do NOT teach German in this chat (the tutor does that in the Sparring sessions). You plan the
+"Schritte plus Neu"). Swiss means Swiss Standard German (Schweizer Hochdeutsch: Spital, Velo, parkieren, ss), never dialect;
+German Standard German is an equally valid option. You do NOT teach German in this chat (the tutor does that in the
+Sparring sessions). You plan the
 student's practice towards their goals like a good teacher would: what to learn, in which order, by when, and what to
 practise today.
 
@@ -153,22 +146,26 @@ ALWAYS TALK ABOUT CONTENT, NEVER ABOUT ABSTRACT PERCENTAGES
 - Never say things like "25 % exam readiness" or "50 % ready". Goal progress percentages are only for you, to judge whether
   the student is on track.
 - A goal is a set of building blocks. Think in them: vocabulary per level (A1, A2, B1 words) and grammar per level
-  (see CURRICULUM). E.g. "Pass the Goethe B1 exam" = A1 + A2 words solid, B1 words, A1 + A2 grammar solid, B1 grammar, plus
-  exam practice. Lower levels first: a B1 student with gaps in A2 grammar fixes those first.
+  (see the ordered CURRICULUM TOPICS in TOPIC CATALOG). E.g. "Pass the Goethe B1 exam" = A1 + A2 words solid, B1 words,
+  A1 + A2 curriculum objectives solid, B1 curriculum objectives, plus exam practice. Lower levels first: a B1 student
+  with gaps in A2 fixes those first.
 - Realistic pace: with 20–30 minutes a day, about 30–50 new words a week, or one grammar point every 1–2 weeks. A word
   counts as learnt with a V score of 8–10 (4 right answers in a row get it to 10).
 
-CURRICULUM (what belongs to each level; [app] = can be practised in this app today)
-${CURRICULUM}
+CURRICULUM
+- The TOPIC CATALOG below is the app's complete A1–B1 curriculum: 12 ordered units per level. Each grammar row contains
+  its real learner objective and situation. Plan from those rows; do not substitute a generic grammar syllabus.
+- Move from the next unmet objective to a short session in its situation. Prefer prerequisites and lower CEFR levels first.
 
 RULES
 - Use only the data below. The numbers were calculated by the app; never invent or change a number, a date or an id.
   If there is no data yet (no answers), say so and recommend a short first session to see where the student stands.
-- Recommend with a reason from the data, in this order: (1) a gap in the goal's level or below, (2) the content of the next
-  milestone, (3) the next word list of the goal's level with few learnt words. Say exactly which list or rule and why.
+- Recommend with a reason from the data, in this order: (1) a gap in the goal's level or below, mapped to the closest
+  curriculum objective, (2) the next unfinished curriculum unit for the goal level or the content of the next milestone,
+  (3) the next word list of the goal's level with few learnt words. Say exactly which unit, situation, list or rule and why.
 - suggestedSession: set it whenever you recommend a session to practise now, else null. topicId must be copied exactly
-  from the TOPIC CATALOG (a vocabulary id for kind "vocab", a grammar id for kind "grammar"). level is A1, A2 or B1 (the goal's level
-  if there is one). questions is one of ${QUESTION_STEPS.join(', ')}; about 1.5 minutes per question. grammar: only for vocabulary topics, e.g.
+  from the TOPIC CATALOG (a vocabulary id for kind "vocab", a grammar id for kind "grammar"). For a grammar session,
+  choose a unit listed at the suggested CEFR level. level is A1, A2 or B1 (the goal's level if there is one). questions is one of ${QUESTION_STEPS.join(', ')}; about 1.5 minutes per question. grammar: only for vocabulary topics, e.g.
   "genitiv" for a Genitiv gap; allowed values: ${GRAMMAR_POINTS.join(', ')}.
 - planChanges: set it ONLY when the student asks to change or redo the plan (more or less time, a new date, a harder or easier plan),
   or when a goal is clearly behind and you suggest a fix. Otherwise null. Always for ONE goal: goalId copied exactly from GOALS.

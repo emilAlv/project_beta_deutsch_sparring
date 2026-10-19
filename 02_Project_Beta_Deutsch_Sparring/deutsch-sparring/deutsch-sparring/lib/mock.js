@@ -7,12 +7,12 @@
 // Extra test words: "langsam" (slow answer), "kaputt" (broken JSON), "rohtext" (plain text
 // instead of JSON), "absturz" (server error), "keine lust mehr" (the student wants to stop).
 
-import { ModelError } from './gemini';
-import { getExamples } from './content';
-import { detectIntent, detectTopicWish } from './intents';
-import { RULES } from './grammar';
-import { chooseTask, findTask, infinitive } from './word-tasks';
-import { align, localizeWord, toVariant } from './variants';
+import { ModelError } from './gemini.js';
+import { getExamples } from './content.js';
+import { detectIntent, detectTopicWish } from './intents.js';
+import { RULES } from './grammar.js';
+import { chooseTask, findTask, infinitive } from './word-tasks.js';
+import { align, localizeWord, toVariant } from './variants.js';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
 
@@ -36,6 +36,32 @@ const FOCUS = {
     watchOut: 'Im Dativ und Genitiv endet das Adjektiv auf -en: mit dem alten Schrank, wegen des alten Schranks.',
   },
 };
+
+function lessonFocus(topic) {
+  if (!topic?.objective && !topic?.rule) return FOCUS.grammar;
+  return {
+    title: topic.short || topic.title || 'Lernziel',
+    rule: topic.rule || topic.objective,
+    boxes: [
+      { label: 'Lernziel', value: topic.objective || 'Die Form im Kontext anwenden.', note: 'Was du am Ende kannst' },
+      { label: 'Situation', value: topic.situation || 'Eine realistische Alltagssituation.', note: 'Wo du es brauchst' },
+    ],
+    watchOut: topic.communicativeTask
+      ? 'Mehrere natürliche Lösungen sind möglich. Wichtig sind Absicht und Zielform.'
+      : 'Achte zuerst auf die Bedeutung, dann auf die Form.',
+  };
+}
+
+function grammarErrorType(topic) {
+  const text = `${topic?.title || ''} ${topic?.rule || ''}`.toLowerCase();
+  if (/adjektiv|endung/.test(text)) return 'Adjektivendung';
+  if (/präposition|praeposition/.test(text)) return 'Präposition';
+  if (/artikel/.test(text)) return 'Artikel';
+  if (/wortstellung|nebensatz|konnektor|satzbau|relativsatz/.test(text)) return 'Wortstellung';
+  if (/perfekt|präteritum|praeteritum|passiv|konjunktiv|modal|verb/.test(text)) return 'Verbform';
+  if (/dativ|akkusativ|genitiv|kasus/.test(text)) return 'Kasus';
+  return 'Andere';
+}
 
 // ---------- small helpers ----------
 const norm = (s) => String(s || '').toLowerCase().replace(/ß/g, 'ss').replace(/[.,!?;:„“”"«»()…]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -99,7 +125,7 @@ function checkGrammar(item, answer) {
   return { correct, studentAnswer, corrected: item.solved };
 }
 
-function grammarQuestion(examples, n, difficulty, strongHint = false) {
+function grammarQuestion(examples, n, difficulty, strongHint = false, topic = null) {
   const item = grammarItem(examples, n);
   const first = item.parts[0];
   const choices = item.gaps === 1 && WRONG_FORM[norm(first)] ? [first, WRONG_FORM[norm(first)]].sort() : [];
@@ -108,8 +134,15 @@ function grammarQuestion(examples, n, difficulty, strongHint = false) {
     : difficulty === 'hard' ? null
       : difficulty === 'easy' ? (choices.length ? `(${choices.join(' oder ')}?)` : '(Achte auf das Verb.)')
         : item.type === 'Fehler finden' ? 'Schreib den Satz richtig.' : item.gaps ? 'Achte auf das Verb.' : null;
+  const baseLine = item.type === 'Fehler finden'
+    ? item.ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: ')
+    : item.ex.task;
+  const cycle = Math.floor((n - 1) / examples.length);
+  const line = cycle
+    ? `Neuer Kontext${topic?.situation ? ` – ${topic.situation}` : ''}: ${baseLine}`
+    : baseLine;
   return {
-    exercise: { number: n, type: item.type, direction: null, line: item.type === 'Fehler finden' ? item.ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: ') : item.ex.task, hint },
+    exercise: { number: n, type: item.type, direction: null, line, hint },
     options: difficulty === 'easy' && choices.length ? choices : [],
   };
 }
@@ -311,7 +344,12 @@ function openVocabQuestion(vocab, n, settings, line, wordId = '', task = null) {
 
 function openGrammarItem(examples, n, line) {
   const same = (x, y) => toVariant(x, 'ch') === toVariant(y, 'ch'); // the line may be shown with ß
-  const i = examples.findIndex((ex) => same(ex.task, line) || same(line, ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: ')));
+  const shown = toVariant(line, 'ch');
+  const i = examples.findIndex((ex) => {
+    const task = toVariant(ex.task, 'ch');
+    const errorTask = toVariant(ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: '), 'ch');
+    return same(ex.task, line) || same(line, errorTask) || norm(shown).includes(norm(task)) || norm(shown).includes(norm(errorTask));
+  });
   return grammarItem(examples, i >= 0 ? i + 1 : n);
 }
 
@@ -329,6 +367,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   const vocab = isVocab ? words.map((w) => mockWord(w, settings.variant)) : [];
   const examples = getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
   const useVocab = isVocab && vocab.length > 0;
+  const focus = useVocab ? FOCUS.vocab : lessonFocus(topic);
   const total = session.total;
   const open = session.openNumber;
 
@@ -355,7 +394,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     // grammar was switched on while a card was open: the card's own grammar task comes next
     else if (openQ && settings.sentences && !openQ.task && taskOf(openQ.word, settings, vocab.indexOf(openQ.word))) pin = { word: openQ.word, kind: 'sentence' };
     else if (openQ && !settings.sentences) pin = { kind: 'card' };
-    const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint);
+    const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint, topic);
     out.exercise = q.exercise;
     if (q.word?.id) {
       out.exercise.wordId = q.word.id;
@@ -406,7 +445,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
 
   // nothing open: start (question 1) or continue with the next question
   if (!open) {
-    out.grammarFocus = useVocab ? FOCUS.vocab : FOCUS.grammar;
+    out.grammarFocus = focus;
     out.message = progress.done
       ? 'Weiter geht’s!'
       : useVocab
@@ -422,8 +461,8 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   if (intent0?.type === 'rule' || /^(erklär|erklaer|explain|regel|rule)/.test(say)) {
     out.message = useVocab
       ? 'Merke dir jedes Nomen mit **Artikel** und Plural. Im Dativ und im Genitiv enden Adjektive nach dem Artikel auf -en.'
-      : 'Die Regel: Bei den Wechselpräpositionen fragst du **Wo?** (Position) → Dativ oder **Wohin?** (Bewegung) → Akkusativ.';
-    out.grammarFocus = useVocab ? FOCUS.vocab : FOCUS.grammar;
+      : `Die Regel: ${topic?.rule || focus.rule}`;
+    out.grammarFocus = focus;
     out.panelView = 'grammar';
     ask(open);
     return json();
@@ -462,10 +501,12 @@ export async function mockReply({ text, settings, session, progress, topic, topi
       correct: r.correct,
       studentAnswer: r.studentAnswer,
       corrected: r.corrected,
-      changedWords: [],
-      explanation: item.ex.type ? `${item.ex.type.replace(/→/g, '→')}: ${r.correct ? 'genau richtig.' : `richtig ist «${item.parts.join(' – ')}».`}` : '',
-      rule: (item.ex.type || '').replace(/Akk$/, 'Akkusativ').replace(/Dat$/, 'Dativ'),
-      errorType: r.correct ? null : 'Kasus',
+      changedWords: r.correct ? [] : item.parts,
+      explanation: item.ex.type
+        ? `${item.ex.type.replace(/→/g, '→')}: ${r.correct ? 'genau richtig.' : `Die Bedeutung bleibt klar; korrigiere die Zielform zu «${item.parts.join(' – ')}».`}`
+        : '',
+      rule: (item.ex.type || topic?.short || '').replace(/Akk$/, 'Akkusativ').replace(/Dat$/, 'Dativ'),
+      errorType: r.correct ? null : grammarErrorType(topic),
     };
   }
   const right = out.feedback.correct;
