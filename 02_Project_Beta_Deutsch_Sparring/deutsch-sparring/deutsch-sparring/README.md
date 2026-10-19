@@ -47,8 +47,33 @@ this». Hint, rule, skip and stop still work in the chat (and as chips above the
   4–6 / 7–9 / 10). A 10 needs 4 right answers in a row; answers after a hint or on *Easy* give +1
   and do not count toward that. The app, never the AI, changes the scores. All rules and numbers
   are in `lib/scores.js`; `node scripts/check-scores.mjs` checks them.
-- Without accounts the chat first asks for the name and the class code, then shows the setup
-  screen; with accounts the setup screen comes right after logging in.
+- Without accounts the chat first asks for the name and the class code, then shows *Home*; with
+  accounts *Home* comes right after logging in. *Start Sparring* on Home opens the setup screen.
+
+**Home page.** After logging in (or after name and class code when accounts are off) the student
+lands on *Home*; the header menu switches between *Home* and *Sparring*, and *Start Sparring →* opens
+the setup screen. A running session is kept while the student looks at Home (*Continue session*) and
+survives a reload. Home shows (`components/Home.js`):
+- **Four tiles** for the last 30 days: sessions, questions answered (+ % right), words learnt (V score
+  8–10 of all words) and the streak.
+- **Goals** (type exam / vocabulary / grammar, level, start and end date, optionally the word section / list
+  or the grammar rules it covers): create, edit, delete. Every new goal gets a default plan of four evenly
+  spaced milestones (25 / 50 / 75 / 100 %) that can be changed in the form. The progress % of a goal is
+  calculated by the app, never by the AI (`lib/home-stats.js`): *vocabulary* = how far the goal's words are
+  on their way to a 10 (average V score), *grammar* = share of right answers on the goal's rules in the last
+  30 days (counted fully from 20 answers), *exam* = the average of the two. "A little behind" = the progress is
+  more than 10 points behind the share of the time that has passed.
+- **Plan timeline** (plain HTML/CSS, no chart package): one line per goal, month ticks, milestone dots
+  (reached = filled, next = thick ring, coming = grey ring, missed = amber), a *Today* line, and a switch
+  *Whole plan / Still to do* (the latter starts today and folds past milestones into "✓ N reached" / "N missed").
+- **Strengths & gaps** of the last 30 days, grouped by `feedback.rule` and by word list (with the average V and
+  G score of the list), each with its % and the goal it belongs to; **recent sessions** with *Again*.
+- A placeholder column on the right for the coach (Task 10).
+- Where it lives: with an account the goals are in the database (tables `goals` + `milestones`,
+  `lib/goals-store.js`, route `/api/goals`) and the numbers come from `GET /api/stats` (summed up in SQL over the
+  last 30 days – the browser never gets all answers). Without accounts the goals, the word scores and a small
+  log of the last answers are in the browser (`wort_goals`, `wort_answerlog`) and `POST /api/stats` only
+  calculates from what the browser sends (nothing is stored there). `node scripts/check-goals.mjs` checks the maths.
 
 ## Deploy (first time, ~15 minutes)
 
@@ -124,7 +149,7 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
 ## How it works (for developers)
 
 - `app/page.js` – the screen and its state, in stages: name / class code (chat, no AI, only
-  without accounts) → `setup` (`components/SetupScreen.js`) → `practice` (chat + ribbon
+  without accounts) → `home` (`components/Home.js`) → `setup` (`components/SetupScreen.js`) → `practice` (chat + ribbon
   `components/SessionRibbon.js` + right panel `components/SessionPanel.js`). **The app owns the
   session**: it numbers the questions, counts the score and ends the session; the AI only writes
   exercises and feedback. Each session carries its fixed settings (`session.settings`, helpers in
@@ -138,6 +163,8 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
   `users` table (or memory with `AUTH_MEMORY=1`), `lib/schema.mjs` = the table (created on first
   use or with `node scripts/db-migrate.mjs`), `app/api/auth/*` = log in / sign up / log out,
   `components/AuthCard.js` = the login card. Tries are limited in `lib/guard.js`.
+- `/api/goals`, `/api/stats` – the Home page (see above); `lib/goals.js` (validation, default plan, timeline maths, no React),
+  `lib/home-stats.js` (numbers, server only), `lib/home-client.js` (browser side).
 - `/api/topics` – grammar lessons (`content/*.md`) plus the vocabulary sections/lists (`lib/words.js`),
   each list with its word counts per level and word source (for the setup screen).
   The old `wortschatz-*.md` lesson files are no longer used as topics.

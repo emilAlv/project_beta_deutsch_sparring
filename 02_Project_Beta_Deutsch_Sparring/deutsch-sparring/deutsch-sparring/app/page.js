@@ -3,6 +3,8 @@
 // The whole app is this one page, in stages:
 //   stage 'name'     → the tutor asks for the name in the chat (no AI; only without accounts)
 //   stage 'code'     → asks for the class code, checked by /api/code (no AI; only without accounts)
+//   stage 'home'     → the Home page: goals, plan, stats, strengths & gaps (components/Home.js); where everyone lands
+//                      after logging in (or after name / class code); "Start Sparring" opens the setup screen
 //   stage 'setup'    → the setup screen: type, topic, level, difficulty, questions, word source,
 //                      direction, grammar per word, Swiss/German Hochdeutsch (components/SetupScreen.js)
 //   stage 'practice' → the Sparring: questions with the AI tutor (/api/chat), a slim ribbon on top
@@ -20,6 +22,7 @@ import Chat from '../components/Chat';
 import SessionPanel from '../components/SessionPanel';
 import SetupScreen from '../components/SetupScreen';
 import SessionRibbon from '../components/SessionRibbon';
+import HomePage from '../components/Home';
 import { t } from '../lib/ui-text';
 import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
@@ -261,10 +264,10 @@ export default function Home() {
     if (
       p.name && codeOk && saved?.version === CHAT_VERSION && saved.messages?.length && sameDay
       && !(saved.session?.finished && longBreak) // a finished session is not brought back after a break
-      && (saved.stage === 'setup' || saved.session?.settings) // a running session always has its settings
+      && (saved.stage === 'setup' || saved.stage === 'home' || saved.session?.settings) // a running session always has its settings
     ) {
       const restored = { ...EMPTY_CONVO, ...saved, session: { ...newSession(), ...saved.session } };
-      if (restored.stage !== 'practice') restored.stage = 'setup';
+      if (restored.stage !== 'practice') restored.stage = restored.stage === 'setup' ? 'setup' : 'home';
       convoRef.current = restored;
       setConvo(restored);
       const last = restored.messages[restored.messages.length - 1];
@@ -285,13 +288,13 @@ export default function Home() {
       update(() => ({ ...start, stage: 'code' }));
       tutorSay(t('tutorAskCode', { name: p.name }));
     } else {
-      update(() => ({ ...start, stage: 'setup' })); // name known (or logged in): straight to the setup screen
+      update(() => ({ ...start, stage: 'home' })); // name known (or logged in): the Home page
     }
   }
 
   // ---------- remember things ----------
   useEffect(() => {
-    if (convo.stage === 'setup' || convo.stage === 'practice') {
+    if (convo.stage === 'setup' || convo.stage === 'practice' || convo.stage === 'home') {
       saveChat({ ...convo, version: CHAT_VERSION, messages: convo.messages.slice(-80), savedAt: Date.now() });
     }
   }, [convo]);
@@ -382,7 +385,7 @@ export default function Home() {
       update((c) => ({ ...c, stage: 'code' }));
       tutorSay(t('tutorAskCode', { name }));
     } else {
-      update((c) => ({ ...c, stage: 'setup', historyFrom: Date.now() }));
+      update((c) => ({ ...c, stage: 'home', historyFrom: Date.now() }));
     }
   }
 
@@ -396,7 +399,7 @@ export default function Home() {
         setProfile({ ...profileRef.current, classCode: text });
         // a session was running (the code changed meanwhile): back to it; otherwise to the setup screen
         const resume = Boolean(convoRef.current.session.topicId);
-        update((c) => ({ ...c, stage: resume ? 'practice' : 'setup', historyFrom: resume ? c.historyFrom : Date.now() }));
+        update((c) => ({ ...c, stage: resume ? 'practice' : 'home', historyFrom: resume ? c.historyFrom : Date.now() }));
         if (resume) reply = t('tutorCodeThanks');
       } else {
         reply = data.error || t('tutorBadCode');
@@ -422,7 +425,21 @@ export default function Home() {
   // back from the setup screen to the session (only offered when there is one)
   function cancelSetup() {
     setSetupError(null);
-    update((c) => ({ ...c, stage: 'practice' }));
+    const s = convoRef.current.session;
+    update((c) => ({ ...c, stage: s.settings && s.started ? 'practice' : 'home' }));
+  }
+
+  // ---------- the header menu: Home ⇄ Sparring ----------
+  function goHome() {
+    setSetupError(null);
+    update((c) => ({ ...c, stage: 'home' }));
+  }
+
+  // Sparring: back to the running session, or the setup screen
+  function goSparring() {
+    const s = convoRef.current.session;
+    if (s.settings && s.started && !s.finished) update((c) => ({ ...c, stage: 'practice' }));
+    else openSetup();
   }
 
   // "Start session": a new session with these fixed settings, a fresh conversation, question 1 from the tutor
@@ -536,7 +553,7 @@ export default function Home() {
     }
     setError(null);
     const c = convoRef.current;
-    if (c.stage === 'loading' || c.stage === 'setup') return false;
+    if (c.stage === 'loading' || c.stage === 'setup' || c.stage === 'home') return false;
     if (c.stage === 'name') return onName(text);
     if (c.stage === 'code') return onCode(text);
 
@@ -794,7 +811,7 @@ export default function Home() {
 
   // put the cursor back into the input after each answer
   useEffect(() => {
-    if (!busy && stage !== 'setup') inputRef.current?.focus({ preventScroll: true });
+    if (!busy && stage !== 'setup' && stage !== 'home') inputRef.current?.focus({ preventScroll: true });
   }, [busy, stage]);
 
   return (
@@ -802,18 +819,32 @@ export default function Home() {
       <Header
         name={profile.name}
         streak={currentStreak(history.streak)}
+        nav={stage === 'home' ? 'home' : stage === 'setup' || stage === 'practice' ? 'sparring' : null}
+        onNav={(k) => (k === 'home' ? goHome() : stage === 'practice' ? undefined : goSparring())}
         onNewSession={() => openSetup(session.settings)}
         onChangeName={account ? null : changeName}
         onLogOut={account ? logOut : null}
       />
-      {stage === 'setup' ? (
+      {stage === 'home' ? (
+        <HomePage
+          name={profile.name}
+          streak={currentStreak(history.streak)}
+          sessions={history.sessions}
+          topics={topics}
+          running={Boolean(session.settings && session.started && !session.finished)}
+          onStart={() => openSetup()}
+          onContinue={goSparring}
+          onAgain={(settings) => startSession(settings)}
+        />
+      ) : stage === 'setup' ? (
         <SetupScreen
           key={JSON.stringify(prefs.setup)}
           topics={topics}
           initial={prefs.setup}
           error={setupError}
           onStart={(form, settings) => startSession(settings, form)}
-          onCancel={session.topicId ? cancelSetup : null}
+          onCancel={cancelSetup}
+          cancelLabel={session.settings && session.started ? undefined : 'setupBackHome'}
         />
       ) : (
         <main className={`workspace${stage === 'practice' && session.settings ? ' with-ribbon' : ''}`}>

@@ -5,7 +5,7 @@ import { t } from '../lib/ui-text';
 import { initials } from '../lib/intents';
 import { Flame } from './icons';
 
-export default function Header({ name, streak, onNewSession, onChangeName, onLogOut }) {
+export default function Header({ name, streak, nav, onNav, onNewSession, onChangeName, onLogOut }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -30,6 +30,15 @@ export default function Header({ name, streak, onNewSession, onChangeName, onLog
         <span className="divider" aria-hidden="true" />
         <span className="tagline">{t('tagline')}</span>
       </div>
+      {name && nav && (
+        <nav className="mainnav" aria-label={t('navLabel')}>
+          {['home', 'sparring'].map((k) => (
+            <button key={k} type="button" className={nav === k ? 'on' : ''} aria-current={nav === k ? 'page' : undefined} onClick={() => onNav(k)}>
+              {t(k === 'home' ? 'navHome' : 'navSparring')}
+            </button>
+          ))}
+        </nav>
+      )}
       {name && (
         <div className="student">
           {streak > 0 && (
