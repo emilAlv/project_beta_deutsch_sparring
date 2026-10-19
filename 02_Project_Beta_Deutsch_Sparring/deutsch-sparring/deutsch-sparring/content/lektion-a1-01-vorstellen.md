@@ -39,10 +39,30 @@ Name + sein/heissen/kommen/wohnen im Präsens. Ich heisse …; Woher kommst du? 
 | 4 | B: Ich komme ___ Italien. | aus | Lückentext |
 | 5 | A: Wo ___ du jetzt? (wohnen) | wohnst | Lückentext |
 | 6 | Du begrüsst deine neue Lehrperson. Übersetze: Good morning, my name is Lea. | Guten Morgen, ich heisse Lea. | Übersetzung |
-| 7 | Finde den Fehler: Ich heisst Nora. | heisse | Fehler finden |
+| 7 | Finde den Fehler: Ich heisst Nora. | Ich heisse Nora. | Fehler finden |
 | 8 | A: Freut mich! B: Mich ___! | auch | Lückentext |
 | 9 | A: ___ ist Ihr Name? B: Mein Name ist Sara. | Wie | Lückentext |
 | 10 | Bilde einen Satz: bin / ich / Studentin | Ich bin Studentin. | Satzbau |
 
 ## Nicht verwenden (off-limits)
 Keine Nebensätze oder komplizierte Vergangenheitsformen.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Grüezi, ich bin Lara. Wie heisst du?
+> B: Ich heisse Samir. Ich komme aus Portugal.
+> A: Freut mich! Wohnst du auch in Zürich?
+> B: Nein, ich wohne in Winterthur.
+
+## Kurzer authentischer Lesetext
+Kursinformation: Lara kommt aus der Schweiz. Samir kommt aus Portugal und wohnt in Winterthur.
+
+**Verstehen:** Wo wohnt Samir?
+
+**Musterantwort:** Er wohnt in Winterthur.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Du bist neu im Kurs. Begrüsse deine Sitznachbarin und sage deinen Namen und deinen Wohnort.
+2. **Reaktion auf eine neue Information:** Sie fragt: «Woher kommst du?» Antworte mit einem vollständigen kurzen Satz.
+3. **Transfer:** Stell nun dieselben Fragen höflich mit «Sie», als würdest du deine Lehrperson kennenlernen.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

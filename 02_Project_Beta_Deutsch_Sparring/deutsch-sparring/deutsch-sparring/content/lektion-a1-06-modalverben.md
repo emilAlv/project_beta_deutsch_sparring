@@ -46,3 +46,23 @@ Modalverb an Position 2, Infinitiv am Ende: Ich kann heute kommen. Häufig: kön
 
 ## Nicht verwenden (off-limits)
 Kein Konjunktiv II ausser der festen Wendung «möchte».
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Kannst du morgen kommen?
+> B: Leider nicht. Ich muss arbeiten.
+> A: Können wir uns am Freitag treffen?
+> B: Ja, am Freitag kann ich.
+
+## Kurzer authentischer Lesetext
+Hinweis in der Bibliothek: «Hier darf man nicht telefonieren. Man kann Bücher ausleihen.»
+
+**Verstehen:** Darf man in der Bibliothek telefonieren?
+
+**Musterantwort:** Nein, man darf nicht telefonieren.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Erkläre einer Kollegin, was du heute machen musst und was du morgen machen möchtest.
+2. **Reaktion auf eine neue Information:** Sie fragt: «Kannst du morgen mitkommen?» Lehne ab und nenne einen einfachen Grund.
+3. **Transfer:** Bitte höflich um Erlaubnis, das Fenster zu öffnen.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

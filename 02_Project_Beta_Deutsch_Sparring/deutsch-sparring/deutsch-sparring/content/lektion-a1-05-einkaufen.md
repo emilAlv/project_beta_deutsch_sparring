@@ -41,9 +41,29 @@ Bei kaufen/brauchen/bestellen häufig Akkusativ: der → den, ein → einen; die
 | 5 | Ich brauche ___ Apfel. (ein) | einen | Lückentext |
 | 6 | A: Zahlen Sie bar? B: Nein, ___ Karte, bitte. | mit | Lückentext |
 | 7 | Bilde einen Satz: bitte / ich / einen Tee / möchte | Ich möchte einen Tee, bitte. | Satzbau |
-| 8 | Finde den Fehler: Ich kaufe ein Apfel. | einen | Fehler finden |
+| 8 | Finde den Fehler: Ich kaufe ein Apfel. | Ich kaufe einen Apfel. | Fehler finden |
 | 9 | Übersetze: How much is the bread? | Was kostet das Brot? | Übersetzung |
 | 10 | A: Haben Sie Milch? B: Ja, ___ Sie hier. | bitte | Lückentext |
 
 ## Nicht verwenden (off-limits)
 Preisdiskussionen und komplizierte Reklamationen erst später.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Grüezi. Ich hätte gern zwei Gipfeli und einen Kaffee.
+> B: Sehr gern. Sonst noch etwas?
+> A: Nein, danke. Was kostet das?
+> B: Sieben Franken fünfzig.
+
+## Kurzer authentischer Lesetext
+Schild in der Bäckerei: «Brot CHF 3.80 · Gipfeli CHF 1.40 · Tee CHF 3.00».
+
+**Verstehen:** Was kostet ein Gipfeli?
+
+**Musterantwort:** Ein Franken vierzig.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Du bist in einer Bäckerei. Bestelle ein Brot und einen Tee.
+2. **Reaktion auf eine neue Information:** Die Verkäuferin fragt: «Sonst noch etwas?» Antworte höflich und frage nach dem Preis.
+3. **Transfer:** Bestelle dieselben Dinge für zwei Personen; ändere die Mengen.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

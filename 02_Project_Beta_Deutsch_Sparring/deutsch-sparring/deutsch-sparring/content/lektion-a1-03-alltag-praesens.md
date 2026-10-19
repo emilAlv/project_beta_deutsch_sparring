@@ -40,8 +40,28 @@ Regelmässige Endungen: ich -e, du -st, er/sie -t, wir -en, ihr -t, sie/Sie -en.
 | 6 | Er ___ jeden Tag mit dem Zug. (fahren) | fährt | Lückentext |
 | 7 | Du ___ gern Bücher. (lesen) | liest | Lückentext |
 | 8 | Bilde einen Satz: am Sonntag / wir / kochen | Am Sonntag kochen wir. | Satzbau |
-| 9 | Finde den Fehler: Wir arbeitet heute. | arbeiten | Fehler finden |
+| 9 | Finde den Fehler: Wir arbeitet heute. | Wir arbeiten heute. | Fehler finden |
 | 10 | Übersetze: I learn German in the evening. | Ich lerne am Abend Deutsch. | Übersetzung |
 
 ## Nicht verwenden (off-limits)
 Kein Passiv und keine komplexen Nebensätze.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Wann gehst du zur Arbeit?
+> B: Um acht Uhr. Am Abend mache ich Sport.
+> A: Und am Sonntag?
+> B: Da schlafe ich länger und koche.
+
+## Kurzer authentischer Lesetext
+Nora arbeitet montags bis freitags. Am Samstag kauft sie ein. Sonntags besucht sie ihre Mutter.
+
+**Verstehen:** Was macht Nora am Samstag?
+
+**Musterantwort:** Sie kauft ein.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Erzähle, was du an einem normalen Arbeitstag morgens und abends machst.
+2. **Reaktion auf eine neue Information:** Dein Gesprächspartner sagt: «Ich beginne um sechs Uhr.» Frage nach seinem Feierabend.
+3. **Transfer:** Vergleiche einen Wochentag mit deinem Sonntag in zwei kurzen Sätzen.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.
