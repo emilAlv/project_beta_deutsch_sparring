@@ -15,10 +15,20 @@ or switch the right panel.
   says «Stopp», «genug», «I'm done» or taps *End session*. A summary card shows the score;
   *Same topic again* starts a new round.
 - **Grammar topics:** gap fill, choose the form, build a sentence, translate, find the mistake.
-- **Vocabulary topics = flashcards** with English as the reference language:
+- **Vocabulary topics = flashcards** from the word list (`vocab/words.json`, see `vocab/README.md`).
+  The topics are the word list's sections and lists (e.g. *Home & living › Furniture & objects*);
+  tap a section to practise all of it or pick one list. English is the reference language:
   English → German (answer with the article), German → English, or mixed. Optionally
   *Add sentences*: after each card, build a sentence with the word – practises article +
   adjective ending in Nominativ, Akkusativ and Dativ.
+- **Word scores:** the app keeps two scores per word from 1 to 10 – *V* (the word itself) and *G*
+  (the word in grammar) – in the browser (`wort_scores`). A session only gets the words it needs
+  (1 per question; with sentences 1 per 2 questions; plus 3 spare), chosen from the chosen
+  section/list and level: words that are due and weak first (lowest score first), about 30 % new
+  words, 1–2 words with a 10 as a check. A word comes back after 1 / 3 / 7 / 21 days (score 1–3 /
+  4–6 / 7–9 / 10). A 10 needs 4 right answers in a row; answers after a hint or on *Easy* give +1
+  and do not count toward that. The app, never the AI, changes the scores. All rules and numbers
+  are in `lib/scores.js`; `node scripts/check-scores.mjs` checks them.
 - Change topic any time: tap *Change topic*, *Grammar* / *Vocabulary*, a topic name, or just
   write «Ich möchte jetzt Wohnen üben».
 
@@ -89,7 +99,12 @@ Rules: one file per topic.
   `users` table (or memory with `AUTH_MEMORY=1`), `lib/schema.mjs` = the table (created on first
   use or with `node scripts/db-migrate.mjs`), `app/api/auth/*` = log in / sign up / log out,
   `components/AuthCard.js` = the login card. Tries are limited in `lib/guard.js`.
-- `/api/chat` – builds the prompt, calls Gemini with `responseMimeType: application/json` +
+- `/api/topics` – grammar lessons (`content/*.md`) plus the vocabulary sections/lists (`lib/words.js`).
+  The old `wortschatz-*.md` lesson files are no longer used as topics.
+- `/api/chat` – for a vocabulary topic the server picks the session's words once (`pickWords` in
+  `lib/scores.js`, using the scores the browser sends with the first request), puts only those
+  words into the prompt as compact lines and sends their ids back; the browser returns them with
+  every later request. Builds the prompt, calls Gemini with `responseMimeType: application/json` +
   `responseSchema`, cleans the answer (`normalizeReply`) and returns it. Safety nets in
   `lib/gemini.js`: low thinking (retried without it on HTTP 400), 25 s timeout per call,
   fallback model, `maxDuration = 60`, every error as JSON. Broken JSON → shown as a normal message.
@@ -107,7 +122,7 @@ npm run dev                  # http://localhost:3000
 ```
 
 With `MOCK=1` the demo tutor builds its questions from the lesson files (the example exercises
-for grammar, the word tables for flashcards) and understands hint, rule, skip, easier/harder,
+for grammar) and from the same word picker as the real tutor (flashcards) and understands hint, rule, skip, easier/harder,
 level and direction changes. Test words: `langsam` (slow answer), `kaputt` (broken JSON),
 `rohtext` (plain text), `absturz` (server error), `keine Lust mehr` (stop in own words).
 To start over as a new student: browser DevTools → Application → Local Storage → delete the

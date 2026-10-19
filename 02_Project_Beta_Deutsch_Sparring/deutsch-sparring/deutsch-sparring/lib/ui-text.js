@@ -23,6 +23,7 @@ const tutor = {
   tutorAskTopicAgain: 'Gern! Was möchtest du jetzt üben?',
   tutorChooseGrammar: 'Welches Grammatik-Thema möchtest du üben?',
   tutorChooseVocab: 'Welchen Wortschatz möchtest du üben?',
+  tutorChooseList: 'Alle Wörter von «{section}» oder eine bestimmte Liste?',
   tutorNoTopicsForLevel: 'Für {level} gibt es noch keine eigenen Lektionen. Hier sind alle Themen – ich passe die Sprache an dein Niveau an.',
   tutorNoTopicsOfType: 'Dazu gibt es noch keine Lektion. Wähle ein anderes Thema oder schreib mir, was du üben möchtest.',
   tutorRestart: 'Neue Runde, {name}! Was möchtest du üben?',

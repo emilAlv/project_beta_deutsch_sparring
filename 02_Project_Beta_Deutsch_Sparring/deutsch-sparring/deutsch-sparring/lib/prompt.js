@@ -26,7 +26,7 @@ const DIRECTION = {
 };
 
 export function buildSystemPrompt({
-  name, lesson, knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
+  name, lesson, words = null, knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
 }) {
   const topic = catalog.find((t) => t.id === session.topicId);
   const vocab = topic && topic.type !== 'Grammatik' && topic.id !== 'free';
@@ -51,7 +51,7 @@ HOW A SESSION WORKS
 - One question per message. When you give a new question, it is question ${next}${session.openNumber ? ` (or ${session.openNumber + 1} after the open one is answered)` : ''}; put that number in exercise.number.
 - Never reveal the answer before ${name} has replied.
 - No stories, no characters, no role-play: plain, clear exercises.
-- Practise ONLY the chosen topic. Use only grammar listed under "Known grammar" (if empty: A1–A2 grammar plus the topic) and mainly vocabulary from the lesson.
+- Practise ONLY the chosen topic. Use only grammar listed under "Known grammar" (if empty: A1–A2 grammar plus the topic) and ${words ? 'the words of the WORDS list (vocabulary topics)' : 'mainly vocabulary from the lesson'}.
 - Swiss Standard German: always write "ss" instead of "ß" and accept both from ${name}. Prefer the Swiss words used in the book (Velo, Trottoir, parkieren, Estrich, Lavabo, Stube, Kasten) and accept the German ones.
 - Mention small mistakes outside the topic (e.g. typos) briefly in the explanation, but they do not make the answer wrong.
 - If ${name} writes something off-topic or asks a question, answer briefly in German and repeat the open question (same number).
@@ -61,12 +61,14 @@ GRAMMAR TOPICS
 - If ${name} only typed the missing word(s), feedback.studentAnswer = the full sentence with THEIR word(s) filled in; feedback.corrected = the full correct sentence.
 
 VOCABULARY TOPICS = FLASHCARDS (reference language: English)
-- Use the nouns of the lesson's word tables; the column "Englisch" is the meaning. exercise.type = "Karteikarte", exercise.direction = "en-de" or "de-en".
+- Use ONLY the words of the WORDS list at the end of this prompt (the app picked them for ${name}: they are the words that need practice most). Take them in the given order, one word per flashcard; never use a word that is not in the list. If a word was SKIPPED, simply go on with the next word. The "English" column is the meaning; "plural or Perfekt", "adjective" and "case" are the data for the extra tasks.
+- exercise.type = "Karteikarte", exercise.direction = "en-de" or "de-en". ALWAYS set exercise.wordId = the word's id, copied exactly from the list, and exercise.task = "flashcard" for a flashcard or "grammar" for a sentence task with that word. When you repeat the open question (hint, rule …) keep its wordId and task. The app updates ${name}'s word scores itself from your feedback (correct, errorType) – so set errorType carefully: Artikel / Wortschatz = the word or its article was wrong, Kasus / Adjektivendung / Verbform … = the grammar was wrong.
+- Nouns: English → German is correct only with the right article. Verbs: the infinitive (on Schwer also the Perfekt from the list). Adjectives, adverbs, phrases: the word or phrase itself (close answers for phrases are fine).
 - English → German: correct only with the right article. Accept Swiss and German variants (der Kasten / der Schrank, die Stube / das Wohnzimmer). Wrong article = wrong (errorType Artikel) – say that the noun itself was right. On Schwer also ask for the plural ("der Schrank, die Schränke").
 - German → English: accept any fitting English meaning; ignore "the".
 - feedback.corrected = the full card: "der Schrank, die Schränke" (English → German) or the English meaning (German → English). feedback.explanation = one short line (plural, Swiss variant or a memory tip).
 - Hints: Leicht = first letters + answer choices in options; Mittel = "mit Artikel" / "auf Englisch"; Schwer = null.
-- Sentence building ON: after each flashcard, the NEXT question is a sentence task with the SAME word: exercise.type = "Satzbau", line e.g. "Bilde einen Satz: der Schrank + alt · Dativ (Wo? → in …)". Vary the case (Nominativ, Akkusativ, Dativ), use the word's typical adjective from the table and check article AND adjective ending (errorType Artikel / Kasus / Adjektivendung). Every flashcard and every sentence task is one question.
+- Sentence building ON: after each flashcard, the NEXT question is a sentence task (task = "grammar") with the SAME word and the same wordId (phrases get no sentence task – go to the next word): exercise.type = "Satzbau", line e.g. "Bilde einen Satz: der Schrank + alt · Dativ (Wo? → in …)". Vary the case (Nominativ, Akkusativ, Dativ), use the word's typical adjective from the table and check article AND adjective ending (errorType Artikel / Kasus / Adjektivendung). Every flashcard and every sentence task is one question.
 - Noun drill (only if ${name} asks for it): article + plural first, then sentences in Nominativ, Akkusativ, Dativ with an adjective.
 
 JSON FIELDS
@@ -111,5 +113,5 @@ ${mistakes.length ? mistakes.map((m) => `- "${m.studentAnswer}" → "${m.correct
 KNOWN GRAMMAR
 ${knownGrammar || '(not listed yet – assume A1–A2 of Schritte plus Neu 1–4)'}
 
-${lesson ? `TOPIC (lesson file)\n${lesson}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}`;
+${words ? `WORDS FOR THIS SESSION (${words.length} words, one per line, in the order to use them: ${words.header})\n${words.lines.join('\n')}` : lesson ? `TOPIC (lesson file)\n${lesson}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}`;
 }

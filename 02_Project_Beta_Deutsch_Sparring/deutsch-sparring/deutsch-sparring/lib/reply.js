@@ -24,6 +24,7 @@ export const ERROR_TYPE = {
   Rechtschreibung: 'spelling',
   Andere: 'other',
 };
+export const TASKS = ['flashcard', 'grammar']; // which score a word task is for (lib/scores.js)
 export const LEVELS = ['A1', 'A2', 'B1'];
 export const VIEWS = ['glance', 'progress', 'grammar'];
 
@@ -61,9 +62,11 @@ export const RESPONSE_SCHEMA = {
         direction: enumOf(['en-de', 'de-en'], { nullable: true, description: 'Flashcards only: English → German or German → English.' }),
         line: str('The task: a sentence with ___, the word on the flashcard, words to build a sentence … No quotation marks.'),
         hint: nullableStr('Depends on difficulty. null on Schwer.'),
+        wordId: nullableStr('Vocabulary topics: the id of the word this question is about, copied exactly from the WORDS list. null for grammar topics.'),
+        task: enumOf(TASKS, { nullable: true, description: 'Vocabulary topics: "flashcard" for a flashcard, "grammar" for a sentence task with the word.' }),
       },
       required: ['number', 'type', 'line'],
-      propertyOrdering: ['number', 'type', 'direction', 'line', 'hint'],
+      propertyOrdering: ['number', 'type', 'direction', 'line', 'hint', 'wordId', 'task'],
     },
     options: { type: 'ARRAY', items: { type: 'STRING' } },
     panelView: enumOf(VIEWS, { nullable: true }),
@@ -137,7 +140,8 @@ export function salvageMessage(text) {
   }
 }
 
-// ctx: { level, difficulty (key), topicIds: Set, topicId } – current values sent by the browser.
+// ctx: { level, difficulty (key), topicIds: Set, topicId, wordIds?: Set } – current values sent by the browser.
+// wordIds = the ids of the words picked for this session; a wordId outside this set is dropped.
 export function normalizeReply(raw, ctx) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const message = clip(raw.message, 1200);
@@ -172,6 +176,12 @@ export function normalizeReply(raw, ctx) {
       hint: orNull(e.hint, 200),
     };
     if (type === 'flashcard' && !exercise.direction) exercise.direction = ARTICLE.test(exercise.line) ? 'de-en' : 'en-de';
+    // vocabulary: which word, and which score the answer counts for (optional; old replies have neither)
+    const wordId = clip(e.wordId, 120);
+    if (wordId && ctx.wordIds?.has(wordId)) {
+      exercise.wordId = wordId;
+      exercise.task = TASKS.includes(e.task) ? e.task : type === 'flashcard' ? 'flashcard' : 'grammar';
+    }
   }
 
   const options = Array.isArray(raw.options)

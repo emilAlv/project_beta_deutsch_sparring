@@ -21,7 +21,7 @@ import { detectIntent, detectTopicWish, topicGroupIn, extractName, QUESTION_MIN,
 import { score, summaryOf } from '../lib/stats';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
-  recordSession, recentMistakes, currentStreak, setStorageAccount,
+  recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount,
 } from '../lib/storage';
 
 const LEVELS = ['A1', 'A2', 'B1'];
@@ -55,6 +55,8 @@ function newSession(topic = null, total = QUESTION_MIN) {
     exercise: null, // the open question (its number is always answers.length + 1)
     lastType: null,
     grammarFocus: null,
+    wordIds: [], // vocabulary: the words picked for this session (by the server, from the scores)
+    words: [], // … with their type: [{ id, type }]
     started: false, // the first question has arrived
     finished: false,
     endedEarly: false,
@@ -521,7 +523,7 @@ export default function Home() {
   }
 
   function listTopicGroup(group, msg) {
-    const list = topicsRef.current.filter((x) => x.type === group);
+    const list = topicsRef.current.filter((x) => x.type === group && !x.parent); // vocabulary: sections (their lists come after a tap)
     const s = convoRef.current.session;
     if (!list.length) {
       tutorSay(t('tutorNoTopicsOfType'));
@@ -547,11 +549,24 @@ export default function Home() {
 
   // the open question is skipped: counted at once, the tutor gives the solution + the next one
   function skipOpen() {
+    scoreAnswer(convoRef.current.session, convoRef.current.session.exercise, { skipped: true });
     updateSession((s) => ({
       ...s,
-      answers: [...s.answers, { n: s.answers.length + 1, skipped: true, correct: false, studentAnswer: '', corrected: '', changedWords: [], explanation: '', rule: '', skippedLine: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null }],
+      answers: [...s.answers, { n: s.answers.length + 1, skipped: true, correct: false, studentAnswer: '', corrected: '', changedWords: [], explanation: '', rule: '', skippedLine: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null, wordId: s.exercise?.wordId || '', task: s.exercise?.task || null }],
       exercise: null,
     }));
+  }
+
+  // Word scores: the APP updates them (lib/scores.js), never the model. Called once per answer.
+  function scoreAnswer(session, exercise, { correct = false, errorType = null, skipped = false } = {}) {
+    if (!exercise?.wordId) return;
+    const type = session.words?.find((w) => w.id === exercise.wordId)?.type;
+    recordWordAnswer(exercise.wordId, {
+      task: exercise.task || 'flashcard',
+      correct, errorType, skipped,
+      hinted: Boolean(exercise.hinted) || prefsRef.current.difficulty === 'easy', // a hint, or "Leicht" (multiple choice)
+      hasG: type !== 'phrase',
+    });
   }
 
   // stop waiting for the tutor (button in the input, or "Stopp" while it is writing)
@@ -606,6 +621,11 @@ export default function Home() {
       const group = topicGroupIn(text);
       if (group) listTopicGroup(group, msg);
     };
+
+    // a hint on a word question: the answer then counts less (+1, no streak)
+    if (open && s.exercise?.wordId && /^(tipp|hint|give me a hint|gib mir einen tipp|einen tipp)\b/i.test(text)) {
+      updateSession((x) => ({ ...x, exercise: x.exercise ? { ...x.exercise, hinted: true } : x.exercise }));
+    }
 
     switch (intent?.type) {
       case 'stop':
@@ -675,6 +695,13 @@ export default function Home() {
     }
     const topic = exact || (wish?.topicId && topicById(wish.topicId));
     if (topic) {
+      // a vocabulary section with several lists: ask for the whole section or one list
+      if (topic.lists?.length && same(text, topic.short)) {
+        const chips = [topic.title, ...topicsRef.current.filter((x) => x.parent === topic.id).map((x) => x.short)];
+        update((x) => ({ ...x, localOptions: { label: topic.short, chips } }));
+        tutorSay(t('tutorChooseList', { section: topic.short }));
+        return true;
+      }
       // the topic that is already running: say so – never grade it as an answer
       if (topic.id === s.topicId && running) tutorSay(t('tutorAlreadyOnTopic', { topic: topic.short }));
       else startTopic(topic, msg);
@@ -714,10 +741,17 @@ export default function Home() {
         openNumber: s.exercise && !s.finished ? s.answers.length + 1 : 0,
         openLine: s.exercise?.line || '',
         openDirection: s.exercise?.direction || null,
+        openWordId: s.exercise?.wordId || '',
+        openTask: s.exercise?.task || null,
         finished: s.finished,
         skippedNumber: lastSkipped && !s.exercise ? lastSkipped.n : 0,
         skippedLine: lastSkipped && !s.exercise ? lastSkipped.skippedLine : '',
+        skippedWordId: lastSkipped && !s.exercise ? lastSkipped.wordId || '' : '',
+        skippedTask: lastSkipped && !s.exercise ? lastSkipped.task || null : null,
       },
+      // vocabulary: the words picked at the start stay the same; without them the server picks, using our scores
+      wordIds: s.wordIds,
+      ...(isVocab(s) && !s.wordIds?.length ? { scores: loadScores(), source: 'both' } : {}),
       progress: score(s.answers),
       // what was already asked in this session, so 20–50 questions don't repeat
       asked: s.answers.map((a) => a.line || a.skippedLine).filter(Boolean).slice(-50),
@@ -755,8 +789,9 @@ export default function Home() {
       if (!data.reply) {
         // not valid JSON: show the text, keep the session and the panel as they are
         add({ role: 'tutor', text: data.text || '…', modelText: data.text || '' });
+        if (Array.isArray(data.words) && data.words.length) updateSession((x) => (x.wordIds?.length ? x : { ...x, wordIds: data.words.map((w) => w.id), words: data.words }));
       } else {
-        then = applyReply(data.reply, data.modelText, sent);
+        then = applyReply(data.reply, data.modelText, sent, data.words);
       }
     } catch (e) {
       if (request.cancelled) return;
@@ -776,7 +811,7 @@ export default function Home() {
   }
 
   // The tutor's answer → chat message + session. Returns a follow-up action (or null).
-  function applyReply(reply, modelText, sent) {
+  function applyReply(reply, modelText, sent, pickedWords) {
     const rs = reply.session;
     const before = convoRef.current.session;
 
@@ -797,6 +832,12 @@ export default function Home() {
       if (topic.id === 'free' && rs.topicName) s.topicName = rs.topicName;
     }
 
+    // the words the server picked for this vocabulary session: kept for the whole session
+    if (Array.isArray(pickedWords) && pickedWords.length && !s.wordIds?.length && s.topicId && !s.finished) {
+      s.wordIds = pickedWords.map((w) => w.id);
+      s.words = pickedWords;
+    }
+
     // 3) feedback for the open question. (Also counted if the tutor asked its question only in
     //    the text, without a question card – but never twice for a question that was skipped.)
     let feedback = null;
@@ -804,7 +845,9 @@ export default function Home() {
     const forSkipped = lastAnswer?.skipped && !s.exercise && reply.feedback?.forNumber === lastAnswer.n;
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
       feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
-      s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false, line: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null }];
+      // word scores: updated by the app from the tutor's verdict (correct, errorType), a hint and "Leicht"
+      scoreAnswer(s, s.exercise, { correct: feedback.correct, errorType: feedback.errorType });
+      s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false, line: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null, wordId: s.exercise?.wordId || '', task: s.exercise?.task || null }];
       s.exercise = null;
       s.started = true;
     }
@@ -821,7 +864,8 @@ export default function Home() {
     // 5) the next (or repeated) question – its number is counted by the app
     let exercise = null;
     if (reply.exercise && !s.finished) {
-      exercise = { ...reply.exercise, number: s.answers.length + 1, total: s.total };
+      const sameQuestion = before.exercise?.wordId && before.exercise.wordId === reply.exercise.wordId && before.exercise.task === reply.exercise.task;
+      exercise = { ...reply.exercise, number: s.answers.length + 1, total: s.total, ...(sameQuestion && before.exercise.hinted ? { hinted: true } : {}) };
       s.exercise = exercise;
       s.started = true;
       s.lastType = exercise.type;
@@ -863,7 +907,7 @@ export default function Home() {
     if (localOptions) groups.push({ label: localOptions.label, chips: chips(localOptions.chips, 'outline') });
 
     if (stage === 'topic') {
-      const forLevel = topics.filter((x) => x.levels.includes(prefs.level));
+      const forLevel = topics.filter((x) => !x.parent && x.levels.includes(prefs.level));
       const list = forLevel.length ? forLevel : topics;
       if (modelOptions.length) groups.push({ label: t('groupNow'), chips: chips(modelOptions, 'soft') });
       if (list.length) {

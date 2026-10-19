@@ -1,4 +1,4 @@
-import { listLessons } from '../../../lib/content';
+import { allTopics } from '../../../lib/topics';
 import { needsCode } from '../../../lib/guard';
 import { requireUser } from '../../../lib/auth';
 
@@ -10,7 +10,7 @@ export async function GET(req) {
     const { user, response } = await requireUser(req);
     if (response) return response;
     return Response.json({
-      topics: listLessons().map(({ keywords, ...t }) => t),
+      topics: allTopics().map(({ keywords, ...t }) => t),
       needsCode: !user && needsCode(),
       account: user ? { username: user.username } : null,
       mock: process.env.MOCK === '1',

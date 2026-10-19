@@ -8,7 +8,7 @@
 // instead of JSON), "absturz" (server error), "keine lust mehr" (the student wants to stop).
 
 import { ModelError } from './gemini';
-import { getExamples, getVocab, listLessons } from './content';
+import { getExamples } from './content';
 import { detectIntent, detectTopicWish } from './intents';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
@@ -111,6 +111,22 @@ function grammarQuestion(examples, n, difficulty, strongHint = false) {
 }
 
 // ---------- vocabulary: flashcards + sentence tasks ----------
+// The words come from the picker (lib/scores.js, vocab/words.json) – the same words the real tutor gets.
+// A picked word (lib/words.js) → the shape this demo works with.
+const splitMeanings = (en) => String(en || '').split(/,\s*(?![^()]*\))/).map((x) => x.trim()).filter(Boolean);
+
+function mockWord(w) {
+  if (w.type === 'noun') {
+    return {
+      id: w.id, type: 'noun', de: `${w.article} ${w.noun}`, article: w.article, noun: w.noun, variants: [],
+      en: splitMeanings(w.en), plural: w.plural, adjective: w.adjective,
+    };
+  }
+  const de = w.de.split(/\s*→\s*/)[0].split(',')[0].trim();
+  return { id: w.id, type: w.type, de, article: '', noun: de, variants: [], en: splitMeanings(w.en), plural: '', adjective: '', perfekt: w.perfekt };
+}
+const isNoun = (w) => w.type === 'noun';
+
 // with sentences: odd questions are cards, even ones a sentence with the card just before
 function vocabSlot(n, sentences) {
   if (!sentences || n % 2 === 1) return { kind: 'card', idx: n - 1, cardNo: sentences ? (n - 1) / 2 : n - 1 };
@@ -169,6 +185,11 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
   const slot = { ...vocabSlot(n, settings.sentences), ...(pin?.kind ? { kind: pin.kind } : {}) };
   const word = pin?.word || vocab[slot.idx % vocab.length];
   const d = settings.difficulty;
+  // only nouns get a sentence task here; any other word gets its card again, the other way round
+  if (slot.kind === 'sentence' && !isNoun(word)) {
+    const back = cardDirection({ direction: 'mixed' }, slot.cardNo + 1);
+    return vocabQuestion(vocab, n, { ...settings, sentences: false, direction: back }, strongHint, { word, kind: 'card' });
+  }
   if (slot.kind === 'sentence') {
     const kase = pin?.kase || CASES[slot.idx % 3];
     const adj = word.adjective || 'neu';
@@ -187,16 +208,16 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
   }
   const dir = cardDirection(settings, slot.cardNo);
   const others = vocab.filter((w) => w !== word);
-  const pick = (k) => others[(slot.idx * 7 + k * 13) % others.length];
+  const pick = (k) => (others.length ? others[(slot.idx * 7 + k * 13) % others.length] : word);
   if (dir === 'en-de') {
-    const choices = ['der', 'die', 'das'].map((a) => `${a} ${word.noun}`);
+    const choices = isNoun(word) ? ['der', 'die', 'das'].map((a) => `${a} ${word.noun}`) : [];
     return {
       exercise: {
         number: n,
         type: 'Karteikarte',
         direction: 'en-de',
         line: word.en[0],
-        hint: strongHint ? `(${word.article} …, Anfang: ${word.noun.slice(0, 3)}…)`
+        hint: strongHint ? `(${word.article ? `${word.article} …, ` : ''}Anfang: ${word.noun.slice(0, 3)}…)`
           : d === 'hard' ? null : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : 'mit Artikel',
       },
       options: d === 'easy' ? choices : [],
@@ -249,7 +270,9 @@ function checkVocab(q, answer, settings) {
     };
   }
   const card = `${w.de}${settings.difficulty === 'hard' && w.plural ? `, ${w.plural}` : ''}`;
-  const extra = [w.plural ? `Plural: ${w.plural}.` : 'Nur Plural.', w.variants.length ? `Auch: ${w.variants.join(', ')}.` : ''].filter(Boolean).join(' ');
+  const extra = isNoun(w)
+    ? [w.plural ? `Plural: ${w.plural}.` : 'Nur Plural.', w.variants.length ? `Auch: ${w.variants.join(', ')}.` : ''].filter(Boolean).join(' ')
+    : w.perfekt ? `Perfekt: ${w.perfekt}.` : '';
   if (q.exercise.direction === 'en-de') {
     const forms = [w.de, ...w.variants];
     const right = forms.some((f) => has(a, f));
@@ -278,7 +301,14 @@ function checkVocab(q, answer, settings) {
 }
 
 // The open question as it was asked (settings may have changed since then): found by its text.
-function openVocabQuestion(vocab, n, settings, line) {
+function openVocabQuestion(vocab, n, settings, line, wordId = '', task = null) {
+  const byId = wordId && vocab.find((w) => w.id === wordId);
+  if (byId) {
+    const sentence = String(line || '').match(/· (Nominativ|Akkusativ|Dativ)/);
+    if (task === 'grammar' && sentence && isNoun(byId)) return { exercise: { number: n, type: 'Satzbau', direction: null, line }, word: byId, kase: sentence[1] };
+    const dir = byId.en.includes(line) || byId.en[0] === line ? 'en-de' : 'de-en';
+    return { exercise: { number: n, type: 'Karteikarte', direction: dir, line }, word: byId };
+  }
   const sentence = String(line || '').match(/^Bilde einen Satz: (.+?) \+ (.+?) · (Nominativ|Akkusativ|Dativ)/);
   if (sentence) {
     const word = vocab.find((w) => w.de === sentence[1]);
@@ -297,17 +327,17 @@ function openGrammarItem(examples, n, line) {
 }
 
 // ---------- the demo tutor ----------
-export async function mockReply({ text, settings, session, progress, topic }) {
+export async function mockReply({ text, settings, session, progress, topic, topics = [], words = [] }) {
   const say = norm(text);
   if (/langsam|slow/.test(say)) await new Promise((r) => setTimeout(r, 4000));
   if (/kaputt|broken/.test(say)) return '{"message": "Das ist absichtlich kaputtes JSON, damit du die Fehlerbehandlung testen kannst", "feedback": {"forNumber": 2, "corr';
   if (/rohtext|raw text/.test(say)) return 'Das ist eine Antwort ohne JSON. Die App zeigt sie als normale Nachricht.';
   if (/absturz|crash/.test(say)) throw new ModelError('Simulierter Fehler (Demo-Modus)', 502);
 
-  const lessons = listLessons();
+  const lessons = topics;
   const topicId = topic?.id || DEFAULT_GRAMMAR;
   const isVocab = Boolean(topic) && topic.type !== 'Grammatik' && topic.id !== 'free';
-  const vocab = isVocab ? getVocab(topicId) : [];
+  const vocab = isVocab ? words.map(mockWord) : [];
   const examples = getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
   const useVocab = isVocab && vocab.length > 0;
   const total = session.total;
@@ -329,7 +359,7 @@ export async function mockReply({ text, settings, session, progress, topic }) {
     },
   };
   // the open question as it was asked: asked again → same word; the sentence after a card → its word
-  const openQ = useVocab && open && session.openLine ? openVocabQuestion(vocab, open, settings, session.openLine) : null;
+  const openQ = useVocab && open && session.openLine ? openVocabQuestion(vocab, open, settings, session.openLine, session.openWordId, session.openTask) : null;
   const ask = (n, strongHint = false) => {
     let pin = null;
     if (openQ && n === open) pin = { word: openQ.word, kind: openQ.exercise.type === 'Satzbau' ? 'sentence' : 'card', kase: openQ.kase };
@@ -337,6 +367,10 @@ export async function mockReply({ text, settings, session, progress, topic }) {
     else if (openQ) pin = { kind: 'card' };
     const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint);
     out.exercise = q.exercise;
+    if (q.word?.id) {
+      out.exercise.wordId = q.word.id;
+      out.exercise.task = q.exercise.type === 'Satzbau' ? 'grammar' : 'flashcard';
+    }
     out.options = q.options;
   };
   const json = () => JSON.stringify(out);
@@ -371,7 +405,7 @@ export async function mockReply({ text, settings, session, progress, topic }) {
   // the app counted a skipped question: give its solution, then the next question
   if (session.skippedNumber) {
     const k = session.skippedNumber;
-    const sq = useVocab ? openVocabQuestion(vocab, k, settings, session.skippedLine) : null;
+    const sq = useVocab ? openVocabQuestion(vocab, k, settings, session.skippedLine, session.skippedWordId, session.skippedTask) : null;
     const solution = useVocab
       ? sq.exercise.type === 'Satzbau' ? FRAME[sq.kase](declined(sq.word, sq.kase).phrase, declined(sq.word, sq.kase).plural)
         : sq.exercise.direction === 'en-de' ? sq.word.de : sq.word.en[0]
@@ -395,7 +429,7 @@ export async function mockReply({ text, settings, session, progress, topic }) {
 
   // help with the open question
   const intent0 = detectIntent(text);
-  const q = useVocab ? openVocabQuestion(vocab, open, settings, session.openLine) : null;
+  const q = openQ;
   if (intent0?.type === 'rule' || /^(erklär|erklaer|explain|regel|rule)/.test(say)) {
     out.message = useVocab
       ? 'Merke dir jedes Nomen mit **Artikel** und Plural. Im Dativ enden Adjektive nach dem Artikel auf -en.'

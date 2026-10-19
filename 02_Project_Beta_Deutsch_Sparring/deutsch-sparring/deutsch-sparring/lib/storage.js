@@ -1,3 +1,5 @@
+import { applyAnswer } from './scores';
+
 // Everything the app remembers lives in the browser (localStorage), never on the server.
 // Every access is wrapped in try/catch: private mode or blocked storage must not break the app.
 
@@ -6,11 +8,12 @@ const KEYS = {
   prefs: 'wort_prefs', // { level, difficulty, view, optionsHidden }
   history: 'wort_history', // { sessions: [...last 5], streak: { count, lastDay } }
   chat: 'wort_chat', // the current conversation, so a reload doesn't lose it
+  scores: 'wort_scores', // { [wordId]: { v, g, last } } – the word scores (lib/scores.js). Task 8 moves this to the database.
 };
 
 // With accounts, the conversation and the session history are kept per username, so two
-// students sharing a computer never see each other's work ("wort_history@anna").
-const PER_ACCOUNT = new Set(['history', 'chat']);
+// students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores']);
 let account = '';
 const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
 
@@ -22,6 +25,8 @@ export function setStorageAccount(username) {
     if (!localStorage.getItem('wort_adopted')) {
       const old = localStorage.getItem(KEYS.history);
       if (old && !localStorage.getItem(storageKey('history'))) localStorage.setItem(storageKey('history'), old);
+      const oldScores = localStorage.getItem(KEYS.scores);
+      if (oldScores && !localStorage.getItem(storageKey('scores'))) localStorage.setItem(storageKey('scores'), oldScores);
       localStorage.setItem('wort_adopted', account);
     }
   } catch {}
@@ -99,4 +104,16 @@ export function recentMistakes(currentAnswers, sessions) {
     })
     .slice(0, 8)
     .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule }));
+}
+
+// ---------- word scores (the rules are in lib/scores.js; this is the only place that stores them) ----------
+export const loadScores = () => read('scores', {});
+
+// One answer about one word → the stored record is updated. Returns the new record.
+export function recordWordAnswer(wordId, answer, now = Date.now()) {
+  if (!wordId) return null;
+  const all = loadScores();
+  const rec = applyAnswer(all[wordId], answer, now);
+  write('scores', { ...all, [wordId]: rec });
+  return rec;
 }
