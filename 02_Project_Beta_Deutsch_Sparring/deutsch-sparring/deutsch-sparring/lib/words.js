@@ -130,6 +130,19 @@ export function wordLine(w) {
 const slug = (s) => String(s).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 let topicCache = null;
 
+// Word counts per level and word source, for the setup screen: { A1: { goethe, kurs, both }, … }
+function countsFor(section, list) {
+  const { words } = load();
+  const out = {};
+  for (const level of LEVELS) {
+    out[level] = {};
+    for (const choice of ['goethe', 'kurs', 'both']) {
+      out[level][choice] = words.filter((w) => matchesFilter(w, { level, sources: sourcesFor(choice), section, list })).length;
+    }
+  }
+  return out;
+}
+
 export function wordTopics() {
   if (topicCache) return topicCache;
   const all = listSections();
@@ -148,6 +161,7 @@ export function wordTopics() {
       list: multi ? null : s.lists[0].name,
       lists: multi ? s.lists.map((l) => l.name) : [],
       count: s.count,
+      counts: countsFor(s.name, multi ? null : s.lists[0].name),
     });
     if (!multi) continue;
     for (const l of s.lists) {
@@ -163,6 +177,7 @@ export function wordTopics() {
         lists: [],
         parent: sid,
         count: l.count,
+        counts: countsFor(s.name, l.name),
       });
     }
   }

@@ -362,7 +362,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
 
   // the session is over: talk, but no new questions
   if (session.finished) {
-    out.message = 'Diese Runde ist fertig. Tippe «Same topic again» für eine neue Runde oder wähle ein anderes Thema.';
+    out.message = 'Diese Runde ist fertig. Tippe «Same settings again» für eine neue Runde oder «New session», um etwas anderes zu üben.';
     return json();
   }
   // the student wants to stop (in words the app did not catch)
@@ -371,13 +371,12 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     out.session.finished = true;
     return json();
   }
-  // the student asks for another topic in their own words
+  // the student asks for another topic in their own words: settings are fixed during a session
   const wish = detectTopicWish(text, lessons, { running: true });
   const other = wish && lessons.find((l) => l.id !== topicId && (l.id === wish.topicId || l.type === wish.group));
   if (other) {
-    out.message = `Okay, wir wechseln zu «${other.short}».`;
-    out.session.topicId = other.id;
-    out.session.topicName = other.short;
+    out.message = 'Das Thema bleibt während der Sitzung gleich. Beende die Sitzung, um etwas anderes zu üben.';
+    if (open) ask(open);
     return json();
   }
   if (/fortschritt|lücken|progress|gaps/.test(say)) {
@@ -435,8 +434,8 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     return json();
   }
   const intent = intent0;
-  if (['difficulty', 'level', 'direction', 'sentences', 'questions'].includes(intent?.type)) {
-    out.message = 'Alles klar, ich passe die Aufgabe an.';
+  if (intent?.type === 'fixed') {
+    out.message = 'Die Einstellungen bleiben während der Sitzung gleich. Beende die Sitzung, um sie zu ändern.';
     ask(open);
     return json();
   }
