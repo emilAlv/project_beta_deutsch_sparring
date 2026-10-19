@@ -50,3 +50,67 @@ export function ruleRows(answers, max = 4) {
 export function summaryOf(session) {
   return { ...score(session.answers), total: session.total, ended: session.endedEarly, states: taskStates({ ...session, exercise: null, finished: true }) };
 }
+
+// ---------- the session summary screen ----------
+const SHORT = 38;
+const clip = (s, n = SHORT) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
+const CASES = ['Nominativ', 'Akkusativ', 'Dativ', 'Genitiv'];
+
+// Why an answer was wrong, as a key for the summary: 'case:Genitiv' (the case named in the rule) or the error type.
+function reasonOf(a) {
+  const kase = CASES.find((c) => (a.rule || '').includes(c));
+  if (kase) return `case:${kase}`;
+  return a.errorType || 'other';
+}
+
+// An answer about a grammar rule: not skipped, has a rule, is no flashcard and no mistake in the word itself.
+export const isGrammarAnswer = (a) => !a.skipped && Boolean(a.rule) && a.qType !== 'flashcard' && a.task !== 'flashcard'
+  && !(a.wordId && (a.errorType === 'vocab' || a.errorType === 'article'));
+
+// Everything the summary screen shows, worked out from the answers the app saw (never from the model).
+// → { words: { known: [label], repeat: [{ label, reason }] } | null,
+//     questions: { right: [text], repeat: [{ label, reason }] },   (used when the session has no words)
+//     grammar: [{ rule, right, total }], minutes }
+export function summaryDetails(session) {
+  const answers = session.answers || [];
+  const labels = new Map((session.words || []).map((w) => [w.id, w.label || w.id]));
+  const byWord = new Map();
+  for (const a of answers) {
+    if (!a.wordId || a.skipped) continue;
+    const w = byWord.get(a.wordId) || { label: labels.get(a.wordId) || a.wordId, ok: true, reason: '' };
+    if (!a.correct) {
+      if (w.ok) w.reason = reasonOf(a);
+      w.ok = false;
+    }
+    byWord.set(a.wordId, w);
+  }
+  const words = byWord.size
+    ? {
+      known: [...byWord.values()].filter((w) => w.ok).map((w) => w.label),
+      repeat: [...byWord.values()].filter((w) => !w.ok).map((w) => ({ label: w.label, reason: w.reason })),
+    }
+    : null;
+
+  const seen = new Set();
+  const once = (k) => (seen.has(k) ? false : seen.add(k));
+  const questions = { right: [], repeat: [] };
+  for (const a of answers) {
+    if (a.skipped) continue;
+    const text = clip(String(a.question || a.line || a.corrected || '').replace(/\s+/g, ' ').trim());
+    if (!text || !once(`${a.correct}:${text}`)) continue;
+    if (a.correct) questions.right.push(text);
+    else questions.repeat.push({ label: text, reason: reasonOf(a) });
+  }
+
+  const rules = new Map();
+  for (const a of answers) {
+    if (!isGrammarAnswer(a)) continue;
+    const r = rules.get(a.rule) || { rule: a.rule, right: 0, total: 0 };
+    r.total += 1;
+    r.right += a.correct ? 1 : 0;
+    rules.set(a.rule, r);
+  }
+
+  const minutes = session.startedAt && session.endedAt ? Math.max(1, Math.round((session.endedAt - session.startedAt) / 60000)) : null;
+  return { words, questions, grammar: [...rules.values()], minutes };
+}

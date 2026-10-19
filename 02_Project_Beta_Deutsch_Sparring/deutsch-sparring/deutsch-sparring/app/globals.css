@@ -745,3 +745,56 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
   .tiles { grid-template-columns: 1fr 1fr; }
   .mainnav { display: none; }
 }
+
+/* ---------- session summary screen ---------- */
+.summary-closing { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; }
+.summary-closing .summary-caption { margin-bottom: 0; }
+.button-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap;
+}
+.button-ghost:hover { color: var(--brand); background: var(--brand-tint); }
+
+.summary-page { flex: 1; min-height: 0; overflow-y: auto; padding: 32px 24px 48px; }
+.summary-column { width: 100%; max-width: 820px; margin: 0 auto; }
+.summary-screen { display: flex; flex-direction: column; gap: 24px; padding: 36px; box-shadow: 0 8px 28px rgba(36, 58, 48, 0.08); }
+.sum-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.sum-title-block { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sum-title { font-family: var(--serif); font-weight: 600; font-size: 36px; line-height: 1.15; color: var(--ink); overflow-wrap: anywhere; }
+.sum-meta { font-size: 14px; color: var(--muted); }
+.sum-score-block { flex: none; text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.sum-score { font-family: var(--serif); font-weight: 600; font-size: 52px; line-height: 1.05; color: var(--brand); white-space: nowrap; }
+.sum-of { font-size: 52px; }
+.summary-screen .seg { height: 8px; }
+
+.sum-boxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.sum-box { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); min-width: 0; }
+.sum-known { background: var(--brand-tint); border-color: transparent; }
+.sum-repeat { background: var(--amber-bg); border-color: var(--amber-line); }
+.sum-box-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.sum-repeat .sum-box-title { color: var(--amber); }
+.sum-tags { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sum-tag { padding: 3px 10px; border-radius: 999px; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; background: var(--surface); border: 1px solid var(--line); }
+.sum-known .sum-tag { color: var(--brand); border-color: #c9d9c8; }
+.sum-repeat .sum-tag { border-color: var(--amber-line); }
+.sum-reason { color: var(--amber); }
+.sum-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.sum-rules li { display: flex; justify-content: space-between; gap: 10px; }
+.sum-rule-name { min-width: 0; overflow-wrap: anywhere; }
+.sum-rules li > span:last-child { flex: none; font-weight: 600; }
+.sum-low { color: #b3402a; }
+
+.sum-goals { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: var(--radius-md); background: var(--surface-2); }
+.sum-goal-line { font-size: 14px; }
+.sum-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sum-chat-link { margin-left: auto; font-size: 13px; font-weight: 500; }
+
+@media (max-width: 760px) {
+  .summary-screen { padding: 22px; }
+  .sum-top { flex-direction: column; }
+  .sum-score-block { text-align: left; }
+  .sum-boxes { grid-template-columns: 1fr; }
+  .sum-title { font-size: 30px; }
+  .sum-chat-link { margin-left: 0; }
+}

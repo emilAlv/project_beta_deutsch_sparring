@@ -169,18 +169,8 @@ function FeedbackCard({ f }) {
 
 function SummaryCard({ s, actions }) {
   return (
-    <div className="summary-card">
-      <p className="caps">{s.ended ? t('summaryEnded') : t('summaryTitle')}</p>
-      <p className="summary-score">
-        {s.answered
-          ? <><span className="big">{s.correct}</span><span className="of"> / {s.answered}</span></>
-          : <span className="big">–</span>}
-      </p>
-      <p className="summary-caption">
-        {s.answered ? `${t('summaryScore', s)} · ` : ''}{t('summaryDetail', { done: s.done, total: s.total })}
-        {s.skipped > 0 && ` · ${t('summarySkipped', { n: s.skipped })}`}
-      </p>
-      <ProgressTrack states={s.states} />
+    <div className="summary-closing">
+      <p className="summary-caption">{t('sumClosing', { correct: s.correct, answered: s.answered })}</p>
       {actions?.length > 0 && (
         <div className="summary-actions">
           {actions.map((a) => (
