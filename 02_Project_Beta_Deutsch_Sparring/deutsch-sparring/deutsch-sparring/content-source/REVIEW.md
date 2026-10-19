@@ -9,6 +9,7 @@
 | wortschatz-06-verkehr-reisen.md | Plural column empty for: der Fahrer | Plural filled in: die Fahrer / die Fahrerinnen | The Plural column needs a value for the plural exercises; please check |
 | wortschatz-09-arbeit-bildung.md | Partizip with "sich": sich bewerben → sich beworben | Perfekt without "sich" in the Partizip, e.g. hat sich beworben | Partizip II is only the verb part (unterhalten, bedankt …); "sich" belongs to the Perfekt form |
 | wortschatz-09-arbeit-bildung.md | Plural column empty for: der Leiter, der Chef, der Direktor, der Absender, der Empfänger, das Abitur, der Azubi, der Fachmann, die Kleinkindererzieherin | Plural filled in: die Leiter / die Leiterinnen, die Chefs / die Chefinnen, die Direktoren / die Direktorinnen, die Absender / die Absenderinnen, die Empfänger / die Empfängerinnen, – (nur Singular), die Azubis / die Auszubildenden, die Fachleute, die Kleinkindererzieherinnen | The Plural column needs a value for the plural exercises; please check |
+| wortschatz-10-freizeit-natur.md | Plural column empty for: das Selbstgemachte | Plural filled in: – (nur Singular) | The Plural column needs a value for the plural exercises; please check |
 | all files | der/die Bekannte (one cell with «der/die») | der Bekannte / die Bekannte | The app only reads «der», «die» or «das» at the start of a noun cell |
 
 ## Questions
