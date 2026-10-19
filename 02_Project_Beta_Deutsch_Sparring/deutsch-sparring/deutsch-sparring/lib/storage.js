@@ -5,7 +5,7 @@ import { applyAnswer } from './scores';
 
 const KEYS = {
   profile: 'wort_profile', // { name, classCode }
-  prefs: 'wort_prefs', // { level, difficulty, view, optionsHidden }
+  prefs: 'wort_prefs', // { view, setup } – setup = the last setup screen choices (prefill)
   history: 'wort_history', // { sessions: [...last 5], streak: { count, lastDay } }
   chat: 'wort_chat', // the current conversation, so a reload doesn't lose it
   scores: 'wort_scores', // { [wordId]: { v, g, last } } – the word scores (lib/scores.js). Task 8 moves this to the database.

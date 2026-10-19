@@ -19,16 +19,13 @@ export const QUESTION_MAX = 50;
 
 // → null, or one of:
 // { type: 'stop' }                   end the session now, show the summary (no AI call)
-// { type: 'again' }                  same topic again, new round
-// { type: 'restart' }                new session, keep the name (no AI call)
-// { type: 'changeTopic' }            show the topic list (no AI call)
-// { type: 'topicGroup', group }      list grammar / vocabulary topics (no AI call)
+// { type: 'again' }                  same settings again, new round (after a session)
+// { type: 'restart' }                new session: opens the setup screen (no AI call)
 // { type: 'view', view }             switch the right panel (no AI call)
-// { type: 'questions', value }       questions per session (10–50)
-// { type: 'direction', value }       flashcards: 'en-de' | 'de-en' | 'mixed'
-// { type: 'sentences', value }       flashcards: add sentence building (true/false)
-// { type: 'difficulty', value | step }
-// { type: 'level', value }
+// { type: 'fixed', setting, … }      the student asks to change a setting (topic, questions, direction,
+//                                    sentences, difficulty, level). Settings are FIXED during a session:
+//                                    the app only answers "end the session to change this" (no AI call).
+//                                    setting = 'topic' | 'questions' | 'direction' | 'sentences' | 'difficulty' | 'level'
 // { type: 'rule' }                   open the grammar view and ask the tutor
 // { type: 'skip' }                   skip the open question (+ ask the tutor for the next one)
 // open = a question is waiting for an answer: then single words that could be an answer
@@ -43,17 +40,17 @@ export function detectIntent(text, { open = false } = {}) {
   if (short(s, 7) && new RegExp(`^(ich (will|möchte|moechte) )?(jetzt )?(${stopWords})${POLITE}$`).test(s)) {
     return { type: 'stop' };
   }
-  if (new RegExp(`^(nochmal|noch ?mal|noch einmal|noch eine runde|neue runde|nochmals|again|one more round|another round|same topic again|gleiches thema( nochmal)?|repeat the session)${POLITE}$`).test(s)) {
+  if (new RegExp(`^(nochmal|noch ?mal|noch einmal|noch eine runde|neue runde|nochmals|again|one more round|another round|same topic again|same settings( again)?|gleiche einstellungen( nochmal| bitte)?|gleiches thema( nochmal)?|repeat the session)${POLITE}$`).test(s)) {
     return { type: 'again' };
   }
   if (/^(neu starten|neustart|neu beginnen|von vorne( beginnen| anfangen)?|restart|start over|start again|new session|neue sitzung)$/.test(s)) {
     return { type: 'restart' };
   }
   if (new RegExp(`^(anderes thema|neues thema|thema wechseln|ein anderes thema|change topic|change the topic|other topic|new topic|another topic)${POLITE}$`).test(s)) {
-    return { type: 'changeTopic' };
+    return { type: 'fixed', setting: 'topic' };
   }
-  if (/^(grammatik|grammar)$/.test(s)) return { type: 'topicGroup', group: 'Grammatik' };
-  if (/^(wortschatz|vocabulary|vokabeln|vocab|words|wörter|woerter)$/.test(s)) return { type: 'topicGroup', group: 'Wortschatz' };
+  if (/^(grammatik|grammar)$/.test(s)) return { type: 'fixed', setting: 'topic', group: 'Grammatik' };
+  if (/^(wortschatz|vocabulary|vokabeln|vocab|words|wörter|woerter)$/.test(s)) return { type: 'fixed', setting: 'topic', group: 'Wortschatz' };
 
   // "Zeig mir Fortschritt & Lücken" / "show me the grammar focus" – but not an answer that
   // happens to contain the word ("Ich mache Fortschritte"): a show-verb or only the view name.
@@ -72,7 +69,7 @@ export function detectIntent(text, { open = false } = {}) {
       || s.match(/^(anzahl|questions|fragen|aufgaben) (\d{1,3})$/);
     if (q) {
       const n = Number(q[1].match(/\d/) ? q[1] : q[2]);
-      return { type: 'questions', value: Math.max(QUESTION_MIN, Math.min(QUESTION_MAX, n)) };
+      return { type: 'fixed', setting: 'questions', value: Math.max(QUESTION_MIN, Math.min(QUESTION_MAX, n)) };
     }
   }
 
@@ -80,14 +77,14 @@ export function detectIntent(text, { open = false } = {}) {
   if (short(s, 8)) {
     const toDe = /\b(english|englisch|en) +(to|nach|zu|ins|into) +(german|deutsch|de)\b/.test(s);
     const toEn = /\b(german|deutsch|de) +(to|nach|zu|ins|into) +(english|englisch|en)\b/.test(s);
-    if (toDe && !toEn) return { type: 'direction', value: 'en-de' };
-    if (toEn && !toDe) return { type: 'direction', value: 'de-en' };
-    if (/^(beide richtungen|both directions|gemischt|mixed|mix)( bitte| please)?$/.test(s)) return { type: 'direction', value: 'mixed' };
+    if (toDe && !toEn) return { type: 'fixed', setting: 'direction', value: 'en-de' };
+    if (toEn && !toDe) return { type: 'fixed', setting: 'direction', value: 'de-en' };
+    if (/^(beide richtungen|both directions|gemischt|mixed|mix)( bitte| please)?$/.test(s)) return { type: 'fixed', setting: 'direction', value: 'mixed' };
     if (/(mit sätzen|mit saetzen|with sentences|add sentences|sätze dazu|saetze dazu|sentences too|plus sätze|plus sentences|sentence building|satzbau)/.test(s)) {
-      return { type: 'sentences', value: true };
+      return { type: 'fixed', setting: 'sentences', value: true };
     }
     if (/(ohne sätze|ohne saetze|without sentences|no sentences|words only|nur wörter|nur woerter|only words|keine sätze|keine saetze)/.test(s)) {
-      return { type: 'sentences', value: false };
+      return { type: 'fixed', setting: 'sentences', value: false };
     }
   }
 
@@ -98,15 +95,15 @@ export function detectIntent(text, { open = false } = {}) {
 
   if (short(s, 5)) {
     if (/^(bitte )?(mach(e)? es |etwas |ein bisschen |noch )?(schwieriger|schwerer|harder|more difficult)( machen)?( bitte| please)?$|^make it harder( please)?$/.test(s)) {
-      return { type: 'difficulty', step: 1 };
+      return { type: 'fixed', setting: 'difficulty', step: 1 };
     }
     if (/^(bitte )?(mach(e)? es |etwas |ein bisschen |noch )?(leichter|einfacher|easier)( machen)?( bitte| please)?$|^make it easier( please)?$/.test(s)) {
-      return { type: 'difficulty', step: -1 };
+      return { type: 'fixed', setting: 'difficulty', step: -1 };
     }
     const d = s.match(/^(stufe |schwierigkeit |difficulty |level )?(leicht|easy|mittel|medium|schwer|hard)$/);
-    if (d && (d[1] || !open)) return { type: 'difficulty', value: { leicht: 'easy', easy: 'easy', mittel: 'medium', medium: 'medium', schwer: 'hard', hard: 'hard' }[d[2]] };
+    if (d && (d[1] || !open)) return { type: 'fixed', setting: 'difficulty', value: { leicht: 'easy', easy: 'easy', mittel: 'medium', medium: 'medium', schwer: 'hard', hard: 'hard' }[d[2]] };
     const l = s.match(/^(niveau |level |stufe )?(a1|a2|b1)$/);
-    if (l) return { type: 'level', value: l[2].toUpperCase() };
+    if (l && (l[1] || !open)) return { type: 'fixed', setting: 'level', value: l[2].toUpperCase() };
   }
   return null;
 }
@@ -133,15 +130,6 @@ export function detectTopicWish(text, topics, { running = false } = {}) {
   if (hit) return { topicId: hit.id };
   if (word('grammatik|grammar').test(s)) return { group: 'Grammatik' };
   if (word('wortschatz|vocabulary|vokabeln|vocab|wörter|woerter|words|flashcards|karteikarten').test(s)) return { group: 'Wortschatz' };
-  return null;
-}
-
-// A topic named inside a settings command at the start ("Flashcards English to German",
-// "30 questions about furniture"): only the vocabulary/grammar group words count.
-export function topicGroupIn(text) {
-  const s = clean(text);
-  if (word('wortschatz|vocabulary|vokabeln|vocab|flashcards|karteikarten|words|wörter|woerter|furniture|möbel|moebel').test(s)) return 'Wortschatz';
-  if (word('grammatik|grammar|dativ|akkusativ|dative|accusative|präpositionen|praepositionen|prepositions').test(s)) return 'Grammatik';
   return null;
 }
 
