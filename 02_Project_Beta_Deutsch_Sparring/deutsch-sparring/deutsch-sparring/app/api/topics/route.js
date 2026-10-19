@@ -1,13 +1,18 @@
 import { allTopics } from '../../../lib/topics';
 import { needsCode } from '../../../lib/guard';
+import { requireUser } from '../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req) {
   try {
+    // with accounts: only for logged-in students; account = { username } (no class-code question then)
+    const { user, response } = await requireUser(req);
+    if (response) return response;
     return Response.json({
       topics: allTopics().map(({ keywords, ...t }) => t),
-      needsCode: needsCode(),
+      needsCode: !user && needsCode(),
+      account: user ? { username: user.username } : null,
       mock: process.env.MOCK === '1',
     });
   } catch (e) {

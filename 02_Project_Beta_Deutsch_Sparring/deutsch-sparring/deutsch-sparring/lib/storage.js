@@ -11,9 +11,30 @@ const KEYS = {
   scores: 'wort_scores', // { [wordId]: { v, g, last } } – the word scores (lib/scores.js). Task 8 moves this to the database.
 };
 
+// With accounts, the conversation and the session history are kept per username, so two
+// students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores']);
+let account = '';
+const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
+
+export function setStorageAccount(username) {
+  account = String(username || '').toLowerCase();
+  if (!account) return;
+  // the first account used in this browser takes over the history from before accounts existed
+  try {
+    if (!localStorage.getItem('wort_adopted')) {
+      const old = localStorage.getItem(KEYS.history);
+      if (old && !localStorage.getItem(storageKey('history'))) localStorage.setItem(storageKey('history'), old);
+      const oldScores = localStorage.getItem(KEYS.scores);
+      if (oldScores && !localStorage.getItem(storageKey('scores'))) localStorage.setItem(storageKey('scores'), oldScores);
+      localStorage.setItem('wort_adopted', account);
+    }
+  } catch {}
+}
+
 function read(key, fallback) {
   try {
-    const v = JSON.parse(localStorage.getItem(KEYS[key]) || 'null');
+    const v = JSON.parse(localStorage.getItem(storageKey(key)) || 'null');
     return v && typeof v === 'object' ? v : fallback;
   } catch {
     return fallback;
@@ -22,8 +43,8 @@ function read(key, fallback) {
 
 function write(key, value) {
   try {
-    if (value == null) localStorage.removeItem(KEYS[key]);
-    else localStorage.setItem(KEYS[key], JSON.stringify(value));
+    if (value == null) localStorage.removeItem(storageKey(key));
+    else localStorage.setItem(storageKey(key), JSON.stringify(value));
   } catch {}
 }
 
