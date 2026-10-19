@@ -1,6 +1,6 @@
 // German noun phrases (article + adjective + noun) in Nominativ / Akkusativ / Dativ / Genitiv.
 // Pure functions, used by the demo tutor (lib/mock.js, lib/word-tasks.js) to build and check
-// sentence tasks. Swiss spelling: "ss", never "ß".
+// sentence tasks. Spelling: the word list is Swiss ("ss"); lib/variants.js turns it into "ß" for the German variant before it gets here.
 // A noun that we cannot decline with confidence (e.g. a masculine noun with an unusual genitive)
 // gets no Genitiv task (nounPhrase returns null) – better no task than a wrong "correct" answer.
 
@@ -82,7 +82,7 @@ export function genitiveSg(w) {
   if (weak === 'unsure') return null;
   if (weak) return { main: MIXED_NS.test(n) ? `${n}ns` : weak, alts: [] };
   if (/e$/.test(n)) return null; // Ende, Auge, Interesse, Käse …
-  if (/(au|ei|ie|eu|äu|ai)s$/.test(n) || /(ss|x|z|sch)$/.test(n) || /[^aeiouäöüs]s$/.test(n)) return { main: `${n}es`, alts: [] }; // Haus, Platz, Tisch, Kurs
+  if (/(au|ei|ie|eu|äu|ai)s$/.test(n) || /(ss|ß|x|z|sch)$/.test(n) || /[^aeiouäöüs]s$/.test(n)) return { main: `${n}es`, alts: [] }; // Haus, Platz, Tisch, Kurs
   if (/[aeiouäöü]s$/.test(n)) return null; // Ergebnis, Bus, Kürbis … (double s)
   if (/[aeiouäöüy]$/.test(n)) return { main: `${n}s`, alts: [] }; // Auto, Büro, Hobby
   if (/(el|er|en|chen|lein|ling)$/.test(n)) return { main: `${n}s`, alts: [] }; // des Schlüssels

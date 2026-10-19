@@ -2,6 +2,8 @@
 // The app does this itself (instead of trusting the model) to strike through the wrong
 // words in "Your answer" and underline the fixed words in "Corrected".
 
+import { align } from './variants.js';
+
 const norm = (w) => w.toLowerCase().replace(/ß/g, 'ss').replace(/[.,!?;:„“”"«»()…]/g, '');
 
 // Longest common subsequence of two word lists → which positions are shared.
@@ -64,7 +66,10 @@ const words = (s) => String(s || '').split(/\s+/).filter(Boolean);
 export function compareAnswer(studentAnswer, corrected, changedWords = []) {
   const a = words(studentAnswer);
   const b = words(corrected);
-  const [keepA, keepB] = lcs(a, b);
+  // compare a copy in which the student's Swiss/German word is lined up with the corrected one (Velo = Fahrrad);
+  // the word count stays the same, and the student's own words are still what gets shown
+  const aa = words(align(studentAnswer, corrected));
+  const [keepA, keepB] = lcs(aa.length === a.length ? aa : a, b);
   const wrong = new Set(a.map((_, i) => i).filter((i) => !keepA.has(i) && norm(a[i])));
   let fixed = new Set(b.map((_, i) => i).filter((i) => !keepB.has(i) && norm(b[i])));
 
