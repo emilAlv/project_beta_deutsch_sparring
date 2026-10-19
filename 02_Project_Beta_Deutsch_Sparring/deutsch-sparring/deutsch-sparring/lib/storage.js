@@ -14,12 +14,14 @@ const KEYS = {
   chat: 'wort_chat', // the current conversation, so a reload doesn't lose it
   goals: 'wort_goals', // [goal, …] – the goals with their milestones (lib/goals.js); with an account they live on the server
   alog: 'wort_answerlog', // the last answers (compact) for the Home page's 30-day stats; with an account the server has them
+  coach: 'wort_coach', // [message, …] – the last 30 coach messages (lib/coach.js); with an account they live on the server
+  coachTry: 'wort_coachtry', // { day } – the day the coach was last asked to greet by itself (at most one automatic call a day)
   scores: 'wort_scores', // { [wordId]: { v, g, last } } – the word scores (lib/scores.js); with an account they live on the server
 };
 
 // With accounts, the conversation and the session history are kept per username, so two
 // students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
-const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog']);
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog', 'coach', 'coachTry']);
 let account = '';
 const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
 
@@ -147,6 +149,24 @@ function logAnswer(entry) {
   const since = entry.t - LOG_DAYS * 86_400_000;
   write('alog', [...loadAnswerLog(), entry].filter((x) => x && x.t >= since).slice(-LOG_MAX));
 }
+
+// ---------- coach messages (without accounts; with an account see lib/coach-client.js) ----------
+export const loadCoachLocal = () => {
+  try {
+    const m = JSON.parse(localStorage.getItem(storageKey('coach')) || 'null');
+    return Array.isArray(m) ? m : [];
+  } catch {
+    return [];
+  }
+};
+export const saveCoachLocal = (messages) => {
+  try {
+    localStorage.setItem(storageKey('coach'), JSON.stringify(messages));
+  } catch {}
+};
+// the day of the last automatic greeting (a convenience of this browser: the worst case is one more greeting)
+export const coachTriedDay = () => read('coachTry', {}).day || null;
+export const setCoachTriedDay = (day) => write('coachTry', { day });
 
 export const loadProfile = () => read('profile', {});
 export const saveProfile = (p) => write('profile', p);

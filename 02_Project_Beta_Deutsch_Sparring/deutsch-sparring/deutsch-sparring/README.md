@@ -68,7 +68,22 @@ survives a reload. Home shows (`components/Home.js`):
   *Whole plan / Still to do* (the latter starts today and folds past milestones into "✓ N reached" / "N missed").
 - **Strengths & gaps** of the last 30 days, grouped by `feedback.rule` and by word list (with the average V and
   G score of the list), each with its % and the goal it belongs to; **recent sessions** with *Again*.
-- A placeholder column on the right for the coach (Task 10).
+- **The coach** (right column, `components/Coach.js`): a chat that plans the student's practice towards their goals.
+  Opening Home gives one automatic greeting with a recommendation (at most one automatic coach call a day;
+  otherwise the coach only answers when the student writes). A coach message can carry a **Suggested session**
+  box (*Set up this session* opens the setup screen prefilled with those settings) and **plan changes** (milestones
+  to add / move / remove for one goal), shown as a short list with *Apply* / *Keep my plan*. Nothing is changed
+  until the student taps *Apply*; the app then checks the goal id and that every date lies inside the goal's time
+  frame (`applyPlan` in `lib/coach.js`) and saves through the normal goals storage. Quick-reply chips sit under the
+  last message. The route `/api/coach` has the same guards as `/api/chat` (login when accounts are on, class code when
+  off, the daily limit – every coach call counts –, validation, size limits, every error as JSON). The model gets a
+  compact context only: goals with milestones, the numbers and strengths/gaps worked out by the app, today's date, the
+  last few chat turns (`lib/coach-prompt.js`, `COACH_SCHEMA`). Everything it answers is cleaned again
+  (`normalizeCoach` in `lib/coach.js`: unknown topic ids, goal ids or out-of-range dates are dropped). With `MOCK=1`
+  `lib/coach-mock.js` answers from the student's real numbers (a suggestion from the biggest gap; "redo my plan" gives a
+  plan change). The last 30 messages are saved per student: table `coach_messages` with an account
+  (`lib/coach-store.js`, route `/api/coach/messages`; memory with `AUTH_MEMORY=1`), `wort_coach` in the browser without.
+  `node scripts/check-coach.mjs` checks the cleaning and the plan maths.
 - Where it lives: with an account the goals are in the database (tables `goals` + `milestones`,
   `lib/goals-store.js`, route `/api/goals`) and the numbers come from `GET /api/stats` (summed up in SQL over the
   last 30 days – the browser never gets all answers). Without accounts the goals, the word scores and a small
@@ -165,6 +180,9 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
   `components/AuthCard.js` = the login card. Tries are limited in `lib/guard.js`.
 - `/api/goals`, `/api/stats` – the Home page (see above); `lib/goals.js` (validation, default plan, timeline maths, no React),
   `lib/home-stats.js` (numbers, server only), `lib/home-client.js` (browser side).
+- `/api/coach`, `/api/coach/messages` – the coach on Home (see above); `lib/coach.js` (cleaning, plan maths, no React),
+  `lib/coach-prompt.js` (instructions + answer schema), `lib/coach-mock.js`, `lib/coach-store.js`, `lib/coach-client.js`,
+  `lib/home-data.js` (the numbers, shared by `/api/stats` and `/api/coach`).
 - `/api/topics` – grammar lessons (`content/*.md`) plus the vocabulary sections/lists (`lib/words.js`),
   each list with its word counts per level and word source (for the setup screen).
   The old `wortschatz-*.md` lesson files are no longer used as topics.

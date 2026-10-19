@@ -18,7 +18,7 @@ One row per student in the table `users`:
 | `created_at` | when the account was made |
 | `settings` | one small note, only after an import: that the old browser data was handed over once (and the old streak) |
 
-**Progress (three more tables, plus two for goals).** For a logged-in student the app saves its learning progress
+**Progress (three more tables, plus two for goals and one for the coach chat).** For a logged-in student the app saves its learning progress
 in the database, so it follows the student to any device:
 
 | Table | One row per | What is in it |
@@ -28,6 +28,7 @@ in the database, so it follows the student to any device:
 | `word_scores` | student and word | the two scores 1–10 (word itself / grammar), the right-answers-in-a-row counters, when the word comes back, when it was last practised |
 | `goals` | goal | the student's goal: name, type (exam / vocabulary / grammar), level, start and end date, and what it covers (word section / list, grammar rules) |
 | `milestones` | milestone of a goal | date, title, target in percent, reached or not; deleted with its goal |
+| `coach_messages` | message in the Home page coach chat | what the student wrote to the coach and what the coach answered (text only), the session suggestion / plan changes the coach proposed and whether the student applied or kept them, the time. Only the last 30 messages are kept; older ones are deleted. |
 
 All rows are tied to the account (`user_id`) and deleted with it. Every request checks that you
 are logged in and only ever reads or writes **your own** rows; the id of the student is taken from
@@ -37,9 +38,17 @@ them from the database, not from the browser. The streak is counted from the day
 Everything sent by the browser is checked and limited in size (a request over 20 KB is refused;
 the one-time import 500 KB).
 
+**The coach.** The coach on the Home page is a second chat, separate from the tutor. To answer, the server sends
+Google's AI a short summary: the student's goals and milestones, the numbers and strengths/gaps worked out by
+the app, today's date and the last few chat turns (never the full answer history, never the password or other
+accounts' data). The coach only *proposes*: a plan change is saved only after the student taps *Apply*, and the
+app checks again that the goal belongs to the student and that every date is inside the goal's time frame. Every
+coach message counts toward the daily limit. The coach chat is saved (last 30 messages, own account only, same
+checks as the other tables); without accounts it stays in the browser.
+
 **What is not stored:** the password itself, e-mail addresses, real names, IP addresses,
-the chat text itself (the conversation with the tutor is not saved on the server; only the typed
-answers and corrections of each question are, see above). Only the current conversation stays in the
+the chat text of the *tutor* conversation (it is not saved on the server; only the typed
+answers and corrections of each question are, see above; the coach chat above is the exception, kept as described). Only the current conversation stays in the
 student's browser (to survive a reload), kept separately per username. Without accounts
 (no database yet) everything stays in the browser, exactly as before.
 

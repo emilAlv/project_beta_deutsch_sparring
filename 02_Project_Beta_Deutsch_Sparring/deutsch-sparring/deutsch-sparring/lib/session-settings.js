@@ -2,7 +2,7 @@
 // ends (level, difficulty, questions, topic, word source, direction, grammar per word, variant).
 // Pure helpers, no React: used by the setup screen, the ribbon and app/page.js.
 
-import { QUESTION_MIN, QUESTION_MAX } from './intents';
+import { QUESTION_MIN, QUESTION_MAX } from './intents.js';
 
 export const KINDS = ['grammar', 'vocab']; // Grammar · Vocabulary + grammar
 export const LEVELS = ['A1', 'A2', 'B1'];
