@@ -84,6 +84,10 @@ export const SCHEMA = [
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, id)
   )`,
+  // Review R10 (redesign §4.1, D7): the whole plan of a goal (parts and milestones) as one value, saved with one UPSERT.
+  // Empty for old-style goals (their milestones stay in the milestones table until they are converted, R12).
+  // Safe to run again on the live database.
+  'ALTER TABLE goals ADD COLUMN IF NOT EXISTS plan jsonb',
   `CREATE TABLE IF NOT EXISTS milestones (
     id text NOT NULL,
     goal_id text NOT NULL,
