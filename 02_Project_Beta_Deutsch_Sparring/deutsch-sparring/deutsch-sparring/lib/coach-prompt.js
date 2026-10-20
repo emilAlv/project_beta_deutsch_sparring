@@ -2,6 +2,7 @@
 // student's practice; it is not the tutor (the tutor is in lib/prompt.js and speaks German).
 // The numbers (progress, strengths, gaps) are worked out by the app and only passed on here.
 import { milestoneStates, goalState, dayNum } from './goals.js';
+import { curriculumCoachText } from './curriculum.js';
 import { LEVELS, DIFFICULTIES, QUESTION_STEPS, GRAMMAR_POINTS } from './session-settings.js';
 
 const str = (description, extra = {}) => ({ type: 'STRING', description, ...extra });
@@ -118,20 +119,8 @@ export function coachContext({ home, topics, today }) {
 }
 
 // What an experienced teacher expects at each level (CEFR / Goethe-Zertifikat, in the order of "Schritte plus Neu").
-// The coach plans with this; the app can practise the points marked [app] today.
-const CURRICULUM = `A1: articles der/die/das and plural; Nominativ and Akkusativ (ein/einen, kein); personal pronouns; present tense incl.
-  separable verbs and modal verbs (können, müssen, wollen, möchten); word order (verb in position 2, questions); Dativ after
-  mit/bei/von/zu/aus/nach [app: Dativ nach mit]; possessive articles; Perfekt with haben and sein for everyday verbs
-  [app: Perfekt mit haben / sein]; imperative; time and place prepositions (am, um, im). About 650 words.
-A2: Dativ and Akkusativ objects, verbs with Dativ (helfen, gefallen, gehören) [app: Verb + Dativ / Akkusativ];
-  Wechselpräpositionen Wo? → Dativ, Wohin? → Akkusativ [app: Dativ nach in (Wo?), Akkusativ nach in (Wohin?)];
-  adjective endings after der/die/das and ein/eine [app]; comparative and superlative; Präteritum of sein, haben and the modal
-  verbs; reflexive verbs; subordinate clauses with weil, dass, wenn (verb at the end); Konjunktiv II for polite requests (hätte,
-  würde, könnte). About 1300 words in total.
-B1: Genitiv and prepositions with Genitiv (wegen, trotz, während) [app: Genitiv nach wegen / trotz]; verbs with fixed
-  prepositions (warten auf, sich freuen über) [app: Verb + case]; relative clauses; Präteritum of common verbs; Plusquamperfekt;
-  Passiv (Präsens, Präteritum); Konjunktiv II (wäre, hätte, würde + Infinitiv); infinitive with zu, um … zu, damit; two-part
-  connectors (nicht nur … sondern auch, entweder … oder, je … desto); n-Deklination. About 2400 words in total.
+// The grammar topics come from lib/curriculum.js (the same list the setup screen and the tutor use); every one can be practised in the app.
+const CURRICULUM = `${curriculumCoachText()}
 Goethe-Zertifikat B1 = four separate modules: Lesen, Hören, Schreiben, Sprechen. This app practises vocabulary and grammar
   only; for the four skills, recommend practice outside the app (e.g. a mock exam from goethe.de) as a milestone.`;
 
@@ -158,7 +147,7 @@ ALWAYS TALK ABOUT CONTENT, NEVER ABOUT ABSTRACT PERCENTAGES
 - Realistic pace: with 20–30 minutes a day, about 30–50 new words a week, or one grammar point every 1–2 weeks. A word
   counts as learnt with a V score of 8–10 (4 right answers in a row get it to 10).
 
-CURRICULUM (what belongs to each level; [app] = can be practised in this app today)
+CURRICULUM (what belongs to each level; every grammar topic below is a topic in the app, its id is in [brackets] and is also in the TOPIC CATALOG)
 ${CURRICULUM}
 
 RULES

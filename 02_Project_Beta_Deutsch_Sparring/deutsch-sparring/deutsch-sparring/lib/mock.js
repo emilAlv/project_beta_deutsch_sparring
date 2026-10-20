@@ -3,16 +3,19 @@
 //   grammar topics    → the "Beispielübungen" table (gap fill, find the mistake …)
 //   vocabulary topics → flashcards from the word tables (English ↔ German), optionally followed
 //                       by a sentence task with the same word (article + adjective ending)
+// Curriculum topics (lib/curriculum.js, ids "g-a1-…") have no lesson file: their gap fills are made from the
+// entry's example sentences (the marked key word is blanked, the full sentence is the solution).
 // The app counts the questions; the demo only answers for the question numbers it is given.
 // Extra test words: "langsam" (slow answer), "kaputt" (broken JSON), "rohtext" (plain text
 // instead of JSON), "absturz" (server error), "keine lust mehr" (the student wants to stop).
 
-import { ModelError } from './gemini';
-import { getExamples } from './content';
-import { detectIntent, detectTopicWish } from './intents';
-import { RULES } from './grammar';
-import { chooseTask, findTask, infinitive } from './word-tasks';
-import { align, localizeWord, toVariant } from './variants';
+import { ModelError } from './gemini.js';
+import { getExamples } from './content.js';
+import { curriculumEntry, gapExample, shortTitle } from './curriculum.js';
+import { detectIntent, detectTopicWish } from './intents.js';
+import { RULES } from './grammar.js';
+import { chooseTask, findTask, infinitive } from './word-tasks.js';
+import { align, localizeWord, toVariant } from './variants.js';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
 
@@ -36,6 +39,25 @@ const FOCUS = {
     watchOut: 'Im Dativ und Genitiv endet das Adjektiv auf -en: mit dem alten Schrank, wegen des alten Schranks.',
   },
 };
+
+// A curriculum entry → the same shape as the rows of a lesson file's example table (task, solution, type) + the rule name
+function curriculumExamples(entry) {
+  return entry.examples.map((x) => {
+    const g = gapExample(x);
+    return { task: g.task, solution: g.solution, type: shortTitle(entry), rule: entry.ruleNames[0] };
+  });
+}
+
+// the "grammar focus" card of a curriculum topic: rule + the first two examples as boxes
+function curriculumFocus(entry) {
+  const [a, b] = entry.examples.map(gapExample);
+  return {
+    title: shortTitle(entry),
+    rule: entry.rule.split(/(?<=[.!?])\s+/).slice(0, 2).join(' '),
+    boxes: [a, b].map((g) => ({ label: 'Beispiel', value: g.solution, note: g.sentence.slice(0, 80) })),
+    watchOut: entry.appNote || entry.exerciseIdeas[0] || '',
+  };
+}
 
 // ---------- small helpers ----------
 const norm = (s) => String(s || '').toLowerCase().replace(/ß/g, 'ss').replace(/[.,!?;:„“”"«»()…]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -327,7 +349,8 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   const topicId = topic?.id || DEFAULT_GRAMMAR;
   const isVocab = Boolean(topic) && topic.type !== 'Grammatik' && topic.id !== 'free';
   const vocab = isVocab ? words.map((w) => mockWord(w, settings.variant)) : [];
-  const examples = getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
+  const entry = isVocab ? null : curriculumEntry(topicId);
+  const examples = entry ? curriculumExamples(entry) : getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
   const useVocab = isVocab && vocab.length > 0;
   const total = session.total;
   const open = session.openNumber;
@@ -406,7 +429,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
 
   // nothing open: start (question 1) or continue with the next question
   if (!open) {
-    out.grammarFocus = useVocab ? FOCUS.vocab : FOCUS.grammar;
+    out.grammarFocus = useVocab ? FOCUS.vocab : entry ? curriculumFocus(entry) : FOCUS.grammar;
     out.message = progress.done
       ? 'Weiter geht’s!'
       : useVocab
@@ -422,8 +445,9 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   if (intent0?.type === 'rule' || /^(erklär|erklaer|explain|regel|rule)/.test(say)) {
     out.message = useVocab
       ? 'Merke dir jedes Nomen mit **Artikel** und Plural. Im Dativ und im Genitiv enden Adjektive nach dem Artikel auf -en.'
-      : 'Die Regel: Bei den Wechselpräpositionen fragst du **Wo?** (Position) → Dativ oder **Wohin?** (Bewegung) → Akkusativ.';
-    out.grammarFocus = useVocab ? FOCUS.vocab : FOCUS.grammar;
+      : entry ? `Die Regel: ${entry.rule.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ')}`
+        : 'Die Regel: Bei den Wechselpräpositionen fragst du **Wo?** (Position) → Dativ oder **Wohin?** (Bewegung) → Akkusativ.';
+    out.grammarFocus = useVocab ? FOCUS.vocab : entry ? curriculumFocus(entry) : FOCUS.grammar;
     out.panelView = 'grammar';
     ask(open);
     return json();
@@ -464,7 +488,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
       corrected: r.corrected,
       changedWords: [],
       explanation: item.ex.type ? `${item.ex.type.replace(/→/g, '→')}: ${r.correct ? 'genau richtig.' : `richtig ist «${item.parts.join(' – ')}».`}` : '',
-      rule: (item.ex.type || '').replace(/Akk$/, 'Akkusativ').replace(/Dat$/, 'Dativ'),
+      rule: item.ex.rule || (item.ex.type || '').replace(/Akk$/, 'Akkusativ').replace(/Dat$/, 'Dativ'),
       errorType: r.correct ? null : 'Kasus',
     };
   }
