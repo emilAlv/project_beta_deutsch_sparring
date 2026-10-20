@@ -17,7 +17,8 @@
 import { RULES } from './grammar.js';
 
 export const CURRICULUM_LEVELS = ['A1', 'A2', 'B1'];
-export const CURRICULUM_WORDS = { A1: 650, A2: 1300, B1: 2400 }; // vocabulary size per level (Goethe), for the coach
+// Fallback only (Goethe vocabulary size per level). The coach is told the REAL counts of vocab/words.json: see wordCountsByLevel in lib/words.js.
+export const CURRICULUM_WORDS = { A1: 650, A2: 1300, B1: 2400 };
 
 export const CURRICULUM = [
   // ---------------------------------------------------------------- A1
@@ -541,10 +542,10 @@ feedback.rule: use EXACTLY one of these names (the stats group by them): ${entry
 }
 
 // The CURRICULUM text of the coach (lib/coach-prompt.js): the grammar topics of every level, from this list.
-export function curriculumCoachText() {
+export function curriculumCoachText(wordCounts = CURRICULUM_WORDS) {
   return CURRICULUM_LEVELS.map((lv) => {
     const lines = curriculumByLevel(lv).map((e) => `  - ${shortTitle(e)} (${e.titleEn}) [${e.id}]`);
-    return `${lv} (about ${CURRICULUM_WORDS[lv]} words in total). Grammar topics in the app, in teaching order:\n${lines.join('\n')}`;
+    return `${lv} (${wordCounts[lv] ?? CURRICULUM_WORDS[lv]} words in the app's word list at this level). Grammar topics in the app, in teaching order:\n${lines.join('\n')}`;
   }).join('\n');
 }
 

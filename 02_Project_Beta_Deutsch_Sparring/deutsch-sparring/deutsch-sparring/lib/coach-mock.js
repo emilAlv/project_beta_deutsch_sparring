@@ -65,11 +65,13 @@ function suggestionFor(home, topics, goalLevel) {
 // A milestone with real content, like a teacher would set it: the weakest grammar rule of the goal
 // ("Genitiv nach wegen: 80 % right"), else the word list of the goal's level with the most words still to learn
 // ("Furniture: all 45 words learnt").
+// an exam goal needs the words of every lower level too
+const levelsOfGoal = (goal) => (goal.type === 'exam' ? ['A1', 'A2', 'B1'].slice(0, ['A1', 'A2', 'B1'].indexOf(goal.level) + 1) : [goal.level]);
 function concreteStep(home, goal) {
   const rule = home.gaps.find((x) => x.kind === 'rule' && (!x.goalId || x.goalId === goal.id));
   if (goal.type !== 'vocab' && rule) return `${rule.label}: 80 % right`;
   const lists = (home.vocab?.byList || [])
-    .filter((l) => (l.levels[goal.level] || 0) > 0 && l.learnt < l.total)
+    .filter((l) => levelsOfGoal(goal).some((lv) => (l.levels[lv] || 0) > 0) && l.learnt < l.total)
     .filter((l) => !goal.scope.section || l.topic.startsWith(goal.scope.section))
     .sort((a, b) => (b.total - b.learnt) - (a.total - a.learnt));
   const l = lists[0];

@@ -89,6 +89,13 @@ function load() {
 }
 
 export const getWords = () => load().words;
+
+// How many words each level has in vocab/words.json → { A1: n, A2: n, B1: n } (the real numbers for the coach)
+export function wordCountsByLevel() {
+  const out = Object.fromEntries(LEVELS.map((lv) => [lv, 0]));
+  for (const w of load().words) if (w.level in out) out[w.level] += 1;
+  return out;
+}
 export const getWord = (id) => load().byId.get(id) || null;
 
 // Sections → lists with English names and word counts, for the chosen level and source.

@@ -5,6 +5,7 @@ import { milestoneStates, goalState, dayNum, MAX_MILESTONES } from './goals.js';
 import { curriculumCoachText } from './curriculum.js';
 import { LEVELS, DIFFICULTIES, QUESTION_STEPS, GRAMMAR_POINTS } from './session-settings.js';
 import { MAX_CHANGES } from './coach.js';
+import { wordCountsByLevel } from './words.js';
 
 const str = (description, extra = {}) => ({ type: 'STRING', description, ...extra });
 const nullableStr = (description) => str(description, { nullable: true });
@@ -121,7 +122,8 @@ export function coachContext({ home, topics, today }) {
 
 // What an experienced teacher expects at each level (CEFR / Goethe-Zertifikat, in the order of "Schritte plus Neu").
 // The grammar topics come from lib/curriculum.js (the same list the setup screen and the tutor use); every one can be practised in the app.
-const CURRICULUM = `${curriculumCoachText()}
+// The word counts are the real ones from vocab/words.json (not the Goethe estimates).
+const curriculumText = () => `${curriculumCoachText(wordCountsByLevel())}
 Goethe-Zertifikat B1 = four separate modules: Lesen, Hören, Schreiben, Sprechen. This app practises vocabulary and grammar
   only; for the four skills, recommend practice outside the app (e.g. a mock exam from goethe.de) as a milestone.`;
 
@@ -149,7 +151,7 @@ ALWAYS TALK ABOUT CONTENT, NEVER ABOUT ABSTRACT PERCENTAGES
   counts as learnt with a V score of 8–10 (4 right answers in a row get it to 10).
 
 CURRICULUM (what belongs to each level; every grammar topic below is a topic in the app, its id is in [brackets] and is also in the TOPIC CATALOG)
-${CURRICULUM}
+${curriculumText()}
 
 RULES
 - Use only the data below. The numbers were calculated by the app; never invent or change a number, a date or an id.

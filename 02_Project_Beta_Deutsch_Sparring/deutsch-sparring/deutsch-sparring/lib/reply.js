@@ -48,7 +48,7 @@ export const RESPONSE_SCHEMA = {
         corrected: str('The full corrected sentence (same as studentAnswer when correct).'),
         changedWords: { type: 'ARRAY', items: { type: 'STRING' } },
         explanation: str('1–2 short lines in simple German.'),
-        rule: str('The grammar point in max 5 words, always the same wording for the same point, e.g. "Genitiv nach wegen", "Dativ nach in (Wo?)", "Perfekt mit sein". For a mistake in the word or its article: the word itself, e.g. "der Schrank".'),
+        rule: str('The grammar point in max 5 words, always the same wording for the same point, e.g. "Genitiv nach wegen", "Dativ nach in (Wo?)", "Perfekt mit sein". For a mistake in the word or its article: an empty string (the word is not a grammar rule).'),
         errorType: enumOf(Object.keys(ERROR_TYPE), {
           nullable: true,
           description: 'null when correct. Artikel / Wortschatz = the word or its article was wrong (counts for the vocabulary score). Kasus / Adjektivendung / Verbform / Präposition / Wortstellung = a grammar mistake.',
@@ -108,6 +108,8 @@ export const RESPONSE_SCHEMA = {
   required: ['message', 'feedback', 'exercise', 'options', 'panelView', 'session'],
   propertyOrdering: ['message', 'feedback', 'exercise', 'options', 'panelView', 'grammarFocus', 'session'],
 };
+
+import { cleanRule } from './rules.js';
 
 const ARTICLE = /^(der|die|das)\s/i;
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
@@ -177,7 +179,8 @@ export function normalizeReply(raw, ctx) {
       corrected,
       changedWords: Array.isArray(f.changedWords) ? f.changedWords.map((w) => clip(w, 60)).filter(Boolean).slice(0, 8) : [],
       explanation: clip(f.explanation, 500),
-      rule: clip(f.rule, 80),
+      // only real grammar rule names count; a word such as "der Schrank" becomes null (lib/rules.js)
+      rule: cleanRule(clip(f.rule, 80), ctx.topicId),
       errorType: ERROR_TYPE[f.errorType] || null,
     };
     if (feedback.correct) feedback.errorType = null;

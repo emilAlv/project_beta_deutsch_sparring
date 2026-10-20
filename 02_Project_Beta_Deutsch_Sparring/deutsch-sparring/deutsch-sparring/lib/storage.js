@@ -1,3 +1,4 @@
+import { cleanRule, topicForRule } from './rules';
 import { applyAnswer } from './scores';
 import { queuePost, whenSaved, getJson, postNow } from './progress-client';
 
@@ -246,7 +247,12 @@ export function recordWordAnswer(wordId, answer, extra = null, now = Date.now())
     return null;
   }
   if (extra) {
-    logAnswer({ i: extra.sessionId || '', r: String(extra.rule || '').slice(0, 200), o: answer.correct === true, s: answer.skipped === true, w: wordId || '', t: now });
+    // g = grammar topic id, h = a hint was used, d = difficulty (review R8; the rule is cleaned the same way as on the server)
+    const rule = cleanRule(extra.rule) || '';
+    logAnswer({
+      i: extra.sessionId || '', r: rule, o: answer.correct === true, s: answer.skipped === true, w: wordId || '', t: now,
+      g: (rule && topicForRule(rule, extra.topicId)) || '', h: answer.hinted === true, d: extra.difficulty || '',
+    });
   }
   if (!wordId) return null;
   const all = loadScores();
