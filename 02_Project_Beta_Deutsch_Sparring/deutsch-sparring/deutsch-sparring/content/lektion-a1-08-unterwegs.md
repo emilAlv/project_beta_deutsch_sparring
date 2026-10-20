@@ -39,10 +39,30 @@ Höfliche Fragen: Wo ist …? Wie komme ich zu …? Richtungsangaben: geradeaus,
 | 4 | A: Ist es weit? B: Nein, nur fünf ___. | Minuten | Lückentext |
 | 5 | A: Wie komme ich ___ Bahnhof? | zum | Lückentext |
 | 6 | Gehen Sie bis ___ Ampel. (die) | zur | Lückentext |
-| 7 | Bilde einen Satz: Sie / rechts / bitte / gehen | Gehen Sie bitte rechts. | Satzbau |
-| 8 | Finde den Fehler: Wo ist die Bahnhof? | der | Fehler finden |
+| 7 | Bilde einen Satz: Sie / bitte / biegen / rechts / ab | Biegen Sie bitte rechts ab. | Satzbau |
+| 8 | Finde den Fehler: Wo ist die Bahnhof? | Wo ist der Bahnhof? | Fehler finden |
 | 9 | Übersetze: Is the bus stop nearby? | Ist die Bushaltestelle in der Nähe? | Übersetzung |
 | 10 | A: Danke! B: ___ geschehen. | Gern | Lückentext |
 
 ## Nicht verwenden (off-limits)
 Keine komplexen Wegbeschreibungen mit Relativsätzen.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Entschuldigung, wo ist die Post?
+> B: Gehen Sie geradeaus bis zur Ampel und dann links.
+> A: Ist es weit?
+> B: Nein, ungefähr fünf Minuten zu Fuss.
+
+## Alltagsnaher Modelltext (fiktiv)
+Aushang: «Tram 4: Bahnhof – Central – Universität».
+
+**Verstehen:** Fährt Tram 4 zum Bahnhof?
+
+**Musterantwort:** Ja, Tram 4 fährt zum Bahnhof.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Du suchst den Bahnhof. Bitte eine Person höflich um Hilfe.
+2. **Reaktion auf eine neue Information:** Die Person sagt: «Gehen Sie geradeaus und dann rechts.» Wiederhole die Richtung.
+3. **Transfer:** Erkläre danach einem neuen Passanten einen kurzen Weg zur Post.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.
