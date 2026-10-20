@@ -45,12 +45,32 @@ export async function goalSnapshot() {
   return d ? { progress: d.progress || {}, learnt: d.tiles?.learnt ?? 0 } : null;
 }
 
+// ---------- goals through the Coach (R12): the plan generator on the server, nothing is stored there ----------
+// Accounts off: the browser also sends its word scores and rulelog, so the plan knows what is already solid.
+async function planCall(payload) {
+  try {
+    const { scores, rulelog, today } = usesServer() ? { today: todayKey() } : localNumbers();
+    const res = await fetch('/api/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, today, ...(scores ? { scores, rulelog } : {}) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return res.ok ? { ...data, ok: true } : { ok: false, code: data.code || 'server' };
+  } catch {
+    return { ok: false, code: 'network' };
+  }
+}
+// Accept: the request of the preview → the goal to save (names and dates made by the templates)
+export const buildGoal = (request) => planCall({ draft: request });
+// a "doesn't fit" fix picked → the same goal previewed again: { ok, proposal }
+export const previewFix = (request, lever) => planCall({ fix: { request, lever } });
+// Apply: the goal as it is now + the change → the new goal to save
+export const changeGoal = (goal, levers, label) => planCall({ goal, levers, label });
+
 // → true when saved
 export async function saveGoal(goal) {
-  if (!usesServer()) {
-    saveGoalLocal(goal);
-    return true;
-  }
+  if (!usesServer()) return saveGoalLocal(goal);
   const answer = await postNow('/api/goals', { goal });
   return Boolean(answer?.ok);
 }

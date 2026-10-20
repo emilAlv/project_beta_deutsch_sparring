@@ -341,7 +341,7 @@ const planRoute = readFileSync(new URL('../app/api/plan/route.js', import.meta.u
 check('/api/plan works without an account and stores nothing', /allowOff: true/.test(planRoute) && !/goalsStore|\.save\(/.test(planRoute));
 const gen = ['../lib/plan.js', '../lib/plan-templates.js', '../app/api/plan/route.js'].map((f) => readFileSync(new URL(f, import.meta.url), 'utf8')).join('\n');
 const imports = [...gen.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
-check('no AI call anywhere in the generator (no Gemini / coach import, no fetch)', imports.length > 0 && !imports.some((i) => /gemini|coach|reply/.test(i)) && !/\bfetch\(/.test(gen), imports.join(' '));
+check('no AI call anywhere in the generator (no Gemini / coach import, no fetch)', imports.length > 0 && !imports.some((i) => /gemini|reply|coach(?!-goal)/.test(i)) && !/\bfetch\(/.test(gen), imports.join(' '));
 
 // ======================================================================================================
 // R11: measuring and latching (lib/plan-progress.js)
@@ -532,6 +532,21 @@ const homeClient = readFileSync(new URL('../lib/home-client.js', import.meta.url
 check('without an account the browser saves newlyReached itself (home-client → markReachedLocal)', /markReachedLocal\(data\.newlyReached/.test(homeClient));
 const statsRoute = readFileSync(new URL('../app/api/stats/route.js', import.meta.url), 'utf8');
 check('/api/stats goes through homeData (GET with an account, POST without)', /homeData/.test(statsRoute));
+
+// ---- R12: converting old goals, goals through the Coach ----
+check('homeData offers the new plan for each old goal (upgrades), and saves nothing itself', /upgradesFor\(goals/.test(homeData) && /upgradeGoal\(g, ctx\)/.test(homeData) && !/save\(/.test(homeData));
+check('saving a plan deletes the old "% ready" milestone rows of that goal', /DELETE FROM milestones WHERE user_id = \$1 AND goal_id = \$2/.test(store) && store.indexOf('UPSERT_PLAN, [') < store.indexOf("DELETE FROM milestones"));
+check('browser-only storage accepts new plans (cleaned like the server does)', /cleanPlanGoal\(goal\)/.test(readFileSync(new URL('../lib/storage.js', import.meta.url), 'utf8')));
+check('there is no goal form any more', !readdirSync(new URL('../components/', import.meta.url)).includes('GoalForm.js'));
+{
+  const ctx12 = { words: W.getWords(), sections: W.listSections(), today: '2026-10-20', scores: {}, grammarStats: {} };
+  const oldGoal = { id: 'old9', type: 'grammar', level: 'A2', title: 'Grammar', startDate: '2026-10-01', endDate: '2027-02-01', scope: { section: null, list: null, rules: [] }, milestones: [{ id: 'm1', date: '2026-11-01', title: '50 %', target: 50, status: 'open' }] };
+  const conv = PT.upgradeGoal(oldGoal, ctx12);
+  const clean = conv && PT.cleanPlan(conv.goal);
+  check('converting an old goal gives a clean plan with the same id and no "%" step', clean && clean.id === 'old9' && clean.title === 'A2 grammar' && clean.version === 2 && !/%/.test(JSON.stringify(clean.subPlans)));
+  check('a label (the student\'s own name) is the only way to change a title, and it is cut at 40 characters',
+    PT.cleanPlan({ ...clean, label: 'x'.repeat(90) }).title.length === 40 && PT.cleanPlan({ ...clean, title: 'HACK' }).title === 'A2 grammar');
+}
 
 }
 

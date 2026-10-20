@@ -70,25 +70,23 @@ check('"follow it from now on" is gone', !/follow it from now on/.test(prompt));
 
 // --- the coach sees its own last proposal ---
 const plan = {
-  goalId: 'g1', status: 'open',
-  changes: [
-    { action: 'add', title: 'Half done', date: '2026-11-15', target: 70 },
-    { action: 'move', milestoneId: 'm123', title: 'Most', date: '2026-12-01' },
-    { action: 'remove', milestoneId: 'm4', title: 'All' },
-  ],
+  goalId: 'g1', status: 'open', label: 'My B1 plan', levers: { minutesPerDay: 30, endDate: '2027-02-01' },
+  changes: [{ type: 'pace', from: '20', to: '30' }, { type: 'endDate', from: '2027-01-01', to: '2027-02-01' }],
 };
+const proposal = { request: { template: 'exam', level: 'B1', endDate: '2027-03-31', minutesPerDay: 20 }, preview: { title: 'x' }, status: 'open' };
 const long = 'a'.repeat(900);
 const msgs = [
   { role: 'student', text: 's'.repeat(900) },
-  { role: 'coach', text: long, plan },
+  { role: 'coach', text: long, plan, proposal },
   { role: 'student', text: 'move the second one' },
 ];
 const turns = C.turnsForModel(msgs);
-check('coach turn carries a summary of its proposal', /add «Half done» 2026-11-15 70 %/.test(turns[1].text) && /move m123/.test(turns[1].text) && /remove m4/.test(turns[1].text), turns[1].text);
+check('coach turn carries a summary of its plan change', /rename to «My B1 plan»/.test(turns[1].text) && /30 min a day/.test(turns[1].text) && /end date 2027-02-01/.test(turns[1].text), turns[1].text);
+check('coach turn carries a summary of its goal proposal', /proposed goal: template exam, B1, until 2027-03-31, 20 min a day/.test(turns[1].text), turns[1].text);
 check('summary says the plan is waiting', /waiting for the student/.test(turns[1].text));
 check('500-character cut applies to student turns only', turns[0].text.length === 500 && turns[1].text.startsWith(long) && turns[2].text === 'move the second one');
-check('browser side keeps the plan and adds no summary', (() => { const t = C.turnsForModel(msgs, 10, { summary: false }); return t[1].plan === plan && t[1].text === long; })());
-check('a bad plan from the browser is ignored', C.turnsForModel([{ role: 'coach', text: 'hi', plan: { goalId: 'g1', changes: [{ action: 'x' }] } }])[0].text === 'hi');
+check('browser side keeps the plan and adds no summary', (() => { const t = C.turnsForModel(msgs, 10, { summary: false }); return t[1].plan === plan && t[1].proposal === proposal && t[1].text === long; })());
+check('a bad plan from the browser is ignored', C.turnsForModel([{ role: 'coach', text: 'hi', plan: { goalId: 'g1', changes: [{ type: 'x' }] } }])[0].text === 'hi');
 
 if (failed) {
   console.log(`\n${failed} check(s) failed.`);

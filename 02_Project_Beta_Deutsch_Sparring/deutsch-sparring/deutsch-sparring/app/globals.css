@@ -723,6 +723,21 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .modal { width: 100%; max-width: 640px; padding: 24px 28px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 24px 60px rgba(36, 58, 48, 0.25); }
 .modal-title { font-family: var(--serif); font-size: 26px; font-weight: 600; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+/* goal preview in the Coach chat (R12) */
+.gp-parts { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.gp-parts li { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 3px solid var(--brand-tint); }
+.gp-part { font-weight: 600; color: var(--ink); }
+.gp-first { font-style: italic; }
+.coach-warn { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--amber-line); border-radius: var(--radius-sm); background: var(--amber-bg); }
+.gp-warn-title { font-weight: 600; font-size: 14px; color: var(--ink); }
+.gp-fixes { display: flex; flex-direction: column; gap: 6px; }
+.gp-fix { text-align: left; min-height: 32px; white-space: normal; }
+.goal-tag.ended { background: var(--surface-2); color: var(--muted); }
+/* the dialog for old goals (a built-in <dialog>) */
+.upgrade-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); margin: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; color: var(--ink); }
+.upgrade-dialog::backdrop { background: rgba(36, 58, 48, 0.35); }
+.upgrade-dialog[open] { display: flex; }
+.up-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding-left: 18px; font-size: 14px; }
 .gf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .gf-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .gf-input {

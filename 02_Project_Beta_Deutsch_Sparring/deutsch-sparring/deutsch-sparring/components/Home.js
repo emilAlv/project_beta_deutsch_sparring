@@ -4,13 +4,12 @@
 // sessions; the coach column on the right is the coach chat (components/Coach.js). All numbers come from
 // the app (/api/stats, lib/home-stats.js), never from the AI.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { t } from '../lib/ui-text';
 import { goalState, todayKey } from '../lib/goals';
+import { PLAN_VERSION } from '../lib/plan';
 import { fmtDay } from '../lib/dates';
-import { loadHome, saveGoal, removeGoal } from '../lib/home-client';
-import { applyPlan } from '../lib/coach';
-import GoalForm from './GoalForm';
+import { loadHome, saveGoal, removeGoal, buildGoal, previewFix, changeGoal } from '../lib/home-client';
 import Coach from './Coach';
 import PlanTimeline from './PlanTimeline';
 
@@ -29,28 +28,74 @@ function Tile({ label, value, sub }) {
   );
 }
 
-function GoalCard({ goal, pct, today, onEdit, onDelete }) {
+const PLAN_TAG = { ontrack: 'onTrack', ahead: 'onTrack', behind: 'behind', done: 'done', ended: 'ended' };
+
+// A goal with a plan (version 2, made through the Coach): parts and milestones reached. An old-style goal still shows
+// its old bar until the student switches it to a plan (the dialog below).
+function GoalCard({ goal, pct, plan, today, onDelete }) {
+  const isPlan = Number(goal.version) === PLAN_VERSION;
   const st = goalState(goal, pct, today);
+  const tag = isPlan ? (st.tag === 'upcoming' ? 'upcoming' : PLAN_TAG[plan?.status] || 'onTrack') : st.tag;
   const weeks = st.ended ? t('goalEnded') : st.weeksLeft === 1 ? t('goalWeekOne') : t('goalWeeks', { n: st.weeksLeft });
   return (
     <article className="card goal-card">
       <div className="goal-top">
-        <span className={`goal-tag ${st.tag}`}>{t(`goalTag_${st.tag}`)}</span>
+        <span className={`goal-tag ${tag}`}>{tag === 'ended' ? t('goalEnded') : t(`goalTag_${tag}`)}</span>
         <span className="goal-actions">
-          <button type="button" className="text-button" onClick={onEdit}>{t('goalEdit')}</button>
           <button type="button" className="text-button" onClick={onDelete}>{t('goalDelete')}</button>
         </span>
       </div>
       <h3 className="goal-name">{goal.title}</h3>
-      <p className="detail">{t(`goalType_${goal.type}`)} · {goal.level}</p>
       <p className="detail">{t('goalDates', { from: fmtDay(goal.startDate), to: fmtDay(goal.endDate, true) })} · {weeks}</p>
-      <div className="goal-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={st.pct} aria-label={goal.title}>
-        <span style={{ width: `${st.pct}%` }} />
-      </div>
-      <p className="goal-pct">{t('goalDone', { n: st.pct })}</p>
+      {isPlan ? (
+        <p className="detail">
+          {goal.subPlans.filter((p) => p.include).length === 1 ? t('goalPartsOne') : t('goalPartsCount', { n: goal.subPlans.filter((p) => p.include).length })}
+          {plan ? ` · ${t('goalReachedOf', { n: plan.reached, total: plan.total })}` : ''}
+        </p>
+      ) : (
+        <>
+          <p className="detail">{t(`goalType_${goal.type}`)} · {goal.level}</p>
+          <div className="goal-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={st.pct} aria-label={goal.title}>
+            <span style={{ width: `${st.pct}%` }} />
+          </div>
+          <p className="detail">{t('goalOldStyle')}</p>
+        </>
+      )}
     </article>
   );
 }
+
+// The first visit after the update: old goals get a new plan, but only when the student says yes (D6). Nothing is saved before.
+function UpgradeDialog({ items, busy, error, onConvert, onKeep }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open && typeof d.showModal === 'function') d.showModal();
+  }, []);
+  return (
+    <dialog ref={ref} className="card upgrade-dialog" aria-labelledby="up-title" onCancel={(e) => { e.preventDefault(); onKeep(); }}>
+      <h2 id="up-title" className="modal-title">{t('upTitle')}</h2>
+      <p className="detail">{t('upIntro')}</p>
+      <ul className="up-list">
+        {items.map(({ old, next }) => (
+          <li key={old.id}>
+            {t('upLine', { title: old.title, newTitle: next.title, date: fmtDay(next.endDate, true) })}
+          </li>
+        ))}
+      </ul>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <div className="modal-actions">
+        <button type="button" className="button-outline" disabled={busy} onClick={onKeep}>{t('upKeep')}</button>
+        <button type="button" className="button-primary" disabled={busy} onClick={onConvert}>{busy ? t('gpSaving') : t('upConvert')}</button>
+      </div>
+    </dialog>
+  );
+}
+
+// "Keep the old one for now" is remembered for today only (this browser)
+const SKIP_KEY = 'wort_upgrade_skip';
+const skippedToday = (today) => { try { return localStorage.getItem(SKIP_KEY) === today; } catch { return false; } };
+const skipToday = (today) => { try { localStorage.setItem(SKIP_KEY, today); } catch {} };
 
 function SgColumn({ kind, items, goals, empty }) {
   const goalName = (id) => goals.find((g) => g.id === id)?.title;
@@ -82,10 +127,9 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
   const [mode, setMode] = useState('whole');
-  const [form, setForm] = useState(null); // { goal } (goal = null: a new one)
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState('');
+  const [starter, setStarter] = useState(null); // "+ New goal": a starter message for the Coach { n, text }
   const [notice, setNotice] = useState('');
+  const [upgrading, setUpgrading] = useState({ busy: false, error: '', skipped: false });
   const today = useMemo(() => todayKey(), []);
 
   const reload = useCallback(async () => {
@@ -102,19 +146,6 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
     reload();
   }, [reload]);
 
-  async function save(goal) {
-    setSaving(true);
-    setFormError('');
-    const ok = await saveGoal(goal);
-    setSaving(false);
-    if (!ok) {
-      setFormError(t('goalSaveError'));
-      return;
-    }
-    setForm(null);
-    await reload();
-  }
-
   async function remove(goal) {
     if (!window.confirm(t('goalDeleteConfirm', { title: goal.title }))) return;
     setNotice('');
@@ -127,17 +158,46 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
 
   const goals = data?.goals || [];
 
-  // the coach proposed changes and the student tapped "Apply": checked again against the goal as it is now
-  async function applyCoachPlan(goalId, changes) {
-    const goal = goals.find((g) => g.id === goalId);
-    const next = goal && applyPlan(goal, changes, today);
-    if (!next) return { ok: false, stale: true };
-    if (!(await saveGoal(next))) return { ok: false };
+  // ---- goals through the Coach (R12): the server builds and checks the plan, the browser saves it after Accept / Apply ----
+  async function acceptGoal(proposal) {
+    const built = await buildGoal(proposal.request);
+    if (!built.ok || !built.goal) return { ok: false };
+    if (!(await saveGoal(built.goal))) return { ok: false };
     await reload();
     return { ok: true };
   }
+  const fixGoal = (request, lever) => previewFix(request, lever);
+  async function applyCoachPlan(plan) {
+    const goal = goals.find((g) => g.id === plan.goalId && Number(g.version) === PLAN_VERSION);
+    if (!goal) return { ok: false, stale: true };
+    const out = await changeGoal(goal, plan.levers, plan.label || '');
+    if (!out.ok || !out.goal) return { ok: false, stale: true };
+    if (!(await saveGoal(out.goal))) return { ok: false };
+    await reload();
+    return { ok: true };
+  }
+
+  // ---- old goals: converted only when the student confirms ----
+  const pending = Object.entries(data?.upgrades || {})
+    .map(([id, up]) => ({ old: goals.find((g) => g.id === id), next: up.goal }))
+    .filter((x) => x.old && Number(x.old.version) !== PLAN_VERSION);
+  async function convertAll() {
+    setUpgrading({ busy: true, error: '', skipped: false });
+    for (const { next } of pending) {
+      if (!(await saveGoal(next))) {
+        setUpgrading({ busy: false, error: t('upError'), skipped: false });
+        return;
+      }
+    }
+    setUpgrading({ busy: false, error: '', skipped: false });
+    await reload();
+  }
+  function keepOld() {
+    skipToday(today);
+    setUpgrading({ busy: false, error: '', skipped: true });
+  }
   const progress = data?.progress || {};
-  const behind = goals.filter((g) => goalState(g, progress[g.id], today).tag === 'behind');
+  const behind = goals.filter((g) => (Number(g.version) === PLAN_VERSION ? data?.plans?.[g.id]?.status === 'behind' : goalState(g, progress[g.id], today).tag === 'behind'));
   const summary = !goals.length ? t('homeSummaryNone')
     : behind.length ? t('homeSummaryBehind', { names: behind.map((g) => g.title).join(', ') })
       : t('homeSummaryOn');
@@ -186,7 +246,7 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
         <section className="home-section">
           <div className="section-head">
             <h2 className="section-title">{t('goalsTitle')}</h2>
-            <button type="button" className="button-outline small" onClick={() => { setFormError(''); setForm({ goal: null }); }}>{t('goalNew')}</button>
+            <button type="button" className="button-outline small" onClick={() => setStarter((x) => ({ n: (x?.n || 0) + 1, text: t('goalNewStarter') }))}>{t('goalNew')}</button>
           </div>
           {notice && <p className="form-error" role="alert">{notice}</p>}
           {data && !goals.length && <p className="card empty-card muted">{t('goalsEmpty')}</p>}
@@ -196,8 +256,8 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
                 key={g.id}
                 goal={g}
                 pct={progress[g.id] ?? 0}
+                plan={data?.plans?.[g.id]}
                 today={today}
-                onEdit={() => { setFormError(''); setForm({ goal: g }); }}
                 onDelete={() => remove(g)}
               />
             ))}
@@ -257,21 +317,16 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
           goals={goals}
           topics={topics}
           today={today}
+          starter={starter}
           onSetup={onSetupSuggested}
+          onAcceptGoal={acceptGoal}
+          onFix={fixGoal}
           onApplyPlan={applyCoachPlan}
         />
       </aside>
 
-      {form && (
-        <GoalForm
-          goal={form.goal}
-          today={today}
-          topics={topics}
-          busy={saving}
-          error={formError}
-          onSave={save}
-          onCancel={() => setForm(null)}
-        />
+      {pending.length > 0 && !upgrading.skipped && !skippedToday(today) && (
+        <UpgradeDialog items={pending} busy={upgrading.busy} error={upgrading.error} onConvert={convertAll} onKeep={keepOld} />
       )}
     </main>
   );

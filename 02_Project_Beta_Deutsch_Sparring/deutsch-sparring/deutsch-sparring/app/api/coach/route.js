@@ -4,7 +4,8 @@ import { parseModelJson, salvageMessage } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { requireUser } from '../../../lib/auth';
 import { fail, reasonCode, replyShape, readJsonBody } from '../../../lib/route-guard';
-import { homeData } from '../../../lib/home-data';
+import { homeData, planContext } from '../../../lib/home-data';
+import { goalActions, NOTES } from '../../../lib/coach-goal';
 import { todayKey } from '../../../lib/goals';
 import { COACH_SCHEMA, buildCoachPrompt, coachContext, GREETING_TURN, pickToday } from '../../../lib/coach-prompt';
 import { normalizeCoach, turnsForModel, withPlanNote, startsPlanChanges } from '../../../lib/coach';
@@ -76,7 +77,7 @@ async function handle(req) {
   let aiError = null; // set when the answer was cut off: we still try to rescue the message
   try {
     raw_answer = process.env.MOCK === '1'
-      ? mockCoach({ text: lastUser, kind: greeting ? 'greeting' : 'chat', name, home, topics, today })
+      ? mockCoach({ text: lastUser, kind: greeting ? 'greeting' : 'chat', name, home, topics, today, history: turns })
       : await askGemini();
   } catch (e) {
     console.error('Coach failed:', e.status, e.reason || '');
@@ -113,12 +114,23 @@ async function handle(req) {
 
   // --- turn it into clean data for the screen ---
   const parsed = typeof raw_answer === 'string' ? parseModelJson(raw_answer) : raw_answer;
-  const coach = normalizeCoach(parsed, { topics, goals: home.goals, today });
+  // a goal proposal or a plan change: the app builds the plan from the template (names and dates never come from the model)
+  let actions = null;
+  if (parsed && typeof parsed === 'object' && (parsed.proposeGoal || parsed.planChanges)) {
+    try {
+      const ctx = await withTimeout(planContext(user, body, today), DATA_TIMEOUT_MS);
+      actions = goalActions(parsed, { goals: home.goals, ctx, today, lastUser });
+    } catch (e) {
+      console.error('coach: plan could not be built:', e?.message);
+      actions = { goalProposal: null, planChanges: null, note: NOTES.default };
+    }
+  }
+  const coach = normalizeCoach(parsed, { topics, actions });
   if (coach) return Response.json({ coach });
   // invalid or cut-off JSON: show at least the message (and say if a plan proposal got lost)
   console.warn('Coach answer was not valid JSON:', replyShape(raw_answer));
   const text = salvageMessage(raw_answer);
   if (!text) return fail('model', 502, aiError ? reasonCode(aiError) : 'ai-unreadable');
   const message = text.slice(0, 1200);
-  return Response.json({ coach: { message: startsPlanChanges(raw_answer) ? withPlanNote(message) : message, suggestedSession: null, planChanges: null, quickReplies: [] } });
+  return Response.json({ coach: { message: startsPlanChanges(raw_answer) ? withPlanNote(message) : message, suggestedSession: null, goalProposal: null, planChanges: null, quickReplies: [] } });
 }
