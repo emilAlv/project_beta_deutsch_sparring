@@ -2,6 +2,7 @@
 // cookie, docs/security-accounts.md for the plain-English overview.
 import { authEnabled, readSessionToken, passwordVersion, createSessionToken, sessionCookieOptions, SESSION_COOKIE } from './session';
 import { users } from './users';
+import { sameOrigin } from './route-guard';
 
 export { authEnabled };
 
@@ -54,13 +55,5 @@ export function clearSession(res) {
   setCookie(res, '', 0);
 }
 
-// Forms on other websites must not be able to log someone in or out here.
-export function sameOrigin(req) {
-  const origin = req.headers.get('origin');
-  if (!origin) return true; // same-origin fetches without Origin (old browsers, curl)
-  try {
-    return new URL(origin).host === req.headers.get('host');
-  } catch {
-    return false;
-  }
-}
+// Forms on other websites must not be able to log someone in or out here: see sameOrigin in lib/route-guard.js.
+export { sameOrigin };

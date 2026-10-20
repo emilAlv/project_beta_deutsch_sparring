@@ -222,10 +222,31 @@ export function cleanStoredMessages(raw, topics = null) {
   return out.slice(-MAX_MESSAGES);
 }
 
+export const MAX_STUDENT_CHARS = 500; // a student's turn is cut here; the coach's own turns keep their full text
+
+// A short line telling the coach what it proposed earlier ("proposed: add «Half» 2026-11-15 70 %; move m123 → …").
+export function planSummary(plan) {
+  const p = cleanStoredPlan(plan);
+  if (!p) return '';
+  const parts = p.changes.map((c) => {
+    if (c.action === 'add') return `add «${clip(c.title, 60)}» ${c.date} ${c.target} %`;
+    if (c.action === 'move') return `move ${c.milestoneId} («${clip(c.title, 40)}») → ${c.date}`;
+    return `remove ${c.milestoneId} («${clip(c.title, 40)}»)`;
+  });
+  return `[proposed for goal ${p.goalId}: ${parts.join('; ')} – ${p.status === 'applied' ? 'the student applied it' : p.status === 'open' ? 'waiting for the student' : 'not applied'}]`;
+}
+
 // The conversation the model gets: the last few messages as { role: 'user'|'model', text } turns.
-export function turnsForModel(messages, limit = 10) {
-  return (Array.isArray(messages) ? messages : []).slice(-limit).map((m) => ({
-    role: m.role === 'coach' ? 'model' : 'user',
-    text: clip(m.text, 600),
-  })).filter((m) => m.text);
+// Student turns are cut to MAX_STUDENT_CHARS. A coach turn keeps its text and, with summary, gets the short summary of
+// the plan it carried (without summary the plan itself is passed on as `plan`, for the browser to send to the server).
+export function turnsForModel(messages, limit = 10, { summary = true } = {}) {
+  return (Array.isArray(messages) ? messages : []).slice(-limit).map((m) => {
+    if (m?.role !== 'coach') return { role: 'user', text: clip(m?.text, MAX_STUDENT_CHARS) };
+    const text = clip(m.text, MAX_TEXT);
+    if (summary) {
+      const note = planSummary(m.plan);
+      return { role: 'model', text: note ? `${text}\n${note}` : text };
+    }
+    return { role: 'model', text, ...(m.plan ? { plan: m.plan } : {}) };
+  }).filter((m) => m.text);
 }
