@@ -3,16 +3,17 @@
 //   accounts off goals live in localStorage (lib/storage.js); the browser sends a compact copy of its goals,
 //                word scores and answer log to POST /api/stats, which only calculates (nothing is stored there)
 import {
-  usesServer, loadGoalsLocal, saveGoalLocal, deleteGoalLocal, loadScores, loadAnswerLog, loadRuleLog, progressSaved,
+  usesServer, loadGoalsLocal, saveGoalLocal, deleteGoalLocal, loadScores, loadAnswerLog, loadRuleLog, progressSaved, markReachedLocal,
 } from './storage';
 import { postNow } from './progress-client';
+import { todayKey } from './goals';
 
 // Accounts off: the compact copy of the browser's own goals, word scores and answer log, from which the
 // server works out the numbers (nothing is stored there). The coach gets the same copy.
 export function localNumbers() {
   const scores = {};
   for (const [id, rec] of Object.entries(loadScores())) scores[id] = [rec?.v?.s ?? 1, rec?.g?.s ?? null];
-  return { goals: loadGoalsLocal(), scores, log: loadAnswerLog(), rulelog: loadRuleLog() };
+  return { goals: loadGoalsLocal(), scores, log: loadAnswerLog(), rulelog: loadRuleLog(), today: todayKey() };
 }
 
 // → { goals, tiles, progress, strengths, gaps } or null when the server could not be reached
@@ -28,7 +29,10 @@ export async function loadHome() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(localNumbers()),
     });
-    return res.ok ? await res.json() : null;
+    const data = res.ok ? await res.json() : null;
+    // a milestone reached for the first time stays reached: save it here (the server stores nothing)
+    if (data?.newlyReached) markReachedLocal(data.newlyReached, todayKey());
+    return data;
   } catch {
     return null;
   }

@@ -343,5 +343,197 @@ const gen = ['../lib/plan.js', '../lib/plan-templates.js', '../app/api/plan/rout
 const imports = [...gen.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
 check('no AI call anywhere in the generator (no Gemini / coach import, no fetch)', imports.length > 0 && !imports.some((i) => /gemini|coach|reply/.test(i)) && !/\bfetch\(/.test(gen), imports.join(' '));
 
+// ======================================================================================================
+// R11: measuring and latching (lib/plan-progress.js)
+// ======================================================================================================
+{
+const PP = await import('../lib/plan-progress.js');
+const hasTpl = readFileSync(new URL('../lib/plan-templates.js', import.meta.url), 'utf8');
+check('R11: the measuring rules live only in plan-progress.js (the generator imports them)',
+  !/const (SOLID_ANSWERS|CHUNK_REACHED|LEARNT_FROM|INTRODUCED_PCT)\b/.test(hasTpl) && /from '\.\/plan-progress\.js'/.test(hasTpl) && PT.LEARNT_FROM === PP.LEARNT_FROM);
+
+const NOW0 = Date.parse('2026-11-10T12:00:00Z');
+const T_DAY = '2026-11-10';
+const run = (goals, over = {}) => PP.computePlans({ goals, words, scores: {}, grammarStats: {}, today: T_DAY, lastPractice: NOW0, ...over });
+const freshWord = PT.previewPlan({ template: 'wordtopic', level: 'A1', endDate: '2027-03-01', minutesPerDay: 20, options: { section: 'Home & living' } }, { words, sections, today: T_DAY }).goal;
+const vpart = freshWord.subPlans[0];
+const wm1 = vpart.milestones[0];
+const ids1 = PT.chunkWords(vpart, words).get(wm1.id);
+const learntScores = (n, from = ids1) => Object.fromEntries(from.slice(0, n).map((id) => [id, { v: { s: 8, k: 2, due: NOW0 + 3 * DAY }, last: NOW0 }]));
+const need90 = Math.ceil(0.9 * ids1.length);
+
+// ---- words: reached at 90 % learnt ----
+let r = run([freshWord], { scores: learntScores(need90 - 1) });
+let ms = r.plans[freshWord.id].milestones[wm1.id];
+eq(`words: ${need90 - 1} of ${ids1.length} learnt is not enough`, [ms.state, ms.have, ms.need, ms.total, ms.unit], ['open', need90 - 1, need90, ids1.length, 'words']);
+check('words: not-learnt word ids are listed for the Coach', ms.missingIds.length > 0 && ms.missingIds.every((id) => ids1.includes(id)));
+r = run([freshWord], { scores: learntScores(need90) });
+ms = r.plans[freshWord.id].milestones[wm1.id];
+eq(`words: ${need90} of ${ids1.length} (90 %) is reached`, [ms.state, ms.have, ms.reachedAt], ['reached', need90, T_DAY]);
+eq('words: newlyReached names it once', r.newlyReached, { [freshWord.id]: [wm1.id] });
+check('words: V = 7 is not learnt, V = 8 is', !PP.isLearnt({ v: { s: 7 } }) && PP.isLearnt({ v: { s: 8 } }));
+check('words: an unscored word counts as not learnt', !PP.isLearnt(undefined));
+
+// ---- latching: a reached milestone stays reached ----
+const latched = PP.applyReached(freshWord, [wm1.id], '2026-11-10');
+check('latching: reachedAt is set only where it was empty', PP.applyReached(latched, [wm1.id], '2026-12-24').subPlans[0].milestones[0].reachedAt === '2026-11-10');
+same('latching: applying twice changes nothing', PP.applyReached(PP.applyReached(freshWord, [wm1.id], T_DAY), [wm1.id], T_DAY), latched);
+check('latching: applyReached leaves the original untouched', !freshWord.subPlans[0].milestones[0].reachedAt);
+r = run([latched], { scores: {}, today: '2026-12-01' }); // every score gone: it must stay reached
+ms = r.plans[latched.id].milestones[wm1.id];
+eq('latching: scores fall to nothing → still reached (with a refresh), reachedAt kept', [ms.state, ms.reachedAt], ['refresh', '2026-11-10']);
+eq('latching: no newlyReached for a milestone that is reached already', r.newlyReached, {});
+eq('latching: all words learnt → plain "reached", no refresh', run([latched], { scores: learntScores(ids1.length) }).plans[latched.id].milestones[wm1.id].state, 'reached');
+
+// ---- "needs a refresh" (words): more than 20 % due or below 8 ----
+const dueN = Math.floor(0.2 * ids1.length);
+const dueScores = (n) => Object.fromEntries(ids1.map((id, i) => [id, { v: { s: 9, k: 3, due: i < n ? NOW0 - DAY : NOW0 + 9 * DAY }, last: NOW0 }]));
+eq(`refresh: ${dueN} of ${ids1.length} due (20 %) is still fine`, run([latched], { scores: dueScores(dueN) }).plans[latched.id].milestones[wm1.id].state, 'reached');
+ms = run([latched], { scores: dueScores(dueN + 1) }).plans[latched.id].milestones[wm1.id];
+eq(`refresh: ${dueN + 1} due (more than 20 %) → needs a refresh, tick stays`, [ms.state, ms.refresh?.due, ms.reachedAt], ['refresh', dueN + 1, '2026-11-10']);
+
+// ---- grammar: solid ----
+const tpF = PT.previewPlan({ template: 'topic', endDate: '2027-03-01', minutesPerDay: 20, options: { topicIds: ['g-a2-wechselpraepositionen'] } }, { words, sections, today: T_DAY }).goal;
+const gm1 = PL.allMilestones(tpF)[0].m;
+const rows = (n, rightCount, { days = 3, hinted = 0 } = {}) => Array.from({ length: n }, (_, i) => [i >= n - rightCount, i >= n - rightCount && i < n - rightCount + hinted, NOW0 - (days - 1 - (i % days)) * DAY]);
+const pts = (recent) => recent.reduce((a, [ok, h]) => a + (ok ? (h ? 0.5 : 1) : 0), 0);
+const stats = (recent) => ({ n: recent.length, points: pts(recent), pct: Math.round((pts(recent) / recent.length) * 100), recent });
+const gState = (recent) => run([tpF], { grammarStats: { 'g-a2-wechselpraepositionen': stats(recent) } }).plans[tpF.id].milestones[gm1.id];
+eq('grammar: threshold of a productive topic is 80 %', C.topicThreshold(C.curriculumEntry('g-a2-wechselpraepositionen')), 80);
+ms = gState(rows(20, 16));
+eq('grammar solid: 20 answers, 3 days, 16 of last 20 right', [ms.state, ms.have, ms.need, ms.total, ms.unit], ['reached', 16, 16, 20, 'answers']);
+const need16 = ms.need;
+eq('grammar: 15 of last 20 is not enough for solid (it is "introduced")', gState(rows(20, 15)).state, 'introduced');
+eq('grammar: 19 answers (all right) is not enough for solid', gState(rows(19, 19)).state, 'introduced');
+eq('grammar: all answers on ONE day is not enough', [gState(rows(20, 20, { days: 1 })).state, gState(rows(20, 20, { days: 1 })).detail.days], ['introduced', 1]);
+eq('grammar: exactly 2 days is enough', gState(rows(20, 20, { days: 2 })).state, 'reached');
+eq('grammar: only the LAST 20 count (40 answers, early ones wrong)', gState([...rows(20, 0), ...rows(20, 20)]).state, 'reached');
+eq('grammar: old mastery does not count when the last 20 are bad', gState([...rows(20, 20), ...rows(20, 10)]).state, 'introduced');
+eq('grammar: a hinted right answer counts half (8 hinted + 8 right = 12 points → not enough; 16 right incl. 0 hinted ok)', [gState(rows(20, 16, { hinted: 8 })).have, gState(rows(20, 16, { hinted: 8 })).state], [12, 'introduced']);
+eq('grammar: 18 right with 4 hinted = 16 points → solid', gState(rows(20, 18, { hinted: 4 })).state, 'reached');
+ms = gState(rows(12, 8));
+eq('grammar introduced: 12 answers, 67 % → "introduced", not reached', [ms.state, ms.detail.n, ms.detail.pct, ms.reachedAt], ['introduced', 12, 67, null]);
+eq('grammar: 9 answers is not yet introduced', gState(rows(9, 9)).state, 'open');
+eq('grammar: 10 answers at 50 % is not introduced', gState(rows(10, 5)).state, 'open');
+// receptive topic: 70 %
+const passiv = PT.previewPlan({ template: 'topic', endDate: '2027-03-01', minutesPerDay: 20, options: { topicIds: ['g-b1-passiv'] } }, { words, sections, today: T_DAY }).goal;
+const pm = PL.allMilestones(passiv)[0].m;
+const pState = (recent) => run([passiv], { grammarStats: { 'g-b1-passiv': stats(recent) } }).plans[passiv.id].milestones[pm.id];
+eq('grammar receptive: 14 of last 20 (70 %) is solid, 13 is not', [pState(rows(20, 14)).state, pState(rows(20, 13)).state], ['reached', 'introduced']);
+eq('grammar receptive: needs 14, productive needs 16', [pState(rows(20, 14)).need, need16], [14, 16]);
+eq('grammar: adjektivendungen uses 70 %', C.topicThreshold(C.curriculumEntry('g-a2-adjektivendungen')), 70);
+const introG = structuredClone(tpF);
+introG.subPlans[0].milestones[0].criterion.target = 'introduced';
+ms = run([introG], { grammarStats: { 'g-a2-wechselpraepositionen': stats(rows(10, 7)) } }).plans[introG.id].milestones[gm1.id];
+eq('grammar target "introduced": 10 answers at 70 % reaches it', [ms.state, ms.unit], ['reached', 'answers']);
+
+// ---- grammar: needs a refresh, and never goes back ----
+const gLatched = PP.applyReached(tpF, [gm1.id], '2026-11-01');
+const gRun = (recent) => run([gLatched], { grammarStats: recent ? { 'g-a2-wechselpraepositionen': stats(recent) } : {} }).plans[gLatched.id].milestones[gm1.id];
+ms = gRun([...rows(20, 20), ...rows(10, 6)]);
+eq('refresh (grammar): last 10 answers at 60 % → needs a refresh, tick and date stay', [ms.state, ms.reachedAt, ms.refresh?.pct], ['refresh', '2026-11-01', 60]);
+eq('refresh (grammar): last 10 at 70 % is fine', gRun([...rows(20, 20), ...rows(10, 7)]).state, 'reached');
+eq('latching (grammar): no answers at all → still reached', gRun(null).state, 'reached');
+eq('newlyReached (grammar): listed when solid for the first time, per goal',
+  run([tpF, freshWord], { grammarStats: { 'g-a2-wechselpraepositionen': stats(rows(20, 18)) } }).newlyReached, { [tpF.id]: [gm1.id] });
+
+// ---- skipped milestones are not measured and not counted ----
+const skipG = structuredClone(freshWord);
+skipG.subPlans[0].milestones[0].status = 'skipped';
+r = run([skipG], { scores: learntScores(ids1.length) });
+eq('skipped: not measured, not counted in the part', [r.plans[skipG.id].milestones[wm1.id].state, r.plans[skipG.id].parts[vpart.id].total, Object.keys(r.newlyReached).length],
+  ['skipped', vpart.milestones.length - 1, 0]);
+
+// ---- situation lessons and exam milestones ----
+const openGoal = structuredClone(goal);
+PL.allMilestones(openGoal).forEach(({ m }) => { m.reachedAt = null; m.alreadySolid = false; });
+const lessonM = PL.allMilestones(openGoal).find(({ m }) => m.criterion.kind === 'lessons' && m.criterion.lessonIds.length > 1).m;
+const lessonStats = (ids, n, pct) => Object.fromEntries(ids.map((id) => [id, { n, points: (n * pct) / 100, pct, recent: [] }]));
+const lm = (gs) => run([openGoal], { grammarStats: gs }).plans[openGoal.id].milestones[lessonM.id];
+const lids = lessonM.criterion.lessonIds;
+eq('lessons: all lessons of the milestone with 10 answers at 60 % → reached', [lm(lessonStats(lids, 10, 60)).state, lm(lessonStats(lids, 10, 60)).unit], ['reached', 'lessons']);
+eq('lessons: 9 answers → open; 10 answers at 50 % → open', [lm(lessonStats(lids, 9, 100)).state, lm(lessonStats(lids, 10, 50)).state], ['open', 'open']);
+eq('lessons: only one of the lessons done → open, "1 of N"', [lm(lessonStats(lids.slice(0, 1), 10, 90)).state, lm(lessonStats(lids.slice(0, 1), 10, 90)).have, lm({}).need], ['open', 1, lids.length]);
+const examM = PL.allMilestones(openGoal).find(({ m }) => m.criterion.kind === 'exam' && m.criterion.part === 'mock').m;
+const allGood = {
+  scores: Object.fromEntries(words.map((w) => [w.id, { v: { s: 10, k: 4, due: NOW0 + 99 * DAY }, last: NOW0 }])),
+  grammarStats: Object.fromEntries([...C.CURRICULUM.map((e) => e.id), ...Object.keys(PT.LESSONS)].map((id) => [id, stats(rows(40, 40))])),
+};
+let big = run([openGoal], allGood);
+eq('exam: never reached by the app, whatever the scores', big.plans[openGoal.id].milestones[examM.id].state, 'open');
+const bp = big.plans[openGoal.id].parts;
+check('exam: with perfect scores every word and grammar milestone is reached, the exam ones are not',
+  bp.exam.reached === 0 && bp['vocab-b1'].reached === bp['vocab-b1'].total && bp['grammar-b1'].reached === bp['grammar-b1'].total && big.plans[openGoal.id].status === 'ontrack',
+  JSON.stringify([bp.exam, bp['vocab-b1'], bp['grammar-b1']]));
+const ticked = PP.applyReached(openGoal, [examM.id], '2026-11-05');
+big = run([ticked]);
+eq('exam: ticked by the student → reached, stays reached', [big.plans[ticked.id].milestones[examM.id].state, big.plans[ticked.id].milestones[examM.id].reachedAt, big.plans[ticked.id].parts.exam.reached], ['reached', '2026-11-05', 1]);
+eq('exam: a tick is not "newly reached" (the student did it)', big.newlyReached, {});
+
+// ---- parts, goal status (behind / ahead / done / ended) ----
+const pace = structuredClone(PT.previewPlan({ template: 'vocab', level: 'A1', endDate: '2027-06-01', minutesPerDay: 20 }, { words, sections, today: T_DAY }).goal);
+pace.id = 'pace1';
+pace.subPlans = [pace.subPlans[0]];
+pace.startDate = '2026-11-10';
+pace.endDate = '2027-06-01';
+pace.subPlans[0].milestones = pace.subPlans[0].milestones.slice(0, 4);
+pace.subPlans[0].milestones.forEach((m, i) => { m.date = GO.addDays('2026-11-10', 21 * (i + 1)); m.order = i; });
+const pid = pace.subPlans[0].id;
+const dated = pace.subPlans[0].milestones;
+const noon = (d) => Date.parse(`${d}T10:00:00Z`);
+const st0 = (over = {}, g = pace) => run([g], over).plans[g.id];
+let pl = st0();
+eq('status: a new plan with nothing due is on track', [pl.status, pl.parts[pid].behindDays, pl.nextMilestoneId], ['ontrack', 0, dated[0].id]);
+pl = st0({ today: GO.addDays(dated[0].date, 3), lastPractice: noon(GO.addDays(dated[0].date, 2)) });
+eq('behind: an open milestone whose date has passed (3 days)', [pl.status, pl.parts[pid].behindDays], ['behind', 3]);
+pl = st0({ today: GO.addDays(dated[0].date, 9), lastPractice: noon(GO.addDays(dated[0].date, 8)) });
+eq('behind: more than a week behind the pace', [pl.status, pl.parts[pid].behindDays], ['behind', 9]);
+eq('behind: 8 days without practice', st0({ today: '2026-11-18', lastPractice: noon('2026-11-10') }).status, 'behind');
+eq('not behind: 6 days without practice', st0({ today: '2026-11-16', lastPractice: noon('2026-11-10') }).status, 'ontrack');
+eq('behind: a plan that never saw practice for 7 days after its start', st0({ today: '2026-11-17', lastPractice: 0 }).status, 'behind');
+// ahead: the first two milestones reached long before their dates (due on day 21 and day 42)
+const ahead2 = PP.applyReached(pace, [dated[0].id, dated[1].id], '2026-11-10');
+pl = st0({}, ahead2);
+eq('ahead: two milestones reached, the second planned for day 42 (more than 2 weeks ahead)', [pl.status, pl.parts[pid].aheadDays], ['ahead', 42]);
+const ahead1 = PP.applyReached(pace, [dated[0].id], '2026-11-10');
+eq('ahead: one milestone reached, planned 21 days from now', [st0({}, ahead1).status, st0({}, ahead1).parts[pid].aheadDays], ['ahead', 21]);
+eq('not ahead: planned for 14 days from now or less is on track', st0({ today: '2026-11-17', lastPractice: noon('2026-11-16') }, ahead1).status, 'ontrack');
+const doneG = PP.applyReached(pace, dated.map((m) => m.id), '2026-12-01');
+pl = st0({ today: '2026-12-02', lastPractice: noon('2026-12-01') }, doneG);
+eq('done: every milestone of every part reached', [pl.status, pl.progressShare], ['done', 1]);
+eq('ended: the end date has passed and it is not done', st0({ today: '2027-06-02', lastPractice: noon('2027-06-01') }).status, 'ended');
+const paceIds = PT.chunkWords(pace.subPlans[0], words).get(dated[0].id);
+pl = st0({ scores: learntScores(Math.ceil(0.9 * paceIds.length), paceIds) });
+check('progressShare: weighted by work (one chunk of four)', pl.progressShare > 0 && pl.progressShare < 1 && pl.reached === 1 && pl.total === 4, String(pl.progressShare));
+eq('nextMilestoneId skips what is reached', pl.nextMilestoneId, dated[1].id);
+eq('the part says reached / total / next', [pl.parts[pid].reached, pl.parts[pid].total, pl.parts[pid].nextId], [1, 4, dated[1].id]);
+const twoParts = structuredClone(openGoal);
+const gp = twoParts.subPlans.find((p) => p.id === 'grammar-a1');
+gp.milestones[0].date = GO.addDays(twoParts.startDate, 5);
+pl = run([twoParts], { today: GO.addDays(twoParts.startDate, 15), lastPractice: noon(GO.addDays(twoParts.startDate, 14)) }).plans[twoParts.id];
+const worstPart = Object.values(pl.parts).sort((a, b) => b.behindDays - a.behindDays)[0];
+check('nextMilestoneId comes from the part that is most behind', worstPart.behindDays > 0 && pl.nextMilestoneId === worstPart.nextId, JSON.stringify(pl.parts));
+
+// ---- old goals and junk are ignored; output is plain JSON ----
+eq('old-style goals (no plan) are ignored', run([{ id: 'old', type: 'vocab', milestones: [] }, null, {}]), { plans: {}, newlyReached: {} });
+check('plans survive JSON (they go to the browser as JSON)', JSON.stringify(JSON.parse(JSON.stringify(big))) === JSON.stringify(big));
+const t0 = Date.now();
+run([goal, goal, goal], allGood);
+check('speed: three full B1 plans measured in under 1 s', Date.now() - t0 < 1000, `${Date.now() - t0} ms`);
+
+// ---- latching in the database and the routes ----
+const mark = (store.match(/const MARK_REACHED = `([\s\S]*?)`;/) || [])[1] || '';
+check('markReached is ONE UPDATE that sets reachedAt only where it is empty, for one student\'s goal',
+  /^UPDATE goals SET plan = jsonb_set/.test(mark) && /reachedAt'\) IS NULL/.test(mark) && /user_id = \$1/.test(mark) && /id = \$2/.test(mark) && !/DELETE|DROP/.test(mark));
+check('markReached leaves old goals (no plan) alone', /jsonb_typeof\(plan->'subPlans'\) = 'array'/.test(mark));
+const homeData = readFileSync(new URL('../lib/home-data.js', import.meta.url), 'utf8');
+check('/api/stats (homeData) returns plans and newlyReached, and saves them with an account', /plans, newlyReached/.test(homeData) && /markReached\(user\.id/.test(homeData));
+const homeClient = readFileSync(new URL('../lib/home-client.js', import.meta.url), 'utf8');
+check('without an account the browser saves newlyReached itself (home-client → markReachedLocal)', /markReachedLocal\(data\.newlyReached/.test(homeClient));
+const statsRoute = readFileSync(new URL('../app/api/stats/route.js', import.meta.url), 'utf8');
+check('/api/stats goes through homeData (GET with an account, POST without)', /homeData/.test(statsRoute));
+
+}
+
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll plan checks passed.');
 process.exit(failed ? 1 : 0);

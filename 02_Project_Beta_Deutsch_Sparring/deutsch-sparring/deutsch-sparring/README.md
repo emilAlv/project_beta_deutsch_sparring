@@ -116,6 +116,14 @@ survives a reload. Home shows (`components/Home.js`):
   target (D2). `POST /api/plan` returns the preview and stores nothing. New plans are saved in `goals.plan` (jsonb, one
   UPSERT that also checks the 12-goal limit); old goals keep their `milestones` rows until R12 converts them.
   `node scripts/check-plan.mjs` proves it on the B1 example (Goethe B1, 20 Oct 2026 → 24 Apr 2027, 20 min a day).
+- Measuring and latching (review R11, nothing on screen yet): `lib/plan-progress.js` is the ONE place that decides
+  whether a milestone is reached (the generator asks the same functions). Word chunk: 90 % of its words learnt (V >= 8).
+  Grammar topic "solid": 20 counted answers on 2 or more days and the last 20 at 80 % (productive) / 70 % (receptive);
+  "introduced": 10 answers at 60 %. Situation lesson: 10 answers at 60 %. Exam items: only you tick them. A reached
+  milestone **stays reached** (`reachedAt`); if its words are due or its last answers drop it shows "needs a refresh"
+  instead. `computePlans` also gives each part's reached/total/behind/ahead days and each goal's status. `/api/stats`
+  returns `plans` and `newlyReached`; with an account `goalsStore().markReached` saves new ticks (one UPDATE, only where
+  `reachedAt` is empty); without an account `home-client.js` saves them in the browser (`markReachedLocal`).
 
 ## Deploy (first time, ~15 minutes)
 

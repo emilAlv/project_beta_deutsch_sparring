@@ -1,6 +1,7 @@
 import { cleanRule, topicForRule } from './rules';
 import { applyAnswer } from './scores';
 import { addToRuleLog } from './grammar-stats';
+import { applyReached } from './plan-progress';
 import { queuePost, whenSaved, getJson, postNow } from './progress-client';
 
 // What the app remembers. Without accounts (or MOCK=1 / no database) everything lives in the
@@ -138,6 +139,14 @@ export const loadGoalsLocal = () => {
 export const saveGoalLocal = (goal) => {
   const all = loadGoalsLocal();
   write('goals', all.some((x) => x.id === goal.id) ? all.map((x) => (x.id === goal.id ? goal : x)) : [...all, goal]);
+};
+// Latching without an account (R11): /api/stats says which milestones were reached for the first time
+// ({ goalId: [milestoneId] }); they are saved here for good. reachedAt is set only where it is still empty.
+export const markReachedLocal = (newlyReached, day) => {
+  if (!newlyReached || typeof newlyReached !== 'object') return;
+  const all = loadGoalsLocal();
+  if (!all.some((g) => g?.version === 2 && Array.isArray(newlyReached[g.id]))) return;
+  write('goals', all.map((g) => (g?.version === 2 && Array.isArray(newlyReached[g.id]) ? applyReached(g, newlyReached[g.id], day) : g)));
 };
 export const deleteGoalLocal = (id) => write('goals', loadGoalsLocal().filter((x) => x.id !== id));
 
