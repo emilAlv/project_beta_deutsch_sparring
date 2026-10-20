@@ -341,7 +341,7 @@ const planRoute = readFileSync(new URL('../app/api/plan/route.js', import.meta.u
 check('/api/plan works without an account and stores nothing', /allowOff: true/.test(planRoute) && !/goalsStore|\.save\(/.test(planRoute));
 const gen = ['../lib/plan.js', '../lib/plan-templates.js', '../app/api/plan/route.js'].map((f) => readFileSync(new URL(f, import.meta.url), 'utf8')).join('\n');
 const imports = [...gen.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
-check('no AI call anywhere in the generator (no Gemini / coach import, no fetch)', imports.length > 0 && !imports.some((i) => /gemini|coach|reply/.test(i)) && !/\bfetch\(/.test(gen), imports.join(' '));
+check('no AI call anywhere in the generator (no model / coach import, no fetch)', imports.length > 0 && !imports.some((i) => /openai|coach|reply/.test(i)) && !/\bfetch\(/.test(gen), imports.join(' '));
 
 // ======================================================================================================
 // R11: measuring and latching (lib/plan-progress.js)

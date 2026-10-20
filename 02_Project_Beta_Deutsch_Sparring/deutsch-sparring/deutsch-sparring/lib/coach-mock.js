@@ -1,4 +1,4 @@
-// The demo coach for MOCK=1 (no Gemini key needed). It answers in the same format as the real model
+// The demo coach for MOCK=1 (no OpenAI key needed). It answers in the same format as the real model
 // (COACH_SCHEMA) and uses the REAL numbers of the student (gaps, goals), so the whole chain can be tried:
 // suggestion → setup screen, plan change → Apply / Keep. Server only.
 import { addDays, dayNum, dayOf, goalState, MAX_MILESTONES } from './goals.js';

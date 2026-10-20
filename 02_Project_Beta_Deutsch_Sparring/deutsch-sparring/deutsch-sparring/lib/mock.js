@@ -9,7 +9,7 @@
 // Extra test words: "langsam" (slow answer), "kaputt" (broken JSON), "rohtext" (plain text
 // instead of JSON), "absturz" (server error), "keine lust mehr" (the student wants to stop).
 
-import { ModelError } from './gemini.js';
+import { ModelError } from './openai.js';
 import { getExamples } from './content.js';
 import { curriculumEntry, gapExample, shortTitle } from './curriculum.js';
 import { detectIntent, detectTopicWish } from './intents.js';

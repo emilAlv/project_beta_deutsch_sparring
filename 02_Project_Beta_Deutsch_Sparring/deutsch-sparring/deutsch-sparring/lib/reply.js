@@ -29,24 +29,27 @@ export const TASKS = ['flashcard', 'grammar']; // which score a word task is for
 export const LEVELS = ['A1', 'A2', 'B1'];
 export const VIEWS = ['glance', 'progress', 'grammar'];
 
-const str = (description, extra = {}) => ({ type: 'STRING', description, ...extra });
-const nullableStr = (description) => str(description, { nullable: true });
-const enumOf = (values, extra = {}) => ({ type: 'STRING', format: 'enum', enum: values, ...extra });
+const str = (description, extra = {}) => ({ type: 'string', description, ...extra });
+const nullableStr = (description) => ({ type: ['string', 'null'], description });
+const enumOf = (values, { nullable = false, ...extra } = {}) => ({
+  type: nullable ? ['string', 'null'] : 'string',
+  enum: nullable ? [...values, null] : values,
+  ...extra,
+});
 
-// Gemini responseSchema (OpenAPI subset).
+// OpenAI Structured Outputs JSON Schema. Nullable fields are still required: the model writes null.
 export const RESPONSE_SCHEMA = {
-  type: 'OBJECT',
+  type: 'object',
   properties: {
     message: str('What you say to the student: 1–3 short sentences in simple German.'),
     feedback: {
-      type: 'OBJECT',
-      nullable: true,
+      type: ['object', 'null'],
       properties: {
-        forNumber: { type: 'INTEGER' },
-        correct: { type: 'BOOLEAN' },
+        forNumber: { type: 'integer' },
+        correct: { type: 'boolean' },
         studentAnswer: str('The student answer exactly as written.'),
         corrected: str('The full corrected sentence (same as studentAnswer when correct).'),
-        changedWords: { type: 'ARRAY', items: { type: 'STRING' } },
+        changedWords: { type: 'array', items: { type: 'string' } },
         explanation: str('1–2 short lines in simple German.'),
         rule: str('The grammar point in max 5 words, always the same wording for the same point, e.g. "Genitiv nach wegen", "Dativ nach in (Wo?)", "Perfekt mit sein". For a mistake in the word or its article: an empty string (the word is not a grammar rule).'),
         errorType: enumOf(Object.keys(ERROR_TYPE), {
@@ -54,14 +57,13 @@ export const RESPONSE_SCHEMA = {
           description: 'null when correct. Artikel / Wortschatz = the word or its article was wrong (counts for the vocabulary score). Kasus / Adjektivendung / Verbform / Präposition / Wortstellung = a grammar mistake.',
         }),
       },
-      required: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule'],
-      propertyOrdering: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule', 'errorType'],
+      required: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule', 'errorType'],
+      additionalProperties: false,
     },
     exercise: {
-      type: 'OBJECT',
-      nullable: true,
+      type: ['object', 'null'],
       properties: {
-        number: { type: 'INTEGER' },
+        number: { type: 'integer' },
         type: enumOf(Object.keys(EXERCISE_TYPE)),
         direction: enumOf(['en-de', 'de-en'], { nullable: true, description: 'Flashcards only: English → German or German → English.' }),
         line: str('The task: a sentence with ___, the word on the flashcard, words to build a sentence … No quotation marks.'),
@@ -70,43 +72,45 @@ export const RESPONSE_SCHEMA = {
         wordId: nullableStr('Vocabulary topics: the id of the word this question is about, copied exactly from the WORDS list. null for grammar topics.'),
         task: enumOf(TASKS, { nullable: true, description: 'Vocabulary topics: "flashcard" for a flashcard, "grammar" for a sentence task with the word.' }),
       },
-      required: ['number', 'type', 'line', 'answer'],
-      propertyOrdering: ['number', 'type', 'direction', 'line', 'answer', 'hint', 'wordId', 'task'],
+      required: ['number', 'type', 'direction', 'line', 'answer', 'hint', 'wordId', 'task'],
+      additionalProperties: false,
     },
-    options: { type: 'ARRAY', items: { type: 'STRING' } },
+    options: { type: 'array', items: { type: 'string' } },
     panelView: enumOf(VIEWS, { nullable: true }),
     grammarFocus: {
-      type: 'OBJECT',
-      nullable: true,
+      type: ['object', 'null'],
       properties: {
         title: str('Name of the rule, e.g. "Wechselpräpositionen".'),
         rule: str('The rule in 1–2 simple sentences.'),
         boxes: {
-          type: 'ARRAY',
+          type: 'array',
           items: {
-            type: 'OBJECT',
+            type: 'object',
             properties: { label: str('e.g. "Wo?"'), value: str('e.g. "Dativ"'), note: str('e.g. "Position"') },
             required: ['label', 'value', 'note'],
+            additionalProperties: false,
           },
         },
         watchOut: str('One typical trap in one line.'),
       },
       required: ['title', 'rule', 'boxes', 'watchOut'],
+      additionalProperties: false,
     },
     session: {
-      type: 'OBJECT',
+      type: 'object',
       properties: {
         topicId: nullableStr('Id from the TOPIC CATALOG, "free" for free practice, null while not chosen.'),
         topicName: nullableStr('Short topic name, max 4 words.'),
         level: enumOf(LEVELS),
         difficulty: enumOf(Object.keys(DIFFICULTY)),
-        finished: { type: 'BOOLEAN', description: 'true only when the student wants to stop now.' },
+        finished: { type: 'boolean', description: 'true only when the student wants to stop now.' },
       },
-      required: ['level', 'difficulty', 'finished'],
+      required: ['topicId', 'topicName', 'level', 'difficulty', 'finished'],
+      additionalProperties: false,
     },
   },
-  required: ['message', 'feedback', 'exercise', 'options', 'panelView', 'session'],
-  propertyOrdering: ['message', 'feedback', 'exercise', 'options', 'panelView', 'grammarFocus', 'session'],
+  required: ['message', 'feedback', 'exercise', 'options', 'panelView', 'grammarFocus', 'session'],
+  additionalProperties: false,
 };
 
 import { cleanRule } from './rules.js';

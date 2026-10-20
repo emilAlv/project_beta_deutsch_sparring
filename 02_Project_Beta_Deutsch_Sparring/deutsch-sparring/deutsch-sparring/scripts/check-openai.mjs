@@ -1,8 +1,8 @@
-// Checks the AI safety nets (lib/gemini.js) with a fake `fetch` (no key, no network), and the answer cleaning
+// Checks the AI safety nets (lib/openai.js) with a fake `fetch` (no key, no network), and the answer cleaning
 // in lib/reply.js (parseModelJson, salvageMessage, normalizeReply). Plain node:
-//   node scripts/check-gemini.mjs
+//   node scripts/check-openai.mjs
 process.removeAllListeners('warning'); // lib/*.js are ES modules without "type": "module" – the warning is harmless
-const G = await import('../lib/gemini.js');
+const O = await import('../lib/openai.js');
 const R = await import('../lib/reply.js');
 const C = await import('../lib/coach.js');
 const CP = await import('../lib/coach-prompt.js');
@@ -13,12 +13,21 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok || !detail ? '' : ` – ${detail}`}`);
 }
 
-// ---------- fake Gemini ----------
-const answer = (text, finishReason = 'STOP', extra = {}) => ({
+// ---------- fake OpenAI Responses API ----------
+const answer = (text, status = 'completed', extra = {}) => ({
   status: 200,
-  body: { candidates: [{ content: { parts: text === null ? [] : [{ text }] }, finishReason }], usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 }, ...extra },
+  body: {
+    status,
+    output: text === null ? [] : [{ type: 'message', content: [{ type: 'output_text', text }] }],
+    usage: { input_tokens: 10, output_tokens: 5, output_tokens_details: { reasoning_tokens: 1 } },
+    ...extra,
+  },
 });
-const httpError = (status, message) => ({ status, body: { error: { message } } });
+const refusal = (text = 'I cannot help with that.') => ({
+  status: 200,
+  body: { status: 'completed', output: [{ type: 'message', content: [{ type: 'refusal', refusal: text }] }] },
+});
+const httpError = (status, message, code = '') => ({ status, body: { error: { message, code } } });
 const throws = (name) => ({ throws: Object.assign(new Error(name), { name }) });
 
 let calls = [];
@@ -28,30 +37,45 @@ function fakeFetch(script) {
   globalThis.fetch = async (url, init) => {
     const body = JSON.parse(init.body);
     const call = {
-      model: String(url).match(/models\/([^:]+):/)[1],
-      thinking: body.generationConfig.thinkingConfig?.thinkingLevel || null,
-      schema: body.generationConfig.responseSchema ? 'strict' : body.generationConfig.responseMimeType ? 'json' : 'none',
-      temperature: body.generationConfig.temperature,
+      url: String(url),
+      model: body.model,
+      reasoning: body.reasoning?.effort || null,
+      schema: body.text?.format?.type === 'json_schema' ? 'strict' : body.text?.format?.type === 'json_object' ? 'json' : 'none',
+      schemaName: body.text?.format?.name,
+      store: body.store,
+      temperature: body.temperature,
+      authorization: init.headers.authorization,
     };
     calls.push(call);
     let step = script[Math.min(calls.length - 1, script.length - 1)];
     if (typeof step === 'function') step = step(call);
     if (step.throws) throw step.throws;
-    return { ok: step.status < 400, status: step.status, json: async () => step.body };
+    return { ok: step.status < 400, status: step.status, headers: { get: () => 'req_test' }, json: async () => step.body };
   };
 }
 
-process.env.GEMINI_API_KEY = 'test-key-not-real';
-process.env.GEMINI_MODEL = 'gemini-3.5-flash';
-process.env.GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash-lite';
-delete process.env.GEMINI_TEMPERATURE;
+process.env.OPENAI_API_KEY = 'test-key-not-real';
+process.env.OPENAI_MODEL = 'gpt-6-luna';
+process.env.OPENAI_FALLBACK_MODEL = 'gpt-5.6-luna';
 const realLog = console.log;
 const quiet = (on) => { console.log = on ? () => {} : realLog; };
-const SCHEMA = { type: 'OBJECT', properties: { message: { type: 'STRING' } } };
+const SCHEMA = { type: 'object', properties: { message: { type: 'string' } }, required: ['message'], additionalProperties: false };
+function strictSchema(node) {
+  if (!node || typeof node !== 'object') return true;
+  const types = Array.isArray(node.type) ? node.type : [node.type];
+  if (types.includes('object')) {
+    const keys = Object.keys(node.properties || {});
+    if (node.additionalProperties !== false || keys.some((key) => !node.required?.includes(key))) return false;
+    if (!keys.every((key) => strictSchema(node.properties[key]))) return false;
+  }
+  if (types.includes('array') && !strictSchema(node.items)) return false;
+  if (types.includes('null') && node.enum && !node.enum.includes(null)) return false;
+  return true;
+}
 const run = async (opts = {}) => {
   quiet(true);
   try {
-    return { text: await G.generate({ system: 's', contents: [{ role: 'user', parts: [{ text: 'hi' }] }], schema: SCHEMA, ...opts }) };
+    return { text: await O.generate({ system: 's', messages: [{ role: 'user', content: 'hi' }], schema: SCHEMA, schemaName: 'test_reply', ...opts }) };
   } catch (error) {
     return { error };
   } finally {
@@ -60,62 +84,59 @@ const run = async (opts = {}) => {
 };
 const models = () => calls.map((c) => c.model).join(',');
 
-// ---------- the happy path and temperature ----------
+// ---------- the happy path and request shape ----------
 fakeFetch([answer('{"message":"ok"}')]);
 let r = await run();
-check('good answer: one call, with thinking, strict schema', r.text === '{"message":"ok"}' && calls.length === 1 && calls[0].thinking && calls[0].schema === 'strict');
-check('gemini-3.x: no temperature is sent', calls[0].temperature === undefined);
-check('temperatureFor: other models keep 0.7, env overrides', G.temperatureFor('gemini-2.5-flash') === 0.7 && G.temperatureFor('gemini-3.5-flash-lite') === undefined);
-process.env.GEMINI_TEMPERATURE = '0.4';
-check('GEMINI_TEMPERATURE overrides', G.temperatureFor('gemini-3.5-flash') === 0.4);
-delete process.env.GEMINI_TEMPERATURE;
+check('good answer: Responses API, low reasoning, strict named schema', r.text === '{"message":"ok"}' && calls.length === 1 && calls[0].url.endsWith('/v1/responses') && calls[0].reasoning === 'low' && calls[0].schema === 'strict' && calls[0].schemaName === 'test_reply');
+check('privacy and auth: store false, bearer key, no temperature', calls[0].store === false && calls[0].authorization === 'Bearer test-key-not-real' && calls[0].temperature === undefined);
+check('tutor and coach schemas meet strict Structured Outputs rules', strictSchema(R.RESPONSE_SCHEMA) && strictSchema(CP.COACH_SCHEMA));
 
 // ---------- empty, cut-off, blocked ----------
 fakeFetch([answer(null), answer('{"message":"second try"}')]);
 r = await run();
-check('empty answer: retried once without thinking, then ok', r.text?.includes('second try') && calls.length === 2 && calls[0].thinking && !calls[1].thinking && models() === 'gemini-3.5-flash,gemini-3.5-flash');
+check('empty answer: retried once with reasoning disabled, then ok', r.text?.includes('second try') && calls.length === 2 && calls[0].reasoning === 'low' && calls[1].reasoning === 'none' && models() === 'gpt-6-luna,gpt-6-luna');
 
-fakeFetch([answer('{"message":"Hallo, das ist', 'MAX_TOKENS'), answer('{"message":"complete"}')]);
+fakeFetch([answer('{"message":"Hallo, das ist', 'incomplete', { incomplete_details: { reason: 'max_output_tokens' } }), answer('{"message":"complete"}')]);
 r = await run();
-check('MAX_TOKENS: treated as failure, retried without thinking', r.text?.includes('complete') && calls.length === 2 && !calls[1].thinking);
+check('max_output_tokens: treated as failure, retried without reasoning', r.text?.includes('complete') && calls.length === 2 && calls[1].reasoning === 'none');
 
-fakeFetch([answer(null, 'MAX_TOKENS'), answer(null, 'MAX_TOKENS'), answer('{"message":"from backup"}')]);
+fakeFetch([answer(null, 'incomplete', { incomplete_details: { reason: 'max_output_tokens' } }), answer(null, 'incomplete', { incomplete_details: { reason: 'max_output_tokens' } }), answer('{"message":"from backup"}')]);
 r = await run();
-check('empty twice: the fallback model answers', r.text?.includes('from backup') && models() === 'gemini-3.5-flash,gemini-3.5-flash,gemini-3.5-flash-lite');
+check('empty twice: the fallback model answers', r.text?.includes('from backup') && models() === 'gpt-6-luna,gpt-6-luna,gpt-5.6-luna');
 
-fakeFetch([answer('{"message":"cut', 'MAX_TOKENS')]);
+fakeFetch([answer('{"message":"cut', 'incomplete', { incomplete_details: { reason: 'max_output_tokens' } })]);
 r = await run();
 check('cut off everywhere: error 502 with a short reason and the partial text',
-  r.error?.status === 502 && r.error.reason === 'cut_off' && G.errorDetail(r.error) === 'AI: cut off' && r.error.partial === '{"message":"cut' && calls.length === 4, `${r.error?.status} ${calls.length}`);
+  r.error?.status === 502 && r.error.reason === 'cut_off' && O.errorDetail(r.error) === 'AI: cut off' && r.error.partial === '{"message":"cut' && calls.length === 4, `${r.error?.status} ${calls.length}`);
 
-fakeFetch([answer(null, 'STOP', { promptFeedback: { blockReason: 'SAFETY' } }), answer('{"message":"fine"}')]);
+fakeFetch([refusal(), answer('{"message":"fine"}')]);
 r = await run();
-check('blocked prompt: retried', r.text?.includes('fine') && calls.length === 2);
+check('refusal: retried', r.text?.includes('fine') && calls.length === 2);
 
-fakeFetch([{ status: 200, body: { candidates: [{ content: { parts: [{ text: 'thinking…', thought: true }] }, finishReason: 'STOP' }] } }]);
+fakeFetch([{ status: 200, body: { status: 'completed', output: [{ type: 'reasoning', content: [] }] } }]);
 r = await run();
-check('only thought parts = empty answer', r.error?.reason === 'empty' && G.errorDetail(r.error) === 'AI: empty answer');
+check('only reasoning items = empty answer', r.error?.reason === 'empty' && O.errorDetail(r.error) === 'AI: empty answer');
 
-fakeFetch([answer('{"message":"x"}', 'SAFETY'), answer('{"message":"y"}')]);
+fakeFetch([answer('{"message":"x"}', 'failed'), answer('{"message":"y"}')]);
 r = await run();
-check('finishReason other than STOP is retried', r.text?.includes('"y"') && calls.length === 2);
+check('non-completed status is retried', r.text?.includes('"y"') && calls.length === 2);
 
 // ---------- HTTP errors ----------
-fakeFetch([httpError(400, 'Invalid JSON payload: unknown field responseSchema.foo (schema)'), answer('{"message":"ok"}')]);
+fakeFetch([httpError(400, 'Invalid schema in text.format'), answer('{"message":"ok"}')]);
 r = await run();
-check('400 about schema: retried without thinking', r.text && calls.length === 2 && !calls[1].thinking);
+check('400 about schema: retried without reasoning', r.text && calls.length === 2 && calls[1].reasoning === 'none');
 
-fakeFetch([httpError(400, 'thinking_level is not supported by this model'), httpError(400, 'Invalid schema: nullable'), answer('{"message":"ok"}')]);
+fakeFetch([httpError(400, 'reasoning effort is not supported'), httpError(400, 'Invalid schema'), httpError(400, 'Invalid schema'), answer('{"message":"ok"}')]);
 r = await run();
-check('400 twice: last try uses plain JSON mode', r.text && calls.length === 3 && calls[2].schema === 'json' && !calls[2].thinking);
+check('settings rejected: final try omits reasoning and uses JSON mode', r.text && calls.length === 4 && calls[3].schema === 'json' && calls[3].reasoning === null);
 
 fakeFetch([httpError(400, 'Request contains an invalid argument.')]);
 r = await run();
-check('400 about something else: not retried', r.error?.status === 400 && calls.length === 1 && G.errorDetail(r.error) === 'AI 400');
+check('400 about something else: not retried', r.error?.status === 400 && calls.length === 1 && O.errorDetail(r.error) === 'AI 400');
 
-fakeFetch([httpError(400, 'API key not valid. Please pass a valid API key.')]);
+fakeFetch([httpError(400, 'Incorrect API key provided.', 'invalid_api_key')]);
 r = await run();
-check('bad key (400): config, one call, fixed text', r.error?.status === 'config' && r.error.message === G.CONFIG_TEXT && calls.length === 1);
+check('bad key (400): config, one call, fixed text', r.error?.status === 'config' && r.error.message === O.CONFIG_TEXT && calls.length === 1);
 
 fakeFetch([httpError(403, 'Permission denied')]);
 r = await run();
@@ -125,9 +146,9 @@ fakeFetch([httpError(401, 'unauthenticated')]);
 r = await run();
 check('401: config', r.error?.status === 'config' && calls.length === 1);
 
-fakeFetch([(c) => (c.model === 'gemini-3.5-flash' ? httpError(404, 'models/x is not found') : answer('{"message":"backup"}'))]);
+fakeFetch([(c) => (c.model === 'gpt-6-luna' ? httpError(404, 'model is not found', 'model_not_found') : answer('{"message":"backup"}'))]);
 r = await run();
-check('wrong primary model name (404): the fallback model still answers', r.text?.includes('backup') && models() === 'gemini-3.5-flash,gemini-3.5-flash-lite');
+check('wrong primary model name (404): the fallback model still answers', r.text?.includes('backup') && models() === 'gpt-6-luna,gpt-5.6-luna');
 
 fakeFetch([httpError(404, 'models/x is not found')]);
 r = await run();
@@ -135,11 +156,11 @@ check('wrong model names everywhere: config', r.error?.status === 'config' && ca
 
 fakeFetch([httpError(503, 'The model is overloaded'), answer('{"message":"backup"}')]);
 r = await run();
-check('503: the fallback model answers (no retry on the same model)', r.text?.includes('backup') && models() === 'gemini-3.5-flash,gemini-3.5-flash-lite');
+check('503: the fallback model answers (no retry on the same model)', r.text?.includes('backup') && models() === 'gpt-6-luna,gpt-5.6-luna');
 
 fakeFetch([httpError(503, 'overloaded')]);
 r = await run();
-check('503 everywhere: error detail is generic', r.error?.status === 503 && G.errorDetail(r.error) === 'AI 503' && !G.errorDetail(r.error).includes('overloaded'));
+check('503 everywhere: error detail is generic', r.error?.status === 503 && O.errorDetail(r.error) === 'AI 503' && !O.errorDetail(r.error).includes('overloaded'));
 
 fakeFetch([httpError(429, 'quota')]);
 r = await run();
@@ -152,40 +173,41 @@ check('timeout: the fallback model answers', r.text?.includes('backup') && calls
 
 fakeFetch([throws('TimeoutError')]);
 r = await run();
-check('timeout everywhere: 504', r.error?.status === 504 && G.errorDetail(r.error) === 'AI: timeout');
+check('timeout everywhere: 504', r.error?.status === 504 && O.errorDetail(r.error) === 'AI: timeout');
 
 fakeFetch([answer('{"message":"ok"}')]);
 r = await run({ deadline: Date.now() + 1000 });
 check('no time left: 504 without calling the AI', r.error?.status === 504 && calls.length === 0);
 
 // ---------- coach settings vs tutor settings ----------
-for (const k of ['COACH_MODEL', 'COACH_FALLBACK_MODEL', 'COACH_THINKING']) delete process.env[k];
+for (const k of ['COACH_MODEL', 'COACH_FALLBACK_MODEL', 'COACH_REASONING']) delete process.env[k];
 fakeFetch([answer('{"message":"ok"}')]);
 await run();
-check('tutor (no override): GEMINI_MODEL and low thinking', calls[0].model === 'gemini-3.5-flash' && calls[0].thinking === 'low');
+check('tutor (no override): OPENAI_MODEL and low reasoning', calls[0].model === 'gpt-6-luna' && calls[0].reasoning === 'low');
 
-let cs = G.coachModelSettings();
-check('coach defaults: tutor model, medium thinking, no fallback (same model)', cs.model === 'gemini-3.5-flash' && cs.thinking === 'medium' && cs.fallback === null);
+let cs = O.coachModelSettings();
+check('coach defaults: tutor model, medium reasoning, no fallback', cs.model === 'gpt-6-luna' && cs.reasoning === 'medium' && cs.fallback === null);
 fakeFetch([answer('{"message":"ok"}')]);
 await run(cs);
-check('coach default call: model gemini-3.5-flash, thinking medium', calls[0].model === 'gemini-3.5-flash' && calls[0].thinking === 'medium');
+check('coach default call: gpt-6-luna, medium reasoning', calls[0].model === 'gpt-6-luna' && calls[0].reasoning === 'medium');
 
-process.env.COACH_MODEL = 'gemini-3.5-pro';
-process.env.COACH_THINKING = 'HIGH';
-cs = G.coachModelSettings();
-check('coach env: model, high thinking, fallback never "lite"', cs.model === 'gemini-3.5-pro' && cs.thinking === 'high' && cs.fallback === 'gemini-3.5-flash');
+process.env.COACH_MODEL = 'gpt-6.1-sol';
+process.env.COACH_FALLBACK_MODEL = 'gpt-5.6-luna';
+process.env.COACH_REASONING = 'HIGH';
+cs = O.coachModelSettings();
+check('coach env: model, fallback and reasoning', cs.model === 'gpt-6.1-sol' && cs.reasoning === 'high' && cs.fallback === 'gpt-5.6-luna');
 fakeFetch([httpError(503, 'busy'), answer('{"message":"backup"}')]);
 r = await run(cs);
-check('coach: pro model first, then gemini-3.5-flash with the same thinking', r.text && models() === 'gemini-3.5-pro,gemini-3.5-flash' && calls[0].thinking === 'high' && calls[1].thinking === 'high');
-fakeFetch([httpError(400, 'thinking level not supported'), answer('{"message":"ok"}')]);
+check('coach: stronger model first, then fallback with same reasoning', r.text && models() === 'gpt-6.1-sol,gpt-5.6-luna' && calls[0].reasoning === 'high' && calls[1].reasoning === 'high');
+fakeFetch([httpError(400, 'reasoning effort not supported'), httpError(400, 'none is not supported for reasoning'), answer('{"message":"ok"}')]);
 r = await run(cs);
-check('coach: model rejects the thinking level (400) → retried without thinking', r.text && calls[0].thinking === 'high' && calls[1].thinking === null && calls[1].model === 'gemini-3.5-pro');
+check('coach: rejected reasoning values → retry omits the setting', r.text && calls[0].reasoning === 'high' && calls[1].reasoning === 'none' && calls[2].reasoning === null && calls[2].model === 'gpt-6.1-sol');
 fakeFetch([answer('{"message":"ok"}')]);
 await run({}); // the tutor in the same process is not affected by COACH_* variables
-check('tutor is unchanged while COACH_* is set', calls[0].model === 'gemini-3.5-flash' && calls[0].thinking === 'low');
-process.env.COACH_THINKING = 'extreme';
-check('coach: unknown thinking value = medium', G.coachModelSettings().thinking === 'medium');
-for (const k of ['COACH_MODEL', 'COACH_FALLBACK_MODEL', 'COACH_THINKING']) delete process.env[k];
+check('tutor is unchanged while COACH_* is set', calls[0].model === 'gpt-6-luna' && calls[0].reasoning === 'low');
+process.env.COACH_REASONING = 'extreme';
+check('coach: unknown reasoning value = medium', O.coachModelSettings().reasoning === 'medium');
+for (const k of ['COACH_MODEL', 'COACH_FALLBACK_MODEL', 'COACH_REASONING']) delete process.env[k];
 
 // ---------- parseModelJson ----------
 check('parseModelJson: plain', R.parseModelJson('{"a":1}')?.a === 1);
@@ -227,5 +249,5 @@ const nc2 = C.normalizeCoach({ message: 'Just a tip.', planChanges: null }, { to
 check('normalizeCoach: no plan proposed = no note', nc2?.message === 'Just a tip.');
 check('startsPlanChanges: sees a cut-off plan proposal', C.startsPlanChanges('{"message":"a","planChanges":{"goalId":"g1","changes":[{"act') && !C.startsPlanChanges('{"message":"a","planChanges":null}'));
 
-console.log(failed ? `\n${failed} check(s) failed.` : '\nAll Gemini checks passed.');
+console.log(failed ? `\n${failed} check(s) failed.` : '\nAll OpenAI checks passed.');
 process.exit(failed ? 1 : 0);

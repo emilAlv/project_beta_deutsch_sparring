@@ -1,5 +1,8 @@
 # wort. 2.0 – implementation tasks
 
+> Historical plan: provider names and file paths describe the app before the OpenAI migration.
+> For the current setup, use the app README and `lib/openai.js`.
+
 One task = one new Claude Code session = one branch = one pull request.
 Do them **in order**: each task starts after the previous task's pull request is merged
 into `main` (later tasks build on earlier ones).

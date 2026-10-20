@@ -5,7 +5,7 @@ import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEA
 import { pickWords, wordsNeeded } from '../../../lib/scores';
 import { GRAMMAR_POINTS, cleanGrammar, wantsSentenceTasks } from '../../../lib/grammar';
 import { buildSystemPrompt } from '../../../lib/prompt';
-import { generate } from '../../../lib/gemini';
+import { generate } from '../../../lib/openai';
 import { mockReply } from '../../../lib/mock';
 import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
@@ -158,24 +158,24 @@ async function handle(req) {
   }
   const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), openTask: session.openTask };
 
-  // --- get the tutor's answer (demo script or Gemini) ---
+  // --- get the tutor's answer (demo script or OpenAI) ---
   let text;
   try {
     if (process.env.MOCK === '1') {
       text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null });
     } else {
-      text = await askGemini();
+      text = await askOpenAI();
       const firstDraft = parseModelJson(text);
       if (draftNeedsRegeneration(firstDraft)) {
         const rejected = String(firstDraft?.exercise?.line || '').slice(0, 300);
-        text = await askGemini(`
+        text = await askOpenAI(`
 
 NOVELTY RETRY
 The first draft below was rejected because it repeats an earlier exercise or uses a mechanical word-algebra format:
 <rejected-draft>${rejected}</rejected-draft>
 Keep the same target word, grammar point, level and question number, but create a genuinely different task. Change at least three of: setting, speaker, relationship, purpose, speech act, main verb and sentence structure. Do not reuse the rejected line. Return the complete JSON response again.`);
         if (draftNeedsRegeneration(parseModelJson(text))) {
-          throw Object.assign(new Error('Gemini repeated an earlier exercise twice.'), { status: 'novelty' });
+          throw Object.assign(new Error('The AI repeated an earlier exercise twice.'), { status: 'novelty' });
         }
       }
     }
@@ -190,7 +190,7 @@ Keep the same target word, grammar point, level and question number, but create 
     } else if (e.status === 'novelty') {
       return fail('novelty', 502);
     } else if (e.status === 'config') {
-      return fail('config', 500); // a wrong key or model name (from Gemini) or a missing key (from askGemini)
+      return fail('config', 500); // a wrong key/model name or a missing key
     } else if (e.status === 'no_message') {
       return fail('no_message', 400);
     } else {
@@ -209,23 +209,17 @@ Keep the same target word, grammar point, level and question number, but create 
       || isNearDuplicateExercise(line, [...asked, session.openLine, session.skippedLine]);
   }
 
-  async function askGemini(extraInstruction = '') {
-    if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY is missing on the server.'), { status: 'config' });
+  async function askOpenAI(extraInstruction = '') {
+    if (!process.env.OPENAI_API_KEY) throw Object.assign(new Error('OPENAI_API_KEY is missing on the server.'), { status: 'config' });
 
-    // Gemini wants user and model turns to alternate: two student messages in a row (after an
-    // error or a cancelled request) are merged into one turn.
     const recent = [];
     for (const m of messages.slice(-MAX_HISTORY)) {
-      const role = m.role === 'assistant' ? 'model' : 'user';
-      const text = String(m.text || '').slice(0, role === 'model' ? MAX_MODEL_CHARS : MAX_CHARS);
+      const role = m.role === 'assistant' ? 'assistant' : 'user';
+      const text = String(m.text || '').slice(0, role === 'assistant' ? MAX_MODEL_CHARS : MAX_CHARS);
       if (!text) continue;
-      const last = recent[recent.length - 1];
-      if (last && last.role === role) last.parts[0].text += `\n${text}`;
-      else recent.push({ role, parts: [{ text }] });
+      recent.push({ role, content: text });
     }
-    while (recent.length && recent[0].role !== 'user') recent.shift();
-    while (recent.length && recent[recent.length - 1].role !== 'user') recent.pop();
-    if (!recent.length) throw Object.assign(new Error('No student message.'), { status: 'no_message' });
+    if (!recent.some((m) => m.role === 'user')) throw Object.assign(new Error('No student message.'), { status: 'no_message' });
 
     const system = buildSystemPrompt({
       name: String(name || 'du').slice(0, 40),
@@ -241,7 +235,7 @@ Keep the same target word, grammar point, level and question number, but create 
       guessed,
       asked,
     });
-    return generate({ system: `${system}${extraInstruction}`, contents: recent, schema: RESPONSE_SCHEMA, deadline });
+    return generate({ system: `${system}${extraInstruction}`, messages: recent, schema: RESPONSE_SCHEMA, schemaName: 'tutor_reply', deadline });
   }
 
   // --- turn it into clean data for the screen ---

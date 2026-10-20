@@ -7,63 +7,65 @@ import { LEVELS, DIFFICULTIES, QUESTION_STEPS, GRAMMAR_POINTS } from './session-
 import { MAX_CHANGES } from './coach.js';
 import { wordCountsByLevel } from './words.js';
 
-const str = (description, extra = {}) => ({ type: 'STRING', description, ...extra });
-const nullableStr = (description) => str(description, { nullable: true });
-const enumOf = (values, extra = {}) => ({ type: 'STRING', format: 'enum', enum: values, ...extra });
+const str = (description, extra = {}) => ({ type: 'string', description, ...extra });
+const nullableStr = (description) => ({ type: ['string', 'null'], description });
+const enumOf = (values, { nullable = false, ...extra } = {}) => ({
+  type: nullable ? ['string', 'null'] : 'string',
+  enum: nullable ? [...values, null] : values,
+  ...extra,
+});
 
-// Gemini responseSchema (OpenAPI subset). The server cleans the answer again (lib/coach.js normalizeCoach).
+// OpenAI Structured Outputs JSON Schema. The server cleans the answer again (lib/coach.js normalizeCoach).
 export const COACH_SCHEMA = {
-  type: 'OBJECT',
+  type: 'object',
   properties: {
     message: str('What you say to the student: 1–4 short sentences in simple English. German examples are fine.'),
     suggestedSession: {
-      type: 'OBJECT',
-      nullable: true,
+      type: ['object', 'null'],
       description: 'Only when you recommend a practice session now. Otherwise null.',
       properties: {
         kind: enumOf(['grammar', 'vocab'], { description: '"grammar" for a grammar lesson topic, "vocab" for a word section or list.' }),
         topicId: str('An id copied exactly from the TOPIC CATALOG.'),
         level: enumOf(LEVELS),
         difficulty: enumOf(DIFFICULTIES),
-        questions: { type: 'INTEGER', description: `One of ${QUESTION_STEPS.join(', ')}.` },
+        questions: { type: 'integer', description: `One of ${QUESTION_STEPS.join(', ')}.` },
         grammar: {
-          type: 'ARRAY',
+          type: 'array',
           items: enumOf(GRAMMAR_POINTS),
           description: 'Vocabulary topics only: the grammar points to practise with each word. Empty list = the student\'s usual choice.',
         },
       },
-      required: ['kind', 'topicId', 'level', 'difficulty', 'questions'],
-      propertyOrdering: ['kind', 'topicId', 'level', 'difficulty', 'questions', 'grammar'],
+      required: ['kind', 'topicId', 'level', 'difficulty', 'questions', 'grammar'],
+      additionalProperties: false,
     },
     planChanges: {
-      type: 'OBJECT',
-      nullable: true,
+      type: ['object', 'null'],
       description: 'Only when the student asks to change the plan or the data clearly calls for it. Otherwise null.',
       properties: {
         goalId: str('The id of one goal, copied exactly from GOALS.'),
         changes: {
-          type: 'ARRAY',
+          type: 'array',
           items: {
-            type: 'OBJECT',
+            type: 'object',
             properties: {
               action: enumOf(['add', 'move', 'remove']),
               milestoneId: nullableStr('move / remove: the id of an existing open milestone, copied exactly. add: null.'),
               date: nullableStr('add / move: the new date, YYYY-MM-DD, between today and the goal\'s end date. remove: null.'),
               title: nullableStr('add: the milestone text, max 8 words. Otherwise null.'),
-              target: { type: 'INTEGER', nullable: true, description: 'add: the target in percent (0–100). Otherwise null.' },
+              target: { type: ['integer', 'null'], description: 'add: the target in percent (0–100). Otherwise null.' },
             },
-            required: ['action'],
-            propertyOrdering: ['action', 'milestoneId', 'date', 'title', 'target'],
+            required: ['action', 'milestoneId', 'date', 'title', 'target'],
+            additionalProperties: false,
           },
         },
       },
       required: ['goalId', 'changes'],
-      propertyOrdering: ['goalId', 'changes'],
+      additionalProperties: false,
     },
-    quickReplies: { type: 'ARRAY', items: { type: 'STRING' }, description: '0–3 short things the student could say next (max 6 words each), in English.' },
+    quickReplies: { type: 'array', items: { type: 'string' }, description: '0–3 short things the student could say next (max 6 words each), in English.' },
   },
   required: ['message', 'suggestedSession', 'planChanges', 'quickReplies'],
-  propertyOrdering: ['message', 'suggestedSession', 'planChanges', 'quickReplies'],
+  additionalProperties: false,
 };
 
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

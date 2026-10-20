@@ -1,5 +1,5 @@
 import { allTopics } from '../../../lib/topics';
-import { generate, coachModelSettings } from '../../../lib/gemini';
+import { generate, coachModelSettings } from '../../../lib/openai';
 import { parseModelJson, salvageMessage } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { requireUser } from '../../../lib/auth';
@@ -71,13 +71,13 @@ async function handle(req) {
     return fail('data', 503, e?.code === 'data_timeout' ? 'timeout' : 'db');
   }
 
-  // --- get the answer (demo script or Gemini) ---
+  // --- get the answer (demo script or OpenAI) ---
   let raw_answer;
   let aiError = null; // set when the answer was cut off: we still try to rescue the message
   try {
     raw_answer = process.env.MOCK === '1'
       ? mockCoach({ text: lastUser, kind: greeting ? 'greeting' : 'chat', name, home, topics, today })
-      : await askGemini();
+      : await askOpenAI();
   } catch (e) {
     console.error('Coach failed:', e.status, e.reason || '');
     if (e.partial) {
@@ -94,21 +94,15 @@ async function handle(req) {
     }
   }
 
-  async function askGemini() {
-    if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY is missing on the server.'), { status: 'config' });
-    // Gemini wants turns to alternate and to start and end with the student
-    const contents = [];
-    const push = (role, text) => {
-      const last = contents.at(-1);
-      if (last && last.role === role) last.parts[0].text += `\n${text}`;
-      else contents.push({ role, parts: [{ text }] });
-    };
-    if (turns[0]?.role !== 'user') push('user', 'Hello.');
-    for (const m of turns) push(m.role, m.role === 'model' ? JSON.stringify({ message: m.text }) : m.text);
-    if (greeting) push('user', GREETING_TURN);
-    while (contents.length && contents.at(-1).role !== 'user') contents.pop();
+  async function askOpenAI() {
+    if (!process.env.OPENAI_API_KEY) throw Object.assign(new Error('OPENAI_API_KEY is missing on the server.'), { status: 'config' });
+    const messages = turns.map((m) => ({
+      role: m.role === 'model' ? 'assistant' : 'user',
+      content: m.role === 'model' ? JSON.stringify({ message: m.text }) : m.text,
+    }));
+    if (greeting) messages.push({ role: 'user', content: GREETING_TURN });
     const system = buildCoachPrompt({ name, context: coachContext({ home, topics, today }) });
-    return generate({ system, contents, schema: COACH_SCHEMA, deadline, ...coachModelSettings() });
+    return generate({ system, messages, schema: COACH_SCHEMA, schemaName: 'coach_reply', deadline, ...coachModelSettings() });
   }
 
   // --- turn it into clean data for the screen ---

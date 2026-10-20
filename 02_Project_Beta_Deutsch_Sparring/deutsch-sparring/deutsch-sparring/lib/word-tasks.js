@@ -1,4 +1,4 @@
-// Grammar tasks for ONE word, used by the demo tutor (MOCK=1). The real tutor (Gemini) gets the
+// Grammar tasks for ONE word, used by the demo tutor (MOCK=1). The real tutor (OpenAI) gets the
 // same rules as text in lib/prompt.js; this file builds and checks the same kinds of tasks without AI.
 //   nouns      → the noun phrase in Akkusativ / Dativ / Genitiv (+ its adjective with the right ending)
 //   verbs      → Perfekt (hat/ist + Partizip) and a sentence with the case the verb needs

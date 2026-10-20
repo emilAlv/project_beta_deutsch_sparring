@@ -1,7 +1,7 @@
 # wort. – Deutsch Sparring
 
 A German practice chatbot built on our course book (*Schritte plus Neu – Ausgabe Schweiz*).
-Next.js on Vercel + Google Gemini (free tier). Optional **accounts** (username + password,
+Next.js on Vercel + OpenAI. Optional **accounts** (username + password,
 stored in Vercel's Postgres / Neon) – see `docs/security-accounts.md` at the repository root.
 Without a database the app works without login; the practice history is remembered in each
 student's own browser either way.
@@ -134,21 +134,23 @@ survives a reload. Home shows (`components/Home.js`):
 4. Before clicking Deploy, open **Environment Variables** and add:
    | Name | Value |
    |---|---|
-   | `GEMINI_API_KEY` | your key from Google AI Studio |
+   | `OPENAI_API_KEY` | a project key from the OpenAI API Platform |
    | `CLASS_CODE` | a code for your classmates, e.g. `schritte5` (optional, case-sensitive) |
 5. Click **Deploy**. After ~1 minute you get a link like `deutsch-sparring.vercel.app`.
 
-The coach has three optional settings of its own, so it can think harder than the tutor without
-changing the tutor: `COACH_MODEL` lets the coach use a stronger model, e.g. a Pro model on a paid plan
-(default: the same as `GEMINI_MODEL`); `COACH_FALLBACK_MODEL` is the model it switches to when the first
-one is busy (default `gemini-3.5-flash` if `COACH_MODEL` is another model, never a "lite" model);
-`COACH_THINKING` is how long it thinks before answering: `low`, `medium` (default) or `high`. More thinking
-means better plans but slower answers. If a model does not accept the setting, the app retries without it.
-`GEMINI_TEMPERATURE` (optional) overrides the randomness setting; by default Gemini 3.x models use Google's
-own default, because lower values can make them loop.
+Create the key in an OpenAI API project under the account that should pay for usage, and enable API billing for that
+project. A ChatGPT or Codex subscription does not supply API credits. Keep the key only in Vercel's encrypted environment
+variables—never paste it into the app, source code, GitHub, or chat.
 
-Optional variables: `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_FALLBACK_MODEL`
-(default `gemini-3.5-flash-lite`), `DAILY_LIMIT` (messages per student per day, default 150 – counted
+The least-cost default for both tutor and coach is `gpt-6-luna`. The tutor uses low reasoning; the coach
+uses medium reasoning because it plans and changes learning goals. `COACH_MODEL` can select a different
+model without changing the tutor (default: the same as `OPENAI_MODEL`); `COACH_FALLBACK_MODEL` is optional
+and is used only when the first model is unavailable. `COACH_REASONING` accepts `none`, `low`, `medium`,
+`high`, `xhigh` or `max` (default `medium`). More reasoning can improve difficult plans but costs more and
+takes longer. The app sends no temperature when reasoning is enabled.
+
+Optional variables: `OPENAI_MODEL` (default `gpt-6-luna`), `OPENAI_FALLBACK_MODEL` (no fallback by default),
+`DAILY_LIMIT` (messages per student per day, default 150 – counted
 per browser, so a whole class on one school network is not locked out; only wrong class codes count as tries),
 `MOCK=1` (demo tutor without AI, see below).
 
@@ -254,10 +256,10 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
   `lib/scores.js`; the scores come from the database for a logged-in student, from the browser's
   request without accounts), puts only those
   words into the prompt as compact lines and sends their ids back; the browser returns them with
-  every later request. Builds the prompt, calls Gemini with `responseMimeType: application/json` +
-  `responseSchema`, cleans the answer (`normalizeReply`) and returns it. Safety nets in
-  `lib/gemini.js`: low thinking (retried without it on HTTP 400), 25 s timeout per call,
-  fallback model, `maxDuration = 60`, every error as JSON. Broken JSON → shown as a normal message.
+  every later request. Builds the prompt, calls the OpenAI Responses API with strict Structured Outputs,
+  cleans the answer (`normalizeReply`) and returns it. Safety nets in `lib/openai.js`: low reasoning for
+  the tutor, retry with reasoning disabled, 25 s timeout per call, optional fallback model,
+  `store: false`, `maxDuration = 60`, every error as JSON. Broken JSON → shown as a normal message.
 - The browser keeps the running session: answers, score (counted by the app, not the model), the
   gap card. `lib/storage.js` is the one interface for history, streak and word scores:
   - **without accounts / MOCK=1 / no database**: localStorage only (last 5 sessions + streak + scores).
@@ -293,7 +295,7 @@ Each entry has: `id` (`g-a2-weil` style; never change an id students may have sa
 
 ```bash
 npm install
-cp .env.example .env.local   # MOCK=1 tests without AI; or add GEMINI_API_KEY
+cp .env.example .env.local   # MOCK=1 tests without AI; or add OPENAI_API_KEY
 npm run dev                  # http://localhost:3000
 ```
 
@@ -313,10 +315,10 @@ Accounts locally without a database: add `AUTH_MEMORY=1` and `SESSION_SECRET=tes
 
 Before pushing: run `npm test` (it runs every `scripts/check-*.mjs`, plain node, no extra packages) and
 `npm run build`; both must pass, otherwise Vercel fails too.
-`scripts/check-gemini.mjs` tests the AI safety nets with a fake Gemini (empty or cut-off answer, a rejected
+`scripts/check-openai.mjs` tests the AI safety nets with a fake OpenAI response (empty or cut-off answer, a rejected
 setting, busy model, timeout, wrong key) and the answer cleaning in `lib/reply.js`, so no real key is needed.
 
-How the AI calls recover (`lib/gemini.js`): an empty, blocked or cut-off answer is retried once without
-thinking, then the backup model answers; a busy or slow model goes straight to the backup. A wrong key or
+How the AI calls recover (`lib/openai.js`): an empty, refused or cut-off answer is retried once with reasoning
+disabled, then the configured backup model answers; a busy or slow model goes straight to the backup. A wrong key or
 model name shows "The AI key or model name on the server is wrong" instead of "not available". The small grey
 detail under a coach error is short and generic (e.g. "AI: cut off", "AI 503"), never raw AI or database text.
