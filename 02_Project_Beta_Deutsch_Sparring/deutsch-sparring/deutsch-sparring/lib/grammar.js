@@ -31,6 +31,9 @@ export const wantsSentenceTasks = (grammar) => (grammar || []).some((p) => p !==
 // The names of the grammar rules (feedback.rule). Always these exact words, so the same point is grouped.
 export const RULES = {
   plural: 'Plural',
+  nounAkk: 'Nomengruppe im Akkusativ',
+  nounDat: 'Nomengruppe im Dativ',
+  nounGen: 'Nomengruppe im Genitiv',
   akkBrauchen: 'Akkusativ nach brauchen',
   akkIn: 'Akkusativ nach in (Wohin?)',
   datMit: 'Dativ nach mit',

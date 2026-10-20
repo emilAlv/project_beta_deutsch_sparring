@@ -142,7 +142,7 @@ function grammarQuestion(examples, n, difficulty, strongHint = false, topic = nu
     ? `Neuer Kontext${topic?.situation ? ` – ${topic.situation}` : ''}: ${baseLine}`
     : baseLine;
   return {
-    exercise: { number: n, type: item.type, direction: null, line, hint },
+    exercise: { number: n, type: item.type, direction: null, line, answer: item.gaps ? item.parts.join(' ') : item.solved, hint },
     options: difficulty === 'easy' && choices.length ? choices : [],
   };
 }
@@ -215,7 +215,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
     const task = pin?.task || taskOf(word, settings, idx);
     if (task) {
       return {
-        exercise: { number: n, type: task.type, direction: null, line: task.line, hint: task.hint(strongHint, d) },
+        exercise: { number: n, type: task.type, direction: null, line: task.line, answer: task.solution, hint: task.hint(strongHint, d) },
         options: task.options(d),
         word,
         task,
@@ -235,6 +235,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         type: 'Karteikarte',
         direction: 'en-de',
         line: word.en[0],
+        answer: isNoun(word) ? `${word.de}${plural ? `, ${word.plural}` : ''}` : word.de,
         hint: strongHint ? `(${word.article ? `${word.article} …, ` : ''}Anfang: ${word.noun.slice(0, 3)}…)`
           : d === 'hard' ? null : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : isNoun(word) ? (plural ? 'mit Artikel und Plural' : 'mit Artikel') : null,
       },
@@ -251,6 +252,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         type: 'Karteikarte',
         direction: 'de-en',
         line: word.noun,
+        answer: `${word.article} – ${meaningOf(word)}`,
         hint: strongHint ? `(Artikel: ${word.article}, ${meaningOf(word).slice(0, 3)}…)` : d === 'hard' ? null : d === 'easy' ? '(Wähle Artikel und Bedeutung.)' : 'mit Artikel, auf Englisch',
       },
       options: d === 'easy' ? wrong.map((a) => `${a} – ${meaningOf(word)}`) : [],
@@ -265,6 +267,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
       type: 'Karteikarte',
       direction: 'de-en',
       line: word.de,
+      answer: meaningOf(word),
       hint: strongHint ? `(${word.en[0].replace(/^the /, '').slice(0, 3)}…)` : d === 'hard' ? null : d === 'easy' ? '(Wähle die Bedeutung.)' : 'auf Englisch',
     },
     options: d === 'easy' ? choices : [],

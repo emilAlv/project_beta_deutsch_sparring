@@ -7,6 +7,8 @@ const W = await import('../lib/words.js');
 const T = await import('../lib/word-tasks.js');
 const D = await import('../lib/declension.js');
 const G = await import('../lib/grammar.js');
+const R = await import('../lib/reply.js');
+const { readFileSync } = await import('node:fs');
 
 let failed = 0;
 function check(name, ok, detail = '') {
@@ -72,6 +74,13 @@ for (const w of words) {
       if (bad.correct) problems.push(`${w.id}: nonsense accepted – ${t.line}`);
       if (!bad.correct && !bad.errorType) problems.push(`${w.id}: wrong answer without errorType – ${t.line}`);
       if (!t.rule) problems.push(`${w.id}: task without rule – ${t.line}`);
+      if (t.kind === 'noun' && t.type !== 'Nomen-Drill') problems.push(`${w.id}: noun task is not a Nomen-Drill – ${t.line}`);
+      if (t.kind === 'noun') {
+        for (const d of ['easy', 'medium', 'hard']) for (const strong of [false, true]) {
+          const hint = t.hint(strong, d);
+          if (hint && T.norm(hint).includes(T.norm(t.solution))) problems.push(`${w.id}: hint reveals noun solution – ${t.line}`);
+        }
+      }
       if (T.findTask(w, t.line)?.line !== t.line) problems.push(`${w.id}: task not found again by its text – ${t.line}`);
       const key = `${w.type}:${t.kind}:${t.rule}`;
       if (!samples[key]) samples[key] = `${t.line}\n      → ${t.solution}`;
@@ -82,20 +91,58 @@ check('every task accepts its own solution, has a rule, no ß', problems.length 
 console.log('task variants checked:', JSON.stringify(counts));
 if (process.argv.includes('--samples')) for (const [k, v] of Object.entries(samples)) console.log(`  ${k}\n      ${v}`);
 
-// ---- error types ----
+// ---- noun drills: morphology without arbitrary predicates ----
 const schrank = { ...word('der', 'Schrank', 'die Schränke', { id: 'x', adjective: 'alt' }) };
-const gen = T.taskList(schrank, ['genitiv', 'adjective-endings']).find((t) => t.rule === 'Genitiv nach wegen');
-eq('Genitiv task line', gen.line, 'Bilde einen Satz: der Schrank + alt · Genitiv nach wegen');
-eq('Genitiv right', gen.check('Wegen des alten Schranks bleiben wir zu Hause.').correct, true);
-eq('Genitiv wrong ending → Adjektivendung', gen.check('Wegen des alte Schrankes bleiben wir zu Hause.').errorType, 'Adjektivendung');
-eq('Genitiv wrong case → Kasus', gen.check('Wegen dem alten Schrank bleiben wir zu Hause.').errorType, 'Kasus');
-eq('Genitiv wrong gender article → Artikel', gen.check('Wegen der alten Schranks bleiben wir zu Hause.').errorType, 'Kasus'); // "der" exists for masculine (Dativ/Gen of feminine) but not as the article of this noun in the Genitiv
-eq('Genitiv wrong article "das" → Artikel', gen.check('Wegen das alte Schrank bleiben wir zu Hause.').errorType, 'Artikel');
-eq('Genitiv word missing → Wortschatz', gen.check('Wegen des alten Tisches bleiben wir zu Hause.').errorType, 'Wortschatz');
-const dat = T.taskList(schrank, ['dativ', 'adjective-endings']).find((t) => t.rule === 'Dativ nach in (Wo?)');
-eq('Dativ in (Wo?) accepts "im"', dat.check('Das Buch liegt im alten Schrank.').correct, true);
-eq('Dativ in (Wo?) accepts "in dem"', dat.check('Das Buch liegt in dem alten Schrank.').correct, true);
-eq('Dativ in (Wo?) rejects Akkusativ', dat.check('Das Buch liegt in den alten Schrank.').errorType, 'Kasus');
+const gen = T.taskList(schrank, ['genitiv', 'adjective-endings']).find((t) => t.rule === G.RULES.nounGen);
+eq('Genitiv task type', gen.type, 'Nomen-Drill');
+eq('Genitiv task line', gen.line, 'Setze in den Genitiv: der · alt · Schrank');
+eq('Genitiv solution', gen.solution, 'des alten Schrankes');
+eq('Genitiv right', gen.check('des alten Schranks').correct, true);
+eq('Genitiv wrong ending → Adjektivendung', gen.check('des alte Schrankes').errorType, 'Adjektivendung');
+eq('Genitiv wrong case → Kasus', gen.check('dem alten Schrank').errorType, 'Kasus');
+eq('Genitiv wrong gender article stays case when gender is possible', gen.check('der alten Schranks').errorType, 'Kasus');
+eq('Genitiv wrong article "das" → Artikel', gen.check('das alte Schrank').errorType, 'Artikel');
+eq('Genitiv word missing → Wortschatz', gen.check('des alten Tisches').errorType, 'Wortschatz');
+const dat = T.taskList(schrank, ['dativ', 'adjective-endings']).find((t) => t.rule === G.RULES.nounDat);
+eq('Dativ task line', dat.line, 'Setze in den Dativ: der · alt · Schrank');
+eq('Dativ right', dat.check('dem alten Schrank').correct, true);
+eq('Dativ rejects Akkusativ', dat.check('den alten Schrank').errorType, 'Kasus');
+
+const baby = word('das', 'Baby', 'die Babys', { id: 'das baby', adjective: 'klein' });
+const babyAcc = T.taskList(baby, ['akkusativ', 'adjective-endings'])[0];
+eq('Baby task type', babyAcc.type, 'Nomen-Drill');
+eq('Baby task line', babyAcc.line, 'Setze in den Akkusativ: das · klein · Baby');
+eq('Baby solution', babyAcc.solution, 'das kleine Baby');
+check('Baby task has no arbitrary predicate', !/brauche|zufrieden|bleiben wir|stelle das Buch|liegt in/i.test(`${babyAcc.line} ${babyAcc.solution}`));
+for (const d of ['easy', 'medium', 'hard']) for (const strong of [false, true]) {
+  const hint = babyAcc.hint(strong, d);
+  check(`Baby hint does not reveal solution (${d}/${strong})`, !hint || !T.norm(hint).includes(T.norm(babyAcc.solution)));
+}
+
+// ---- live reply hint safety ----
+const replyCtx = { level: 'A1', difficulty: 'medium', topicIds: new Set(['free']), topicId: 'free', wordIds: new Set(), openTask: 'grammar' };
+const rawReply = (hint, answer) => ({
+  message: 'Weiter geht es.',
+  feedback: null,
+  exercise: { number: 1, type: 'Lückentext', line: 'In der Praxis: Die Ärztin untersucht ___.', hint, answer },
+  options: [],
+  panelView: null,
+  session: { topicId: 'free', topicName: 'Test', level: 'A1', difficulty: 'Mittel', finished: false },
+});
+eq('Hint with exact noun phrase is removed', R.normalizeReply(rawReply('Akkusativ: das kleine Baby.', 'das kleine Baby'), replyCtx).exercise.hint, null);
+eq('Hint with phrase inside a full sentence is removed', R.normalizeReply(rawReply('Beispiel: Ich sehe das kleine Baby.', 'das kleine Baby'), replyCtx).exercise.hint, null);
+eq('Helpful structural hint survives', R.normalizeReply(rawReply('Wen untersucht die Ärztin? Achte auf Artikel und Endung.', 'das kleine Baby'), replyCtx).exercise.hint, 'Wen untersucht die Ärztin? Achte auf Artikel und Endung.');
+eq('Missing private answer drops hint safely', R.normalizeReply(rawReply('Achte auf den Artikel.', ''), replyCtx).exercise.hint, null);
+eq('ss/ß cannot bypass hint safety', R.normalizeReply(rawReply('Lösung: die grosse Strasse.', 'die große Straße'), replyCtx).exercise.hint, null);
+check('Private answer is absent from normalized exercise', !Object.hasOwn(R.normalizeReply(rawReply(null, 'das kleine Baby'), replyCtx).exercise, 'answer'));
+
+// ---- production prompt regression ----
+const promptSource = readFileSync(new URL('../lib/prompt.js', import.meta.url), 'utf8');
+check('Prompt removes old disconnected noun template', !promptSource.includes('Bilde einen Satz: der Schrank + alt'));
+check('Prompt removes generic brauchen example', !promptSource.includes('Ich brauche den alten Schrank'));
+check('Prompt requires creative, non-repeating contexts', promptSource.includes('CREATIVE VARIATION') && promptSource.includes('exclusion list'));
+check('Prompt requires a private answer for hint safety', promptSource.includes('private exercise.answer'));
+
 const fahren = { id: 'f', type: 'verb', de: 'abbiegen', perfekt: 'ist abgebogen', case: 'in + Akk' };
 const pf = T.taskList(fahren, ['perfekt'])[0];
 eq('Perfekt line', pf.line, 'Bilde das Perfekt: ich + abbiegen');

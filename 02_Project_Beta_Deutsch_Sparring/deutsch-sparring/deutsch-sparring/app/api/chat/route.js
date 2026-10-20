@@ -222,6 +222,12 @@ async function handle(req) {
   }
   // modelText = what the browser sends back as this tutor turn next time (without the bulky parts)
   const { grammarFocus, options, ...essentials } = parsed;
+  // exercise.answer is a private hint-safety reference. Do not expose it to the browser or
+  // send it back in conversation history.
+  if (essentials.exercise && typeof essentials.exercise === 'object') {
+    essentials.exercise = { ...essentials.exercise };
+    delete essentials.exercise.answer;
+  }
   return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo() });
 
   // the picked words for the browser to keep: id + type + the word as shown on the summary screen (phrases have no grammar score)
