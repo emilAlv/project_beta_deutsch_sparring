@@ -40,16 +40,18 @@ export function cleanSuggestion(raw, topics = null) {
   const topicId = clip(raw.topicId, 160);
   if (!topicId || topicId === 'free') return null;
   let kind = KINDS.includes(raw.kind) ? raw.kind : 'vocab';
+  let topicLevel = null; // a grammar topic belongs to one level: the suggestion uses it
   if (topics) {
     const topic = topics.find((x) => x.id === topicId);
     if (!topic) return null;
     kind = topic.type === 'Wortschatz' ? 'vocab' : 'grammar';
+    if (kind === 'grammar' && topic.levels?.length === 1) topicLevel = topic.levels[0];
   }
   const grammar = Array.isArray(raw.grammar) ? GRAMMAR_POINTS.filter((g) => raw.grammar.includes(g)) : [];
   return {
     kind,
     topicId,
-    level: LEVELS.includes(raw.level) ? raw.level : 'B1',
+    level: topicLevel || (LEVELS.includes(raw.level) ? raw.level : 'B1'),
     difficulty: DIFFICULTIES.includes(raw.difficulty) ? raw.difficulty : 'medium',
     questions: nearestStep(Math.round(Number(raw.questions))),
     grammar: kind === 'vocab' ? grammar : [],
