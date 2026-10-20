@@ -96,7 +96,7 @@ function nounTask(w, kase, np, adj) {
       let note = '';
       if (nounAt < 0) {
         errorType = 'Wortschatz';
-        ruleOut = `${w.article} ${w.noun}`;
+        ruleOut = null; // a mistake in the word itself is no grammar rule
         note = `Benutze das Wort «${w.article} ${w.noun}».`;
       } else {
         const artAt = nounAt - (adj ? 2 : 1);
@@ -109,7 +109,7 @@ function nounTask(w, kase, np, adj) {
             ? 'Adjektivendung' : 'Kasus';
         } else if (!art || !anyDefinite.includes(art) || !sameGender.includes(art)) {
           errorType = 'Artikel';
-          ruleOut = `${w.article} ${w.noun}`;
+          ruleOut = null; // a mistake in the word itself is no grammar rule
           note = `Der Ausgangsartikel von «${w.noun}» ist «${w.article}».`;
         }
       }
@@ -224,7 +224,7 @@ function verbCaseTasks(w) {
         let ruleOut = rule;
         if (!verbThere) {
           errorType = 'Wortschatz';
-          ruleOut = w.de.split(/\s*→\s*/)[0];
+          ruleOut = null;
         } else if (!prepThere) errorType = 'Präposition';
         return { correct: false, corrected: solution, changedWords: [main], explanation: why, rule: ruleOut, errorType };
       },
@@ -295,7 +295,7 @@ function endingTask(w, adj, kase, g, definite) {
       const sameAdjective = allEndings.includes(endOnly) || tokens.some((t) => t.startsWith(short));
       return {
         correct: false, corrected: solution, changedWords: [form], explanation,
-        rule: sameAdjective ? rule : w.de.split(' / ')[0],
+        rule: sameAdjective ? rule : null,
         errorType: sameAdjective ? 'Adjektivendung' : 'Wortschatz',
       };
     },

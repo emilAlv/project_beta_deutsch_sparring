@@ -529,7 +529,7 @@ export default function Home() {
       correct, errorType, skipped,
       hinted: Boolean(exercise?.hinted) || session.settings?.difficulty === 'easy', // a hint, or "Leicht" (multiple choice)
       hasG: type !== 'phrase',
-    }, record && { ...record, sessionId: session.id });
+    }, record && { ...record, sessionId: session.id, topicId: session.topicId || null, difficulty: session.settings?.difficulty || null });
   }
 
   // stop waiting for the tutor (button in the input, or "Stopp" while it is writing)

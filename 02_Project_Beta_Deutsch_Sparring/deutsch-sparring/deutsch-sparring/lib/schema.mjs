@@ -42,6 +42,10 @@ export const SCHEMA = [
   // the same answer sent twice (a retry) is saved once
   'CREATE UNIQUE INDEX IF NOT EXISTS answers_session_n_idx ON answers (user_id, session_id, n)',
   'CREATE INDEX IF NOT EXISTS answers_user_created_idx ON answers (user_id, created_at)',
+  // Review R8 / decision D7: was a hint used (or "Leicht"), and the difficulty ('easy' | 'medium' | 'hard').
+  // May be empty on older answers. Safe to run again on the live database.
+  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS hinted boolean',
+  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS difficulty text',
   `CREATE TABLE IF NOT EXISTS word_scores (
     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     word_id text NOT NULL,

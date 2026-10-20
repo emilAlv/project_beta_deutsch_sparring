@@ -14,6 +14,8 @@
 //   exam        the average of the two
 import { getWords, getWord } from './words.js';
 import { matchesFilter, vScore, gScore } from './scores.js';
+import { cleanRule } from './rules.js';
+import { CURRICULUM_LEVELS } from './curriculum.js';
 
 export const WINDOW_DAYS = 30;
 export const LEARNT_FROM = 8; // a word counts as "learnt" with a V score of 8–10
@@ -39,11 +41,13 @@ export function aggregateAnswers(answers) {
       continue;
     }
     if (a.correct) correct += 1;
-    if (a.rule) {
-      const r = rules.get(a.rule) || { rule: a.rule, n: 0, ok: 0 };
+    // only real grammar rules; the word of a vocabulary mistake is never a grammar gap (review T13)
+    const rule = cleanRule(a.rule);
+    if (rule) {
+      const r = rules.get(rule) || { rule, n: 0, ok: 0 };
       r.n += 1;
       r.ok += a.correct ? 1 : 0;
-      rules.set(a.rule, r);
+      rules.set(rule, r);
     }
     if (a.wordId) {
       const w = words.get(a.wordId) || { id: a.wordId, n: 0, ok: 0 };
@@ -55,6 +59,21 @@ export function aggregateAnswers(answers) {
   return { sessions: sessions.size, total: answers.length, correct, skipped, rules: [...rules.values()], words: [...words.values()] };
 }
 
+// Rows from the database ({ rule, n, ok }) → only real grammar rules, spelled the same way and summed up.
+// (Older answers may still hold a word such as "der Schrank" in the rule column.)
+export function cleanRuleRows(rows) {
+  const out = new Map();
+  for (const r of rows || []) {
+    const rule = cleanRule(r.rule);
+    if (!rule) continue;
+    const x = out.get(rule) || { rule, n: 0, ok: 0 };
+    x.n += Number(r.n) || 0;
+    x.ok += Number(r.ok) || 0;
+    out.set(rule, x);
+  }
+  return [...out.values()].sort((a, b) => b.n - a.n);
+}
+
 // The browser's own log (no accounts): [{ i: session id, r: rule, o: right?, s: skipped?, w: word id, t: time }]
 const MAX_LOG = 1500;
 export function answersFromLog(log, now = Date.now()) {
@@ -63,7 +82,7 @@ export function answersFromLog(log, now = Date.now()) {
     .filter((x) => x && typeof x === 'object' && Number(x.t) >= since)
     .map((x) => ({
       sessionId: String(x.i || '').slice(0, 40),
-      rule: typeof x.r === 'string' ? x.r.slice(0, 200) : '',
+      rule: typeof x.r === 'string' ? cleanRule(x.r.slice(0, 200)) || '' : '',
       correct: x.o === true,
       skipped: x.s === true,
       wordId: typeof x.w === 'string' && getWord(x.w) ? x.w : '',
@@ -84,8 +103,11 @@ export function scoresFromCompact(raw) {
 }
 
 // ---------- goals ----------
+// The levels a goal's words come from: an exam goal needs every lower level too (B1 = A1 + A2 + B1)
+const goalLevels = (goal) => (goal.type === 'exam' ? CURRICULUM_LEVELS.slice(0, CURRICULUM_LEVELS.indexOf(goal.level) + 1) : goal.level);
+
 function vocabProgress(goal, scores) {
-  const words = getWords().filter((w) => matchesFilter(w, { level: goal.level, section: goal.scope.section, list: goal.scope.list }));
+  const words = getWords().filter((w) => matchesFilter(w, { level: goalLevels(goal), section: goal.scope.section, list: goal.scope.list }));
   if (!words.length) return 0;
   const sum = words.reduce((s, w) => s + (Math.min(10, vScore(scores[w.id])) - 1) / 9, 0);
   return Math.round((sum / words.length) * 100);

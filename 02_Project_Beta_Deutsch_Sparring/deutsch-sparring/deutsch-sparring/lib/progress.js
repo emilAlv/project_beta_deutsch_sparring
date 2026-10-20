@@ -8,7 +8,8 @@ import { databaseUrl } from './schema.mjs';
 import { sql, ensureSchema } from './db';
 import { applyAnswer } from './scores';
 import { getWord } from './words';
-import { aggregateAnswers, WINDOW_DAYS } from './home-stats';
+import { cleanRule } from './rules';
+import { aggregateAnswers, cleanRuleRows, WINDOW_DAYS } from './home-stats';
 
 const MAX_SCORE_ROWS = 2000;
 const DAY = 86_400_000;
@@ -75,7 +76,7 @@ export function cleanSession(raw) {
   };
 }
 
-// → { sessionId, n, task, wordId, question, studentAnswer, corrected, rule, errorType, correct, skipped, hinted, hasG } or null
+// → { sessionId, n, task, wordId, question, studentAnswer, corrected, rule, errorType, correct, skipped, hinted, difficulty, hasG } or null
 export function cleanAnswer(raw) {
   const sessionId = cleanId(raw?.sessionId);
   const n = int(raw?.n, 0, 99);
@@ -90,11 +91,12 @@ export function cleanAnswer(raw) {
     question: text(raw.question, 400),
     studentAnswer: text(raw.studentAnswer, 600),
     corrected: text(raw.corrected, 600),
-    rule: text(raw.rule, 200),
+    rule: cleanRule(text(raw.rule, 200)) || '', // a word is no grammar rule (lib/rules.js); old browsers may still send one
     errorType: text(raw.errorType, 40) || null,
     correct: raw.correct === true,
     skipped: raw.skipped === true,
     hinted: raw.hinted === true,
+    difficulty: ['easy', 'medium', 'hard'].includes(raw.difficulty) ? raw.difficulty : null,
   };
 }
 
@@ -261,10 +263,10 @@ const dbStore = {
     await ensureSchema();
     await sql().query('INSERT INTO sessions (id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [a.sessionId, userId]);
     const inserted = await sql().query(
-      `INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped, hinted, difficulty)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        ON CONFLICT DO NOTHING RETURNING id`,
-      [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped],
+      [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped, a.hinted, a.difficulty],
     );
     if (!inserted.length) return { saved: false, rec: null };
     let rec = null;
@@ -316,7 +318,9 @@ const dbStore = {
       ),
       sql().query(
         `SELECT rule, count(*)::int AS n, count(*) FILTER (WHERE correct)::int AS ok FROM answers
-         WHERE ${window} AND NOT skipped AND COALESCE(rule, '') <> '' GROUP BY rule ORDER BY n DESC LIMIT 80`,
+         WHERE ${window} AND NOT skipped AND COALESCE(rule, '') <> ''
+           AND task IS DISTINCT FROM 'flashcard' AND NOT (word_id IS NOT NULL AND error_type IN ('vocab', 'article'))
+         GROUP BY rule ORDER BY n DESC LIMIT 400`,
         [userId],
       ),
       sql().query(
@@ -326,7 +330,7 @@ const dbStore = {
       ),
     ]);
     const t = tot[0] || {};
-    return { sessions: t.sessions || 0, total: t.total || 0, correct: t.correct || 0, skipped: t.skipped || 0, rules, words };
+    return { sessions: t.sessions || 0, total: t.total || 0, correct: t.correct || 0, skipped: t.skipped || 0, rules: cleanRuleRows(rules).slice(0, 80), words };
   },
   async hasData(userId) {
     await ensureSchema();

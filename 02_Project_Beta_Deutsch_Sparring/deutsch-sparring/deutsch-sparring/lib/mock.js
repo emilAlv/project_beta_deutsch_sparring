@@ -302,7 +302,7 @@ function checkVocab(q, answer, settings) {
       corrected: correct ? answer.trim() : card,
       changedWords: correct ? [] : right ? [w.plural] : [nounOnly ? w.article : w.de],
       explanation: correct ? extra : nounOnly && !right ? `Das Nomen stimmt, aber der Artikel ist «${w.article}». ${extra}` : right ? `Der Plural fehlt oder stimmt nicht. ${extra}` : extra,
-      rule: right && !pluralOk ? RULES.plural : w.de,
+      rule: right && !pluralOk ? RULES.plural : null,
       errorType: correct ? null : right ? 'Wortschatz' : nounOnly ? 'Artikel' : 'Wortschatz',
     };
   }
@@ -318,7 +318,7 @@ function checkVocab(q, answer, settings) {
       corrected: correct ? answer.trim() : `${w.de} – ${w.en.join(' / ')}`,
       changedWords: correct ? [] : meaningOk ? [w.article] : [w.en[0]],
       explanation: correct ? `${w.de}: ${w.en.join(', ')}. ${extra}` : meaningOk ? `Die Bedeutung stimmt, aber der Artikel ist «${w.article}». ${extra}` : `${w.de}: ${w.en.join(', ')}. ${extra}`,
-      rule: w.de,
+      rule: null, // the word is no grammar rule
       errorType: correct ? null : meaningOk ? 'Artikel' : 'Wortschatz',
     };
   }
@@ -327,7 +327,7 @@ function checkVocab(q, answer, settings) {
     corrected: meaningOk ? answer.trim() : w.en.join(' / '),
     changedWords: meaningOk ? [] : [w.en[0]],
     explanation: `${w.de}: ${w.en.join(', ')}. ${extra}`,
-    rule: w.de,
+    rule: null,
     errorType: meaningOk ? null : 'Wortschatz',
   };
 }
