@@ -11,7 +11,7 @@ import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
 } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
-import { hasMechanicalExerciseFormat, isNearDuplicateExercise, normalizeExerciseLine } from '../../../lib/novelty';
+import { draftWithNoveltyRetry } from '../../../lib/novelty';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
 import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
@@ -164,31 +164,22 @@ async function handle(req) {
     if (process.env.MOCK === '1') {
       text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null });
     } else {
-      text = await askGemini();
-      const firstDraft = parseModelJson(text);
-      if (draftNeedsRegeneration(firstDraft)) {
-        const rejected = String(firstDraft?.exercise?.line || '').slice(0, 300);
-        text = await askGemini(`
-
-NOVELTY RETRY
-The first draft below was rejected because it repeats an earlier exercise or uses a mechanical word-algebra format:
-<rejected-draft>${rejected}</rejected-draft>
-Keep the same target word, grammar point, level and question number, but create a genuinely different task. Change at least three of: setting, speaker, relationship, purpose, speech act, main verb and sentence structure. Do not reuse the rejected line. Return the complete JSON response again.`);
-        if (draftNeedsRegeneration(parseModelJson(text))) {
-          throw Object.assign(new Error('Gemini repeated an earlier exercise twice.'), { status: 'novelty' });
-        }
-      }
+      text = await draftWithNoveltyRetry({
+        ask: askGemini,
+        parse: parseModelJson,
+        previous: [...asked, session.openLine, session.skippedLine],
+        openLine: session.openLine,
+        deadline,
+      });
     }
   } catch (e) {
     console.error('Tutor failed:', e.status, e.reason || '');
     if (e.partial) {
-      text = e.partial; // cut off after both tries: the message is rescued below
+      text = e.partial; // cut off after the tries: the message is rescued below
     } else if (e.status === 429) {
       return fail('quota', 429);
     } else if (e.status === 504) {
       return fail('timeout', 504, 'timeout');
-    } else if (e.status === 'novelty') {
-      return fail('novelty', 502);
     } else if (e.status === 'config') {
       return fail('config', 500); // a wrong key or model name (from Gemini) or a missing key (from askGemini)
     } else if (e.status === 'no_message') {
@@ -196,17 +187,6 @@ Keep the same target word, grammar point, level and question number, but create 
     } else {
       return fail('model', 502, reasonCode(e));
     }
-  }
-
-  function draftNeedsRegeneration(candidate) {
-    const line = candidate?.exercise?.line;
-    if (!line) return false;
-    const repeatsOpenWithoutFeedback = session.openLine
-      && !candidate.feedback
-      && normalizeExerciseLine(line) === normalizeExerciseLine(session.openLine);
-    if (repeatsOpenWithoutFeedback) return false;
-    return hasMechanicalExerciseFormat(line)
-      || isNearDuplicateExercise(line, [...asked, session.openLine, session.skippedLine]);
   }
 
   async function askGemini(extraInstruction = '') {

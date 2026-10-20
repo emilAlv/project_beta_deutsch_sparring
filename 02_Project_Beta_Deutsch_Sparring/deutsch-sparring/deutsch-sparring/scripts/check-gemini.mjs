@@ -187,6 +187,68 @@ process.env.COACH_THINKING = 'extreme';
 check('coach: unknown thinking value = medium', G.coachModelSettings().thinking === 'medium');
 for (const k of ['COACH_MODEL', 'COACH_FALLBACK_MODEL', 'COACH_THINKING']) delete process.env[k];
 
+// ---------- coach on quota (429): the tutor's lite model answers that one call ----------
+delete process.env.GEMINI_FALLBACK_MODEL;
+cs = G.coachModelSettings();
+fakeFetch([httpError(429, 'quota'), answer('{"message":"lite"}')]);
+r = await run(cs);
+check('coach 429, no COACH_FALLBACK_MODEL: falls back to gemini-3.5-flash-lite', r.text && models() === 'gemini-3.5-flash,gemini-3.5-flash-lite', models());
+fakeFetch([httpError(503, 'busy'), answer('{"message":"lite"}')]);
+r = await run(cs);
+check('coach 503 (not quota): still no lite model', r.error?.status === 503 && models() === 'gemini-3.5-flash', models());
+process.env.COACH_FALLBACK_MODEL = 'gemini-3.5-flash';
+cs = G.coachModelSettings();
+fakeFetch([httpError(429, 'quota')]);
+r = await run(cs);
+check('coach 429 with COACH_FALLBACK_MODEL set: no lite model', r.error?.status === 429 && !models().includes('lite'), models());
+delete process.env.COACH_FALLBACK_MODEL;
+process.env.COACH_MODEL = 'gemini-3.5-pro';
+cs = G.coachModelSettings();
+fakeFetch([httpError(429, 'quota'), httpError(429, 'quota'), answer('{"message":"lite"}')]);
+r = await run(cs);
+check('coach pro 429 → flash 429 → lite', r.text && models() === 'gemini-3.5-pro,gemini-3.5-flash,gemini-3.5-flash-lite', models());
+delete process.env.COACH_MODEL;
+
+// ---------- tutor speed: at most one retry, only for a true near-duplicate, never an error ----------
+const N = await import('../lib/novelty.js');
+const draft = (line, extra = {}) => JSON.stringify({ message: 'x', exercise: { number: 2, type: 'Satz', line }, ...extra });
+const FRESH = 'Schreib eine kurze E-Mail an deine Vermieterin, weil die Heizung im Schlafzimmer seit gestern nicht mehr warm wird.';
+const MECH = 'Auf der Strasse: ___ (jung + der Unbekannte) · Dativ';
+const OLD = 'Du bist im Restaurant und bestellst für dich und deine Freundin zwei Gerichte und ein Getränk beim Kellner.';
+const OLD_SIMILAR = 'Du bist im Restaurant und bestellst für dich und deinen Freund zwei Gerichte und ein Getränk beim Kellner.';
+const tutor = async (steps, over = {}) => {
+  fakeFetch(steps.map((d) => (typeof d === 'string' ? answer(d) : d)));
+  quiet(true);
+  try {
+    const out = await N.draftWithNoveltyRetry({
+      ask: (extra = '') => G.generate({ system: `s${extra}`, contents: [{ role: 'user', parts: [{ text: 'hi' }] }], schema: SCHEMA }),
+      parse: R.parseModelJson, previous: [OLD], deadline: Date.now() + 55_000, log: () => {}, ...over,
+    });
+    return { out };
+  } catch (error) {
+    return { error };
+  } finally {
+    quiet(false);
+  }
+};
+check('the mechanical format is still detected (but costs no second call)', N.hasMechanicalExerciseFormat(MECH));
+let t = await tutor([draft(MECH), draft(FRESH)]);
+check('mechanical-format draft: accepted, exactly one AI call', t.out === draft(MECH) && calls.length === 1);
+t = await tutor([draft(FRESH)]);
+check('fresh draft: one AI call', t.out === draft(FRESH) && calls.length === 1);
+t = await tutor([draft(OLD_SIMILAR), draft(FRESH)]);
+check('near-duplicate: one retry, the new draft is used', t.out === draft(FRESH) && calls.length === 2);
+t = await tutor([draft(OLD_SIMILAR), draft(OLD_SIMILAR), draft(FRESH)]);
+check('near-duplicate twice: at most one retry, no error, a draft comes back', typeof t.out === 'string' && calls.length === 2 && !t.error);
+t = await tutor([draft(OLD_SIMILAR), draft(FRESH)], { deadline: Date.now() + 10_000 });
+check('near-duplicate with little time left: no retry, draft accepted', t.out === draft(OLD_SIMILAR) && calls.length === 1);
+t = await tutor([draft(OLD_SIMILAR), httpError(503, 'busy')]);
+check('near-duplicate, retry fails: the first draft is kept (no error)', t.out === draft(OLD_SIMILAR) && !t.error);
+t = await tutor([draft(OLD_SIMILAR), 'not json at all']);
+check('near-duplicate, retry unreadable: the first draft is kept', t.out === draft(OLD_SIMILAR) && calls.length === 2);
+t = await tutor([draft(OLD)], { openLine: OLD });
+check('same open task again without feedback: no retry', calls.length === 1 && t.out === draft(OLD));
+
 // ---------- parseModelJson ----------
 check('parseModelJson: plain', R.parseModelJson('{"a":1}')?.a === 1);
 check('parseModelJson: ```json fence', R.parseModelJson('```json\n{"a":1}\n```')?.a === 1);

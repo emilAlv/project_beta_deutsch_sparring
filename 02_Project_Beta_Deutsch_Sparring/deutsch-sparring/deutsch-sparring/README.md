@@ -143,6 +143,8 @@ The coach has three optional settings of its own, so it can think harder than th
 changing the tutor: `COACH_MODEL` lets the coach use a stronger model, e.g. a Pro model on a paid plan
 (default: the same as `GEMINI_MODEL`); `COACH_FALLBACK_MODEL` is the model it switches to when the first
 one is busy (default `gemini-3.5-flash` if `COACH_MODEL` is another model, never a "lite" model);
+the one exception: if you do not set `COACH_FALLBACK_MODEL` and the coach's model answers "quota used up" (429),
+that one call uses `GEMINI_FALLBACK_MODEL` (default `gemini-3.5-flash-lite`) – a simpler answer is better than none;
 `COACH_THINKING` is how long it thinks before answering: `low`, `medium` (default) or `high`. More thinking
 means better plans but slower answers. If a model does not accept the setting, the app retries without it.
 `GEMINI_TEMPERATURE` (optional) overrides the randomness setting; by default Gemini 3.x models use Google's
