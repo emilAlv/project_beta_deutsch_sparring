@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node scripts/run-checks.mjs"
+    "test": "node scripts/run-checks.mjs",
+    "check:curriculum": "node scripts/check-curriculum.mjs",
+    "check:word-tasks": "node scripts/check-word-tasks.mjs",
+    "check": "npm run check:curriculum && npm run check:word-tasks",
+    "prebuild": "npm run check"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",
@@ -14,5 +18,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

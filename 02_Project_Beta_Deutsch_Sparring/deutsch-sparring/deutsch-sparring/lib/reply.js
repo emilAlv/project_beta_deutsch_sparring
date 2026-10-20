@@ -65,12 +65,13 @@ export const RESPONSE_SCHEMA = {
         type: enumOf(Object.keys(EXERCISE_TYPE)),
         direction: enumOf(['en-de', 'de-en'], { nullable: true, description: 'Flashcards only: English → German or German → English.' }),
         line: str('The task: a sentence with ___, the word on the flashcard, words to build a sentence … No quotation marks.'),
+        answer: str('Private reference answer for hint-safety validation. For a gap fill, give only the missing text; for open production, give the shortest complete natural reference answer. Never copy it into the hint.'),
         hint: nullableStr('Depends on difficulty. null on Schwer.'),
         wordId: nullableStr('Vocabulary topics: the id of the word this question is about, copied exactly from the WORDS list. null for grammar topics.'),
         task: enumOf(TASKS, { nullable: true, description: 'Vocabulary topics: "flashcard" for a flashcard, "grammar" for a sentence task with the word.' }),
       },
-      required: ['number', 'type', 'line'],
-      propertyOrdering: ['number', 'type', 'direction', 'line', 'hint', 'wordId', 'task'],
+      required: ['number', 'type', 'line', 'answer'],
+      propertyOrdering: ['number', 'type', 'direction', 'line', 'answer', 'hint', 'wordId', 'task'],
     },
     options: { type: 'ARRAY', items: { type: 'STRING' } },
     panelView: enumOf(VIEWS, { nullable: true }),
@@ -111,6 +112,16 @@ export const RESPONSE_SCHEMA = {
 const ARTICLE = /^(der|die|das)\s/i;
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 const orNull = (v, n) => clip(v, n) || null;
+const comparable = (v) => clip(v, 500)
+  .toLocaleLowerCase('de')
+  .replace(/ß/g, 'ss')
+  .replace(/[^\p{L}\p{N}]+/gu, ' ')
+  .trim();
+export function hintRevealsAnswer(hint, answer) {
+  const h = comparable(hint);
+  const a = comparable(answer);
+  return Boolean(h && a && ` ${h} `.includes(` ${a} `));
+}
 const int = (v, min, max) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) && n >= min && n <= max ? n : null;
@@ -179,12 +190,17 @@ export function normalizeReply(raw, ctx) {
   const e = raw.exercise;
   if (e && typeof e === 'object' && clip(e.line, 500)) {
     const type = EXERCISE_TYPE[e.type] || 'gapfill';
+    const answer = clip(e.answer, 500);
+    let hint = orNull(e.hint, 200);
+    // A missing private answer cannot prove a hint safe. New model replies always contain one;
+    // deterministic/demo replies populate it too.
+    if (!answer || hintRevealsAnswer(hint, answer)) hint = null;
     exercise = {
       number: int(e.number, 1, 99),
       type,
       direction: type === 'flashcard' && ['en-de', 'de-en'].includes(e.direction) ? e.direction : null,
       line: clip(e.line, 500).replace(/^[„"“»«]+|[“"”«»]+$/g, ''),
-      hint: orNull(e.hint, 200),
+      hint,
     };
     if (type === 'flashcard' && !exercise.direction) exercise.direction = ARTICLE.test(exercise.line) ? 'de-en' : 'en-de';
     // vocabulary: which word, and which score the answer counts for (optional; old replies have neither)

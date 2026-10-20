@@ -150,7 +150,27 @@ Rules: one file per topic.
 - The first line (`# Title`) is the topic name; the part before ` – ` is the short name on the chips.
 - Write "ss" not "ß" (the word list and lessons stay Swiss; the German variant is made when something is shown), own words, no scanned pages.
 
+## A1–B1 communicative curriculum
+
+The app loads every ordered curriculum unit from `content/lektion-a1-*.md`, `lektion-a2-*.md` and
+`lektion-b1-*.md` (currently 48 units: 16 per CEFR level). The setup screen shows only units for the selected
+level. `lib/content.js` also exposes each lesson's learning objective, situation, rule and
+communicative transfer task to the tutor and coach; the complete Markdown lesson stays the source
+of truth.
+
+The tutor uses lesson examples as reference patterns, then varies the people, place, purpose and
+exercise form. Sessions move from a meaningful situation through guided practice to short
+independent production and a natural follow-up. Feedback judges communicative meaning first,
+accepts natural alternatives and keeps the existing error categories and score contract.
+
+Run `npm run check:curriculum` to verify every unit, level filtering, A1/A2/B1 mock sessions,
+curriculum context, deterministic variation, final-question completion, and both Standard German
+variants.
+
 ## Swiss or German Hochdeutsch
+These are two Standard German options, not dialect. The default is Swiss Standard German
+(Schweizer Hochdeutsch: Spital, Velo, parkieren and `ss`); German Standard German is optional.
+
 The setup screen's choice (`variant` = `ch` | `de`) is sent with every `/api/chat` request and checked on the
 server (anything else = `ch`). Everything that differs lives in `lib/variants.js`:
 - **Spelling**: `toVariant(text, variant)`. Swiss = `ss`, never `ß`. German = `ß` only in a list of words
