@@ -487,7 +487,8 @@ const en = {
   coachErr_timeout: 'The coach took too long. Please try again.',
   coachErr_auth: 'Please log in again.',
   coachErr_bad_code: 'The class code is not valid any more. Please enter it again in a Sparring session.',
-  coachErr_config: 'The coach is not set up on the server yet.',
+  coachErr_config: 'The AI key or model name on the server is wrong. Please check the AI key and the model name in the server settings.',
+  coachErr_data: 'Your goals and numbers could not be loaded right now. Please try again.',
   coachErr_network: 'No connection. Please check your internet and try again.',
   coachErr_server: 'Your coach is not available right now. Please try again.',
 };
@@ -929,7 +930,8 @@ const de = {
   coachErr_timeout: 'Der Coach hat zu lange gebraucht. Bitte versuche es nochmal.',
   coachErr_auth: 'Bitte melde dich neu an.',
   coachErr_bad_code: 'Der Klassen-Code stimmt nicht mehr. Bitte gib ihn in einer Sparring-Sitzung neu ein.',
-  coachErr_config: 'Der Coach ist auf dem Server noch nicht eingerichtet.',
+  coachErr_config: 'Der KI-Schlüssel oder der Modellname auf dem Server ist falsch. Bitte prüfe den KI-Schlüssel und den Modellnamen in den Server-Einstellungen.',
+  coachErr_data: 'Deine Ziele und Zahlen konnten gerade nicht geladen werden. Bitte versuche es nochmal.',
   coachErr_network: 'Keine Verbindung. Bitte prüfe dein Internet und versuche es nochmal.',
   coachErr_server: 'Dein Coach ist gerade nicht erreichbar. Bitte versuche es nochmal.',
 };

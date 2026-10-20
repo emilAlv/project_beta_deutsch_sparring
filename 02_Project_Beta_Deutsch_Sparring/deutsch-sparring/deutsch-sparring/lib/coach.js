@@ -18,7 +18,9 @@ import {
 
 export const MAX_MESSAGES = 30; // coach messages kept per student
 export const MAX_TEXT = 1200;
-export const MAX_CHANGES = 8;
+export const MAX_CHANGES = 8; // the one number: the prompt (lib/coach-prompt.js) and cleanPlan use it
+// added to the message when the model proposed plan changes that could not be read (cut off or invalid)
+export const PLAN_UNREADABLE_NOTE = 'I also wanted to propose changes to your plan, but I could not put them together. Ask me again and I will try once more.';
 export const MAX_QUICK = 3;
 const ACTIONS = ['add', 'move', 'remove'];
 const PLAN_STATUS = ['open', 'applied', 'kept', 'replaced'];
@@ -155,13 +157,22 @@ export function normalizeCoach(raw, { topics, goals, today }) {
   if (!isObj(raw)) return null;
   const message = clipLines(raw.message, MAX_TEXT);
   if (!message) return null;
+  const planChanges = cleanPlan(raw.planChanges, goals, today);
   return {
-    message,
+    message: !planChanges && isObj(raw.planChanges) ? withPlanNote(message) : message,
     suggestedSession: cleanSuggestion(raw.suggestedSession, topics),
-    planChanges: cleanPlan(raw.planChanges, goals, today),
+    planChanges,
     quickReplies: cleanQuick(raw.quickReplies),
   };
 }
+
+// The model proposed plan changes but none could be used: say so instead of silently showing no Apply box.
+export function withPlanNote(message) {
+  return `${message.slice(0, MAX_TEXT - PLAN_UNREADABLE_NOTE.length - 2)}\n\n${PLAN_UNREADABLE_NOTE}`;
+}
+
+// A cut-off answer text: did the model start proposing plan changes (planChanges: { … )?
+export const startsPlanChanges = (text) => /"planChanges"\s*:\s*\{/.test(String(text || ''));
 
 // ---------- saved messages ----------
 // One saved message: { id, role: 'coach'|'student', text, at (ms), auto?, suggestion?, plan?: { goalId, changes, status }, quick? }

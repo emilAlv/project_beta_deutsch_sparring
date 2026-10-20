@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "node scripts/run-checks.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

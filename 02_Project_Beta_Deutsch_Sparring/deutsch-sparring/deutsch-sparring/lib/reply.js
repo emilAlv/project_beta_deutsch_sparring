@@ -134,13 +134,17 @@ export function parseModelJson(text) {
 }
 
 // Broken JSON (e.g. cut off): try to rescue at least the "message" text.
+// Also works when the answer stops inside the message (no closing quote).
 export function salvageMessage(text) {
-  const m = String(text || '').match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  const m = String(text || '').match(/"message"\s*:\s*"((?:[^"\\]|\\[\s\S])*)("?)/);
   if (!m) return null;
+  let body = m[1];
+  if (!m[2]) body = body.replace(/\\(u[0-9a-fA-F]{0,3})?$/, ''); // cut inside an escape like \u00
   try {
-    return JSON.parse(`"${m[1]}"`);
+    const out = JSON.parse(`"${body}"`);
+    return out.trim() ? out.trim() : null;
   } catch {
-    return m[1];
+    return body.trim() ? body : null;
   }
 }
 

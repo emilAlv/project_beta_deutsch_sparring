@@ -107,6 +107,15 @@ survives a reload. Home shows (`components/Home.js`):
    | `CLASS_CODE` | a code for your classmates, e.g. `schritte5` (optional, case-sensitive) |
 5. Click **Deploy**. After ~1 minute you get a link like `deutsch-sparring.vercel.app`.
 
+The coach has three optional settings of its own, so it can think harder than the tutor without
+changing the tutor: `COACH_MODEL` lets the coach use a stronger model, e.g. a Pro model on a paid plan
+(default: the same as `GEMINI_MODEL`); `COACH_FALLBACK_MODEL` is the model it switches to when the first
+one is busy (default `gemini-3.5-flash` if `COACH_MODEL` is another model, never a "lite" model);
+`COACH_THINKING` is how long it thinks before answering: `low`, `medium` (default) or `high`. More thinking
+means better plans but slower answers. If a model does not accept the setting, the app retries without it.
+`GEMINI_TEMPERATURE` (optional) overrides the randomness setting; by default Gemini 3.x models use Google's
+own default, because lower values can make them loop.
+
 Optional variables: `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_FALLBACK_MODEL`
 (default `gemini-3.5-flash-lite`), `DAILY_LIMIT` (messages per student per day, default 150 – counted
 per browser, so a whole class on one school network is not locked out; only wrong class codes count as tries),
@@ -250,4 +259,12 @@ opens the setup screen (*Cancel* goes back to the running session).
 Accounts locally without a database: add `AUTH_MEMORY=1` and `SESSION_SECRET=test` to
 `.env.local` (users live in memory until the server stops).
 
-Before pushing: `npm run build` must pass, otherwise Vercel fails too.
+Before pushing: run `npm test` (it runs every `scripts/check-*.mjs`, plain node, no extra packages) and
+`npm run build`; both must pass, otherwise Vercel fails too.
+`scripts/check-gemini.mjs` tests the AI safety nets with a fake Gemini (empty or cut-off answer, a rejected
+setting, busy model, timeout, wrong key) and the answer cleaning in `lib/reply.js`, so no real key is needed.
+
+How the AI calls recover (`lib/gemini.js`): an empty, blocked or cut-off answer is retried once without
+thinking, then the backup model answers; a busy or slow model goes straight to the backup. A wrong key or
+model name shows "The AI key or model name on the server is wrong" instead of "not available". The small grey
+detail under a coach error is short and generic (e.g. "AI: cut off", "AI 503"), never raw AI or database text.
