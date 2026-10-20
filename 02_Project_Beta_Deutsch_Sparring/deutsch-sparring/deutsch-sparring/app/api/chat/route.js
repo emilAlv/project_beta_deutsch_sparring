@@ -10,6 +10,7 @@ import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
 } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
+import { isNearDuplicateExercise, normalizeExerciseLine } from '../../../lib/novelty';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
 import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
@@ -163,9 +164,24 @@ async function handle(req) {
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;
   try {
-    text = process.env.MOCK === '1'
-      ? await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null })
-      : await askGemini();
+    if (process.env.MOCK === '1') {
+      text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null });
+    } else {
+      text = await askGemini();
+      const firstDraft = parseModelJson(text);
+      if (repeatsEarlierExercise(firstDraft)) {
+        const rejected = String(firstDraft?.exercise?.line || '').slice(0, 300);
+        text = await askGemini(`
+
+NOVELTY RETRY
+The first draft below was rejected because it repeats or closely paraphrases an earlier exercise:
+<rejected-draft>${rejected}</rejected-draft>
+Keep the same target word, grammar point, level and question number, but create a genuinely different task. Change at least three of: setting, speaker, relationship, purpose, speech act, main verb and sentence structure. Do not reuse the rejected line. Return the complete JSON response again.`);
+        if (repeatsEarlierExercise(parseModelJson(text))) {
+          throw Object.assign(new Error('Gemini repeated an earlier exercise twice.'), { status: 'novelty' });
+        }
+      }
+    }
   } catch (e) {
     console.error('Tutor failed:', e.status, e.message);
     if (e.status === 429) {
@@ -173,10 +189,21 @@ async function handle(req) {
     }
     if (e.status === 504) return fail('Der Tutor hat zu lange gebraucht. Bitte versuche es nochmal.', 504, 'timeout');
     if (e.status === 'config') return fail(e.message, 500, 'config');
+    if (e.status === 'novelty') return fail('Der Tutor konnte gerade keine neue Aufgabe formulieren. Bitte versuche es nochmal.', 502, 'novelty');
     return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
   }
 
-  async function askGemini() {
+  function repeatsEarlierExercise(candidate) {
+    const line = candidate?.exercise?.line;
+    if (!line) return false;
+    const repeatsOpenWithoutFeedback = session.openLine
+      && !candidate.feedback
+      && normalizeExerciseLine(line) === normalizeExerciseLine(session.openLine);
+    if (repeatsOpenWithoutFeedback) return false;
+    return isNearDuplicateExercise(line, [...asked, session.openLine, session.skippedLine]);
+  }
+
+  async function askGemini(extraInstruction = '') {
     if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY fehlt auf dem Server.'), { status: 'config' });
 
     // Gemini wants user and model turns to alternate: two student messages in a row (after an
@@ -208,7 +235,7 @@ async function handle(req) {
       guessed,
       asked,
     });
-    return generate({ system, contents: recent, schema: RESPONSE_SCHEMA, deadline });
+    return generate({ system: `${system}${extraInstruction}`, contents: recent, schema: RESPONSE_SCHEMA, deadline });
   }
 
   // --- turn it into clean data for the screen ---

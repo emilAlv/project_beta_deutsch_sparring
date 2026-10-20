@@ -8,6 +8,7 @@ const T = await import('../lib/word-tasks.js');
 const D = await import('../lib/declension.js');
 const G = await import('../lib/grammar.js');
 const R = await import('../lib/reply.js');
+const N = await import('../lib/novelty.js');
 const { readFileSync } = await import('node:fs');
 
 let failed = 0;
@@ -136,11 +137,27 @@ eq('Missing private answer drops hint safely', R.normalizeReply(rawReply('Achte 
 eq('ss/ß cannot bypass hint safety', R.normalizeReply(rawReply('Lösung: die grosse Strasse.', 'die große Straße'), replyCtx).exercise.hint, null);
 check('Private answer is absent from normalized exercise', !Object.hasOwn(R.normalizeReply(rawReply(null, 'das kleine Baby'), replyCtx).exercise, 'answer'));
 
+// ---- live exercise novelty gate ----
+eq('Novelty normalizes punctuation and ss/ß', N.normalizeExerciseLine('Grüsse, die Strasse!'), 'grusse die strasse');
+check('Novelty rejects an exact prior exercise', N.isNearDuplicateExercise(
+  'In der Praxis untersucht die Ärztin das kleine Baby.',
+  ['In der Praxis untersucht die Ärztin das kleine Baby.']
+));
+check('Novelty rejects a light template paraphrase', N.isNearDuplicateExercise(
+  'Ergänze die Endung: Ich sehe die ___ (neu) Frau.',
+  ['Ergänze die Endung: Ich sehe den ___ (alt) Mann.']
+));
+check('Novelty allows a genuinely different situation', !N.isNearDuplicateExercise(
+  'Am Bahnhof fragt Samira nach dem nächsten Zug.',
+  ['In der Praxis untersucht die Ärztin das kleine Baby.']
+));
+
 // ---- production prompt regression ----
 const promptSource = readFileSync(new URL('../lib/prompt.js', import.meta.url), 'utf8');
 check('Prompt removes old disconnected noun template', !promptSource.includes('Bilde einen Satz: der Schrank + alt'));
 check('Prompt removes generic brauchen example', !promptSource.includes('Ich brauche den alten Schrank'));
-check('Prompt requires creative, non-repeating contexts', promptSource.includes('CREATIVE VARIATION') && promptSource.includes('exclusion list'));
+check('Prompt requires creative, non-repeating contexts', promptSource.includes('CREATIVE VARIATION') && promptSource.includes('exclusion list') && promptSource.includes('VARY THE TASK'));
+check('Prompt removes remaining stock carrier sentences', !promptSource.includes('Ich möchte dem Freund helfen') && !promptSource.includes('Ich sehe den ___ (alt) Mann'));
 check('Prompt requires a private answer for hint safety', promptSource.includes('private exercise.answer'));
 
 const fahren = { id: 'f', type: 'verb', de: 'abbiegen', perfekt: 'ist abgebogen', case: 'in + Akk' };
