@@ -102,6 +102,14 @@ survives a reload. Home shows (`components/Home.js`):
   plan change). The last 30 messages are saved per student: table `coach_messages` with an account
   (`lib/coach-store.js`, route `/api/coach/messages`; memory with `AUTH_MEMORY=1`), `wort_coach` in the browser without.
   `node scripts/check-coach.mjs` checks the cleaning and the plan maths.
+  Review R15: with a plan, every suggested session is tied to a milestone. The model only names a milestone id from
+  "NEXT UP" in its context; `milestoneSuggestion` (`lib/coach-goal.js`) lets only the Home "Next up" milestone (or one of its
+  "other" milestones) through, otherwise it uses "Next up", and the settings come from `sessionForMilestone`. "Set up this
+  session" only prefills the setup screen. Plan changes are `planChanges` (name, end date, minutes, focus part, cut): the server
+  turns them into checked changes with `replan`, the card shows before → after and the finish date, and Apply checks again
+  (an exam end date and reached milestones never move; old-format cards show as "replaced"). A goal saved or a session
+  that ended adds a short local line (no AI call). The Coach is an old-school boxing coach, kept light (at most one boxing
+  phrase per message, not in every message). Not done yet: the review mode for due words in the word picker.
 - Where it lives: with an account the goals are in the database (tables `goals` + `milestones`,
   `lib/goals-store.js`, route `/api/goals`) and the numbers come from `GET /api/stats` (summed up in SQL over the
   last 30 days – the browser never gets all answers). Without accounts the goals, the word scores and a small

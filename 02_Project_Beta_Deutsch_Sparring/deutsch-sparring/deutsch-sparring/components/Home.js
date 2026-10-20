@@ -429,6 +429,8 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
           topics={topics}
           today={today}
           starter={starter}
+          lastSession={sessions.find((x) => x.answered > 0)}
+          running={running}
           onSetup={onSetupSuggested}
           onAcceptGoal={acceptGoal}
           onFix={fixGoal}

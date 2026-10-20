@@ -38,15 +38,18 @@ const nearestStep = (n) => {
 // (messages read back from storage: the setup screen checks the values again anyway).
 export function cleanSuggestion(raw, topics = null) {
   if (!isObj(raw)) return null;
-  const topicId = clip(raw.topicId, 160);
-  if (!topicId || topicId === 'free') return null;
+  const milestoneId = cleanGoalId(raw.milestoneId) || null; // a suggestion tied to a plan milestone (R15)
+  const topicId = clip(raw.topicId, 160) || null;
+  if (topicId === 'free' || (!topicId && !milestoneId)) return null;
   let kind = KINDS.includes(raw.kind) ? raw.kind : 'vocab';
   let topicLevel = null; // a grammar topic belongs to one level: the suggestion uses it
-  if (topics) {
+  if (topics && topicId) {
     const topic = topics.find((x) => x.id === topicId);
-    if (!topic) return null;
-    kind = topic.type === 'Wortschatz' ? 'vocab' : 'grammar';
-    if (kind === 'grammar' && topic.levels?.length === 1) topicLevel = topic.levels[0];
+    if (!topic && !milestoneId) return null;
+    if (topic) {
+      kind = topic.type === 'Wortschatz' ? 'vocab' : 'grammar';
+      if (kind === 'grammar' && topic.levels?.length === 1) topicLevel = topic.levels[0];
+    }
   }
   const grammar = Array.isArray(raw.grammar) ? GRAMMAR_POINTS.filter((g) => raw.grammar.includes(g)) : [];
   return {
@@ -56,6 +59,11 @@ export function cleanSuggestion(raw, topics = null) {
     difficulty: DIFFICULTIES.includes(raw.difficulty) ? raw.difficulty : 'medium',
     questions: nearestStep(Math.round(Number(raw.questions))),
     grammar: kind === 'vocab' ? grammar : [],
+    ...(milestoneId ? {
+      milestoneId,
+      title: clip(raw.title, 120),
+      ...(SOURCE_CHOICES.includes(raw.source) ? { source: raw.source } : {}),
+    } : {}),
   };
 }
 
@@ -117,6 +125,8 @@ export function cleanLever(raw) {
   if (isDay(r.endDate)) out.endDate = r.endDate;
   const cut = cutsOf(r.cut);
   if (cut.length) out.cut = cut;
+  const focus = (Array.isArray(r.focus) ? r.focus : []).map(cleanGoalId).filter(Boolean).slice(0, 8);
+  if (focus.length) out.focus = [...new Set(focus)];
   return out;
 }
 
@@ -183,6 +193,8 @@ export function cleanStoredPlan(raw) {
   return {
     goalId, ...(label ? { label } : {}), levers, changes, more: int(raw.more, 0, 9999) ?? 0, fits: raw.fits !== false,
     needsUntil: dayOrNull(raw.needsUntil), status: PLAN_STATUS.includes(raw.status) ? raw.status : 'open',
+    // the end-date effect: when the plan finishes before and after, and the goal's own end date (the exam date for an exam)
+    finishBefore: dayOrNull(raw.finishBefore), finishAfter: dayOrNull(raw.finishAfter), endDate: dayOrNull(raw.endDate),
   };
 }
 
@@ -200,7 +212,8 @@ export function normalizeCoach(raw, { topics, actions = null }) {
   if (actions?.note) message = withPlanNote(message, actions.note);
   return {
     message,
-    suggestedSession: cleanSuggestion(raw.suggestedSession, topics),
+    // with a plan the server has already tied the suggestion to a milestone (lib/coach-goal.js milestoneSuggestion)
+    suggestedSession: cleanSuggestion(actions && 'suggestion' in actions ? actions.suggestion : raw.suggestedSession, topics),
     goalProposal: actions?.goalProposal || null,
     planChanges: actions?.planChanges || null,
     quickReplies: cleanQuick(raw.quickReplies),

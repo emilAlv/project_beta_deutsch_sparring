@@ -29,6 +29,7 @@ import { t } from '../lib/ui-text';
 import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
 import { suggestionToSetup } from '../lib/coach';
+import { setupFromSession } from '../lib/home-plan';
 import { score, summaryOf } from '../lib/stats';
 import { mergeQuestions, recentQuestions, sessionQuestions } from '../lib/question-history';
 import {
@@ -431,7 +432,7 @@ export default function Home() {
 
   // the coach's suggestion: the setup screen opens with these choices filled in (the rest stays as remembered)
   function openSetupSuggested(suggestion) {
-    const patch = suggestionToSetup(suggestion, topicsRef.current);
+    const patch = suggestion.milestoneId ? setupFromSession(suggestion, topicsRef.current) : suggestionToSetup(suggestion, topicsRef.current);
     if (patch) setPrefs({ setup: sanitizeSetup({ ...prefsRef.current.setup, ...patch }) });
     openSetup();
   }

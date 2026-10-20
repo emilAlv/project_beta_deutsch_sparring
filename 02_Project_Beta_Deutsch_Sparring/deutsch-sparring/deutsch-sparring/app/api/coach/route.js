@@ -5,7 +5,7 @@ import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { requireUser } from '../../../lib/auth';
 import { fail, reasonCode, replyShape, readJsonBody } from '../../../lib/route-guard';
 import { homeData, planContext } from '../../../lib/home-data';
-import { goalActions, NOTES } from '../../../lib/coach-goal';
+import { goalActions, milestoneSuggestion, NOTES } from '../../../lib/coach-goal';
 import { todayKey } from '../../../lib/goals';
 import { COACH_SCHEMA, buildCoachPrompt, coachContext, GREETING_TURN, pickToday } from '../../../lib/coach-prompt';
 import { normalizeCoach, turnsForModel, withPlanNote, startsPlanChanges } from '../../../lib/coach';
@@ -124,6 +124,10 @@ async function handle(req) {
       console.error('coach: plan could not be built:', e?.message);
       actions = { goalProposal: null, planChanges: null, note: NOTES.default };
     }
+  }
+  // with a plan, a suggested session is always tied to a milestone that Home also shows (unknown id → "Next up")
+  if (home.nextUp && parsed && typeof parsed === 'object') {
+    actions = { goalProposal: null, planChanges: null, note: '', ...(actions || {}), suggestion: parsed.suggestedSession ? milestoneSuggestion(parsed.suggestedSession, home) : null };
   }
   const coach = normalizeCoach(parsed, { topics, actions });
   if (coach) return Response.json({ coach });
