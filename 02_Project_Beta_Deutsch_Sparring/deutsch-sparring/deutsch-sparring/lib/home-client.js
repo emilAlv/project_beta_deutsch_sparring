@@ -3,7 +3,7 @@
 //   accounts off goals live in localStorage (lib/storage.js); the browser sends a compact copy of its goals,
 //                word scores and answer log to POST /api/stats, which only calculates (nothing is stored there)
 import {
-  usesServer, loadGoalsLocal, saveGoalLocal, deleteGoalLocal, loadScores, loadAnswerLog, progressSaved,
+  usesServer, loadGoalsLocal, saveGoalLocal, deleteGoalLocal, loadScores, loadAnswerLog, loadRuleLog, progressSaved,
 } from './storage';
 import { postNow } from './progress-client';
 
@@ -12,7 +12,7 @@ import { postNow } from './progress-client';
 export function localNumbers() {
   const scores = {};
   for (const [id, rec] of Object.entries(loadScores())) scores[id] = [rec?.v?.s ?? 1, rec?.g?.s ?? null];
-  return { goals: loadGoalsLocal(), scores, log: loadAnswerLog() };
+  return { goals: loadGoalsLocal(), scores, log: loadAnswerLog(), rulelog: loadRuleLog() };
 }
 
 // → { goals, tiles, progress, strengths, gaps } or null when the server could not be reached

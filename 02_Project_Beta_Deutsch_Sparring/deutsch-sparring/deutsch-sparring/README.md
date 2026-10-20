@@ -97,6 +97,13 @@ survives a reload. Home shows (`components/Home.js`):
   last 30 days – the browser never gets all answers). Without accounts the goals, the word scores and a small
   log of the last answers are in the browser (`wort_goals`, `wort_answerlog`) and `POST /api/stats` only
   calculates from what the browser sends (nothing is stored there). `node scripts/check-goals.mjs` checks the maths.
+- A topic on every answer (review R9): each saved answer has a `topic_id` – the session's own topic in a grammar
+  session (curriculum topic or situation lesson), otherwise the lowest-level curriculum topic that lists the answer's
+  rule (`topicForRule` in `lib/rules.js`). The migration adds the column and an index and fills in old answers
+  (safe to run again, nothing is deleted). `progress().grammarStats(userId)` gives the last 40 counted answers per
+  topic (skip = wrong, hint = 0.5, "Leicht" left out; `lib/grammar-stats.js`); `/api/stats` returns it as
+  `grammarStats`. Without an account the browser keeps `wort_rulelog` and sends it as `rulelog` with the POST.
+  `node scripts/check-plan.mjs` checks all of this.
 
 ## Deploy (first time, ~15 minutes)
 
