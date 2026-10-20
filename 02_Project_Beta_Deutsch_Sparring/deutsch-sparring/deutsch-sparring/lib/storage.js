@@ -22,12 +22,13 @@ const KEYS = {
   alog: 'wort_answerlog', // the last answers (compact) for the Home page's 30-day stats; with an account the server has them
   coach: 'wort_coach', // [message, …] – the last 30 coach messages (lib/coach.js); with an account they live on the server
   coachTry: 'wort_coachtry', // { day } – the day the coach was last asked to greet by itself (at most one automatic call a day)
+  zoom: 'wort_zoom', // { level, goalId, partId, milestoneId } – how far the Home plan is zoomed in (lib/home-plan.js cleanZoom)
   scores: 'wort_scores', // { [wordId]: { v, g, last } } – the word scores (lib/scores.js); with an account they live on the server
 };
 
 // With accounts, the conversation and the session history are kept per username, so two
 // students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
-const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog', 'rulelog', 'coach', 'coachTry']);
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog', 'rulelog', 'coach', 'coachTry', 'zoom']);
 let account = '';
 const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
 
@@ -197,6 +198,8 @@ export const saveCoachLocal = (messages) => {
 export const coachTriedDay = () => read('coachTry', {}).day || null;
 export const setCoachTriedDay = (day) => write('coachTry', { day });
 
+export const loadZoom = () => read('zoom', null);
+export const saveZoom = (z) => write('zoom', z);
 export const loadProfile = () => read('profile', {});
 export const saveProfile = (p) => write('profile', p);
 export const loadPrefs = () => read('prefs', {});

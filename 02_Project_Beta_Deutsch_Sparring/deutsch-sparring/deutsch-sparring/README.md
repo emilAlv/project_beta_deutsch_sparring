@@ -58,6 +58,16 @@ this». Hint, rule, skip and stop still work in the chat (and as chips above the
 lands on *Home*; the header menu switches between *Home* and *Sparring*, and *Start Sparring →* opens
 the setup screen. A running session is kept while the student looks at Home (*Continue session*) and
 survives a reload. Home shows (`components/Home.js`):
+- **Home with plans (R13, `components/HomePlan.js`, `lib/home-plan.js`).** Top to bottom: a hero line (on track and what is next, or how many
+  milestones are late), **Next up** (the Coach's next milestone with its live count and due date; *Practise this* opens the setup
+  screen filled in through `sessionForMilestone`, everything stays free to change; *Other milestone* lists the next three), goal cards with
+  one row per part, **Your plan** (zoom: overview with every goal on one line and its parts as segments with a *Today* marker → one
+  part with its milestones and dates → one milestone with the words still missing, the last 20 answers on the topic and *Practise this*;
+  breadcrumb buttons, Escape zooms out, the level is kept in the browser and survives a reload), strengths and gaps (each row names its
+  milestone or says "Not in your plan"), the tiles and recent sessions. Without a goal there is one card, *Tell the Coach your goal*;
+  the plan and the tiles stay hidden until there is a goal or a first session. Exam milestones (mock exams, Schreiben/Sprechen) are
+  ticked on the milestone view, with optional points (`PATCH /api/goals`; without accounts in the browser). `/api/stats` adds `nextUp`,
+  `sessions`, `missing` and `recent`. Old-style goals keep their old bar and timeline until they are converted. Checks: `scripts/check-home-plan.mjs`.
 - **Four tiles** for the last 30 days: sessions, questions answered (+ % right), words learnt (V score
   8–10 of all words) and the streak.
 - **Goals** (type exam / vocabulary / grammar, level, start and end date, optionally the word section / list

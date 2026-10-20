@@ -11,7 +11,8 @@ import { cleanPlan, upgradeGoal } from './plan-templates';
 import { computePlans, applyReached } from './plan-progress';
 import { grammarStatsFromLog, slimStats } from './grammar-stats';
 import { computeHome, aggregateAnswers, answersFromLog, scoresFromCompact } from './home-stats';
-import { getWords, listSections } from './words';
+import { getWords, getWord, listSections } from './words';
+import { homeExtras } from './home-plan';
 
 // What the plan generator (lib/plan-templates.js) needs for one student: the word list, the word scores and the
 // per-topic grammar counts (review R10). Used by /api/plan and, from R12, by the Coach. Stores nothing.
@@ -52,6 +53,15 @@ function plansFor(goals, { scores, grammarStats, today, lastPractice }) {
   return computePlans({ goals, words: getWords(), scores, grammarStats, today, lastPractice });
 }
 
+// "der Schrank – wardrobe": how a missing word is shown on Home
+function wordLabel(id) {
+  const w = getWord(id);
+  if (!w) return id;
+  const de = [w.article, w.type === 'noun' && w.noun ? w.noun : w.de].filter(Boolean).join(' ');
+  return w.en ? `${de} – ${w.en}` : de;
+}
+const extrasFor = (goals, plans, today, grammarStats) => homeExtras(goals, plans, today, { grammarStats, wordLabel });
+
 export async function homeData(user, body) {
   // the browser's own day when it is at most one day from the server's (time zones), as in /api/plan
   const server = todayKey();
@@ -65,7 +75,8 @@ export async function homeData(user, body) {
     await Promise.all(Object.entries(newlyReached).map(([goalId, ids]) => goalsStore().markReached(user.id, goalId, ids, today)
       .catch((e) => console.error('markReached failed:', e?.message))));
     const upgrades = upgradesFor(goals, { words: getWords(), sections: listSections(), today, scores, grammarStats });
-    return { goals: goals.map((g) => applyReached(g, newlyReached[g.id], today)), ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades };
+    const shown = goals.map((g) => applyReached(g, newlyReached[g.id], today));
+    return { goals: shown, ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades, ...extrasFor(shown, plans, today, grammarStats) };
   }
   const goals = (Array.isArray(body?.goals) ? body.goals : []).slice(0, MAX_GOALS).map(cleanAnyGoal).filter(Boolean);
   const agg = aggregateAnswers(answersFromLog(body?.log));
@@ -75,5 +86,5 @@ export async function homeData(user, body) {
   const lastPractice = Math.max(0, ...(Array.isArray(body?.log) ? body.log : []).map((e) => Number(e?.t) || 0));
   const { plans, newlyReached } = plansFor(goals, { scores, grammarStats, today, lastPractice });
   const upgrades = upgradesFor(goals, { words: getWords(), sections: listSections(), today, scores, grammarStats });
-  return { goals, ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades };
+  return { goals, ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades, ...extrasFor(goals, plans, today, grammarStats) };
 }
