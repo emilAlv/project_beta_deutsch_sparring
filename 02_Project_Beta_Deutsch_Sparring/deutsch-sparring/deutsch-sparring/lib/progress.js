@@ -62,6 +62,10 @@ export function cleanEntry(raw, fallbackTime = Date.now()) {
       .map((question) => text(question, 500))
       .filter(Boolean)
       .slice(-50),
+    wordIds: (Array.isArray(e.wordIds) ? e.wordIds : [])
+      .map((id) => text(id, 120))
+      .filter(Boolean)
+      .slice(0, 60),
     mistakes: (Array.isArray(e.mistakes) ? e.mistakes : []).slice(0, 5).map((m) => ({
       studentAnswer: text(m?.studentAnswer, 200),
       corrected: text(m?.corrected, 200),
@@ -406,3 +410,4 @@ const dbStore = {
 };
 
 export const progress = () => (databaseUrl() ? dbStore : memoryStore);
+
