@@ -23,6 +23,10 @@ import { addDays, dayNum, dayOf, isDay, newGoalId, cleanGoalId, GOAL_LEVELS } fr
 import { curriculumEntry, curriculumByLevel, planOrder, shortTitle, topicThreshold } from './curriculum.js';
 import { vScore } from './scores.js';
 import {
+  LEARNT_FROM, CHUNK_REACHED, SOLID_ANSWERS, INTRODUCED_ANSWERS, lessonDone, topicMet, lastPoints, isLearnt as learnt,
+  wordMatches, chunkWords, SEP,
+} from './plan-progress.js';
+import {
   PLAN_VERSION, TEMPLATE_IDS, MINUTES_PER_DAY, DEFAULT_MINUTES, MAX_PARTS, MAX_PART_MILESTONES, MAX_SPAN_DAYS,
   cleanPlanGoal, milestoneId, isReached, allMilestones,
 } from './plan.js';
@@ -45,19 +49,10 @@ export const NEW_TOPICS_PER_WEEK = 1; // never two new topics reaching solid in 
 export const REVIEW_TOPICS_PER_WEEK = 2;
 export const FOCUS_EXTRA = 0.15; // the "focus" lever moves this share of the week to the part that is behind
 export const MAX_WEEKS = 520;
-// words (§2.3, D3)
-export const LEARNT_FROM = 8; // the same as lib/home-stats.js
-export const CHUNK_REACHED = 0.9;
+// words (§2.3) – the measuring rules (90 %, learnt from 8, solid, introduced …) live in lib/plan-progress.js
 export const CHUNK_MAX = 40;
 export const CHUNK_MIN = 8;
 export const CHUNK_PART = 25;
-// grammar (§2.4)
-export const SOLID_ANSWERS = 20;
-export const SOLID_DAYS = 2;
-export const INTRODUCED_ANSWERS = 10;
-export const INTRODUCED_PCT = 60;
-export const LESSON_DONE_ANSWERS = 10;
-export const LESSON_DONE_PCT = 60;
 export const LESSONS_PER_MILESTONE = 2;
 const DAY_MS = 86_400_000;
 
@@ -181,43 +176,8 @@ export function milestoneTitle(c) {
   }
 }
 
-// ---------- words of a chunk (§2.3) ----------
-const SOURCES_OF = { goethe: ['goethe-a1', 'goethe-a2', 'goethe-b1'], kurs: ['kurs'], both: null };
-const SEP = ' › ';
-function wordMatches(w, c) {
-  if (w.level !== c.level) return false;
-  const src = SOURCES_OF[c.sources];
-  if (src && !(w.sources || []).some((s) => src.includes(s))) return false;
-  if (!c.section) return true;
-  return (w.topics || []).some((t) => {
-    const [sec, lst] = String(t).split(SEP);
-    return sec === c.section && (!c.lists || c.lists.includes(lst));
-  });
-}
-const groupKey = (c) => `${c.level}|${c.section || '*'}|${(c.lists || []).join('+')}|${c.sources}`;
-
-// Each word belongs to ONE milestone per part: the first one in the part's milestone list (the claim order, which the
-// generator keeps). Parts of a split list share the list's words, sorted by id. Words added later join their chunk.
-export function chunkWords(subPlan, words) {
-  const claimed = new Set();
-  const groups = new Map();
-  const out = new Map();
-  for (const m of subPlan?.milestones || []) {
-    const c = m.criterion;
-    if (c?.kind !== 'words') continue;
-    const key = groupKey(c);
-    if (!groups.has(key)) {
-      const pool = (words || []).filter((w) => !claimed.has(w.id) && wordMatches(w, c)).map((w) => w.id).sort();
-      pool.forEach((id) => claimed.add(id));
-      groups.set(key, pool);
-    }
-    const pool = groups.get(key);
-    if (!c.part) out.set(m.id, pool);
-    else out.set(m.id, pool.slice(Math.floor(((c.part.i - 1) * pool.length) / c.part.n), Math.floor((c.part.i * pool.length) / c.part.n)));
-  }
-  return out;
-}
-
+// ---------- words of a chunk (§2.3): chunkWords lives in lib/plan-progress.js, re-exported here ----------
+export { chunkWords, LEARNT_FROM, topicMet, lessonDone };
 // the sections of the words, in the plan order; lists in the order of the Word file (ctx.sections) or by name
 function orderedSections(words, ctx, onlySection) {
   const fromCtx = new Map((ctx.sections || []).map((s) => [s.name, s.lists.map((l) => l.name)]));
@@ -316,17 +276,7 @@ function interleave(items, isBig) {
   return out;
 }
 
-// ---------- what is met now, what is left (the generator's view; R11 measures the same rules in plan-progress) ----------
-const daysOf = (recent) => new Set((recent || []).map((r) => Math.floor((Number(r[2]) || 0) / DAY_MS))).size;
-const lastPoints = (recent, n) => (recent || []).slice(-n).reduce((s, [ok, h]) => s + (ok ? (h ? 0.5 : 1) : 0), 0);
-export function topicMet(stats, target, threshold) {
-  if (!stats) return false;
-  if (target === 'introduced') return stats.n >= INTRODUCED_ANSWERS && stats.pct >= INTRODUCED_PCT;
-  return stats.n >= SOLID_ANSWERS && daysOf(stats.recent) >= SOLID_DAYS && lastPoints(stats.recent, SOLID_ANSWERS) >= (threshold / 100) * SOLID_ANSWERS;
-}
-export const lessonDone = (stats) => Boolean(stats && stats.n >= LESSON_DONE_ANSWERS && stats.pct >= LESSON_DONE_PCT);
-const learnt = (rec) => Boolean(rec) && vScore(rec) >= LEARNT_FROM;
-
+// ---------- what is met now, what is left (the rules are in lib/plan-progress.js; the generator only asks them) ----------
 // the work of one milestone → { minutes, newWords, newTopics, reviewTopics, size, unit, met }
 function workOf(m, goal, ctx, membership) {
   const c = m.criterion;

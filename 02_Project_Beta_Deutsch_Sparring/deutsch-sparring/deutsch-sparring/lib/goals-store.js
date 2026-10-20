@@ -13,6 +13,7 @@ import { sql, ensureSchema } from './db';
 import { MAX_GOALS } from './goals';
 import { PLAN_VERSION, withLegacyFields } from './plan';
 import { cleanPlan } from './plan-templates';
+import { applyReached } from './plan-progress';
 
 const isPlan = (goal) => goal?.version === PLAN_VERSION;
 // what a list returns for a new plan: the clean plan plus the fields the old Home code reads (until R13)
@@ -45,6 +46,12 @@ const memoryStore = {
   async remove(userId, id) {
     return box(userId).delete(id);
   },
+  async markReached(userId, goalId, ids, day) {
+    const g = box(userId).get(goalId);
+    if (!isPlan(g)) return false;
+    box(userId).set(goalId, applyReached(g, ids, day));
+    return true;
+  },
 };
 
 // ---------- Postgres (Neon) ----------
@@ -58,6 +65,23 @@ const UPSERT_PLAN = `INSERT INTO goals (id, user_id, type, level, title, start_d
     start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date, scope = EXCLUDED.scope, plan = EXCLUDED.plan
   RETURNING id`;
 export const UPSERT_PLAN_SQL = UPSERT_PLAN; // for scripts/check-plan.mjs
+
+// Latching (R11): set reachedAt on the named milestones, ONLY where it is still empty – one statement, so two runs at
+// the same time or the same run twice do no harm. Touches nothing else in the plan, and only a plan that has parts.
+// $1 user, $2 goal, $3 milestone ids, $4 the day.
+const MARK_REACHED = `UPDATE goals SET plan = jsonb_set(plan, '{subPlans}', COALESCE((
+    SELECT jsonb_agg(jsonb_set(sp, '{milestones}', COALESCE((
+      SELECT jsonb_agg(CASE WHEN (m->>'id') = ANY($3::text[]) AND (m->>'reachedAt') IS NULL
+                            THEN m || jsonb_build_object('reachedAt', $4::text) ELSE m END ORDER BY mo)
+      FROM jsonb_array_elements(sp->'milestones') WITH ORDINALITY AS ms(m, mo)
+    ), '[]'::jsonb)) ORDER BY so)
+    FROM jsonb_array_elements(plan->'subPlans') WITH ORDINALITY AS ps(sp, so)
+  ), '[]'::jsonb))
+  WHERE user_id = $1::uuid AND id = $2 AND jsonb_typeof(plan->'subPlans') = 'array'
+    AND EXISTS (SELECT 1 FROM jsonb_array_elements(plan->'subPlans') AS e(sp), jsonb_array_elements(e.sp->'milestones') AS f(m)
+                WHERE (f.m->>'id') = ANY($3::text[]) AND (f.m->>'reachedAt') IS NULL)
+  RETURNING id`;
+export const MARK_REACHED_SQL = MARK_REACHED; // for scripts/check-plan.mjs
 
 const dbStore = {
   async list(userId) {
@@ -115,6 +139,11 @@ const dbStore = {
       await sql().query(`INSERT INTO milestones (user_id, goal_id, id, due_date, title, target, status) VALUES ${values.join(', ')}`, params);
     }
     return true;
+  },
+  async markReached(userId, goalId, ids, day) {
+    await ensureSchema();
+    const rows = await sql().query(MARK_REACHED, [userId, goalId, ids, day]);
+    return rows.length > 0;
   },
   async remove(userId, id) {
     await ensureSchema();
