@@ -40,9 +40,29 @@ Kurze klare Hauptsätze, Anrede und Abschluss. «Leider» für Absage; «bitte»
 | 5 | Danke für ___ Nachricht. (dein) | deine | Lückentext |
 | 6 | Ich bin krank. Ich bleibe heute zu ___. | Hause | Lückentext |
 | 7 | Bilde einen Satz: bis bald / und / danke | Danke und bis bald! | Satzbau |
-| 8 | Finde den Fehler: Ich kann nicht heute kommen. | Ich kann heute nicht kommen. | Fehler finden |
+| 8 | Finde den Fehler: Ich kann komme heute nicht. | Ich kann heute nicht kommen. | Fehler finden |
 | 9 | Übersetze: Sorry, I am late. | Entschuldigung, ich bin spät dran. | Übersetzung |
 | 10 | Hallo Ben, kannst du mich bitte ___? (anrufen) | anrufen | Lückentext |
 
 ## Nicht verwenden (off-limits)
 Keine langen formellen Briefe und keine Begründungen mit obwohl.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Hallo Mia, kommst du heute zum Kurs?
+> B: Leider nicht. Ich bin krank.
+> A: Gute Besserung! Kommst du am Freitag?
+> B: Ja, hoffentlich. Danke!
+
+## Alltagsnaher Modelltext (fiktiv)
+SMS: «Hallo! Der Unterricht beginnt heute erst um 18.30 Uhr. Bis später, Lara».
+
+**Verstehen:** Wann beginnt der Unterricht heute?
+
+**Musterantwort:** Um 18.30 Uhr.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Schreibe eine Nachricht an deinen Sprachpartner: Du kommst heute zehn Minuten später.
+2. **Reaktion auf eine neue Information:** Er antwortet: «Kein Problem. Treffen wir uns vor dem Eingang?» Bestätige das.
+3. **Transfer:** Schreibe eine kurze Absage mit Entschuldigung und einem neuen Vorschlag.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

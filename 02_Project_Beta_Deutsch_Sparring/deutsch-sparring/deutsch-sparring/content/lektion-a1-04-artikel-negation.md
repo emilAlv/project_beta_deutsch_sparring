@@ -38,10 +38,30 @@ Der, die, das und ein/eine gehören zum Nomen. Kein verneint Nomen, nicht vernei
 | 4 | Das ist ___ Tasche, das ist ein Rucksack. (kein) | keine | Lückentext |
 | 5 | Die Lampe ist ___ alt. | nicht | Lückentext |
 | 6 | A: Ist das ein Buch? B: Nein, das ist ___ Buch. | kein | Lückentext |
-| 7 | Finde den Fehler: Die Fenster ist offen. | Das | Fehler finden |
+| 7 | Finde den Fehler: Die Fenster ist offen. | Das Fenster ist offen. | Fehler finden |
 | 8 | Bilde einen Satz: das / nicht / ist / teuer | Das ist nicht teuer. | Satzbau |
 | 9 | A: Wo ist der Schlüssel? B: Ich habe ___ Schlüssel. | keinen | Lückentext |
 | 10 | Übersetze: This is not a chair. | Das ist kein Stuhl. | Übersetzung |
 
 ## Nicht verwenden (off-limits)
 Keine Genitivdeklination und keine Passivformen.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Ist das dein Stift?
+> B: Nein, das ist kein Stift. Das ist ein Kugelschreiber.
+> A: Ist er neu?
+> B: Nein, er ist nicht neu.
+
+## Alltagsnaher Modelltext (fiktiv)
+Im Fundbüro liegen eine Brille, ein Schlüssel und zwei Taschen. Ein Handy liegt dort nicht.
+
+**Verstehen:** Gibt es im Fundbüro ein Handy?
+
+**Musterantwort:** Nein, es gibt kein Handy.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Du suchst dein Handy. Sage, was du hast und was dir fehlt.
+2. **Reaktion auf eine neue Information:** Die Person zeigt dir einen Schlüssel. Sage, dass das nicht dein Schlüssel ist.
+3. **Transfer:** Beschreibe drei Dinge auf deinem Tisch, eines davon verneint.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.

@@ -45,3 +45,23 @@ In Hauptsätzen steht die trennbare Vorsilbe am Ende: Ich stehe um sieben auf. M
 
 ## Nicht verwenden (off-limits)
 Keine trennbaren Infinitivgruppen mit zu.
+
+## Gesprächsmodell – Hören/Lesen als Text
+> A: Wann stehst du morgen auf?
+> B: Um sechs Uhr. Danach rufe ich meine Mutter an.
+> A: Kaufst du auch ein?
+> B: Ja, nach der Arbeit.
+
+## Alltagsnaher Modelltext (fiktiv)
+Notiz: «07.00 aufstehen; 08.15 abfahren; 17.30 einkaufen; 19.00 anrufen».
+
+**Verstehen:** Was passiert um 17.30 Uhr?
+
+**Musterantwort:** Einkaufen.
+
+## Kommunikative Aufgabe – vom Verstehen zum Handeln
+1. **Situation:** Erzähle deinen Morgen mit «aufstehen» und «losfahren».
+2. **Reaktion auf eine neue Information:** Dein Freund fragt: «Rufst du mich heute Abend an?» Antworte und nenne eine Uhrzeit.
+3. **Transfer:** Formuliere zwei Tätigkeiten für morgen mit einem Modalverb.
+
+**Feedbackkriterium:** Eine verständliche, zur Situation passende Antwort zählt zuerst. Gib bei kleinen Fehlern ein natürliches korrektes Modell, ohne die Kommunikation abzubrechen. Die Aufgaben sind für den Tutor flexibel variierbar; sie ersetzen nicht die Beispielübungen.
