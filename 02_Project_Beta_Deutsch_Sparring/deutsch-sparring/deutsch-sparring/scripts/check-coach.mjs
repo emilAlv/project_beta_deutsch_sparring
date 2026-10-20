@@ -353,5 +353,12 @@ check('stored: a saved milestone suggestion survives; an old topic one too', (()
   return m[0].suggestion.milestoneId === nu.milestoneId && m[1].suggestion.topicId === 'w:essen';
 })());
 
+check('replan: less time a day never pulls an open milestone earlier', (() => {
+  const g = T.cleanPlan(T.previewPlan({ template: 'vocab', level: 'A1', endDate: '2026-12-01', minutesPerDay: 30 }, ctx).goal);
+  const r = T.replan(g, ctx, today, { minutesPerDay: 15 });
+  const before = new Map(g.subPlans.flatMap((p) => p.milestones.map((m) => [m.id, m.date])));
+  return r.ok && r.goal.subPlans.every((p) => p.milestones.every((m) => !before.get(m.id) || !m.date || m.date >= before.get(m.id)));
+})());
+
 console.log(failed ? `\n${failed} check(s) failed.` : '\nAll coach checks passed.');
 process.exit(failed ? 1 : 0);
