@@ -104,6 +104,18 @@ survives a reload. Home shows (`components/Home.js`):
   topic (skip = wrong, hint = 0.5, "Leicht" left out; `lib/grammar-stats.js`); `/api/stats` returns it as
   `grammarStats`. Without an account the browser keeps `wort_rulelog` and sends it as `rulelog` with the POST.
   `node scripts/check-plan.mjs` checks all of this.
+- The plan generator (review R10, nothing on screen yet): a goal becomes **parts** (A1/A2/B1 vocabulary, A1/A2/B1
+  grammar & situations, exam practice) with **milestones** of real content – word chunks of a list, curriculum topics,
+  situation lessons (two per milestone), mock exams and Schreiben/Sprechen tasks. `lib/plan.js` is the shape and its
+  cleaning (a milestone stores only its criterion, never a title), `lib/plan-templates.js` the fixed rules: chunk rule,
+  topic order (`needs`, `TEACHING_ORDER`), pace (minutes a day → new words and topics a week, keeping learnt words costs
+  time), the 2-week exam buffer, "already solid", and the honest "doesn't fit" answer (`tight`: until when it would need,
+  what would be reached by the end, which fixes help). **Every goal, part and milestone name is made there** – the
+  Coach (R12) only calls `previewPlan({ template, endDate, minutesPerDay, startLevel, options })` and `replan(goal, …,
+  { minutesPerDay, endDate (never for an exam), focus, cut })`. Exam goals include the course-only words as a core
+  target (D2). `POST /api/plan` returns the preview and stores nothing. New plans are saved in `goals.plan` (jsonb, one
+  UPSERT that also checks the 12-goal limit); old goals keep their `milestones` rows until R12 converts them.
+  `node scripts/check-plan.mjs` proves it on the B1 example (Goethe B1, 20 Oct 2026 → 24 Apr 2027, 20 min a day).
 
 ## Deploy (first time, ~15 minutes)
 
@@ -260,8 +272,9 @@ all one list: `lib/curriculum.js`. To add or change a topic, edit that file (on 
 Each entry has: `id` (`g-a2-weil` style; never change an id students may have saved), `level` (A1 / A2 / B1),
 `title` (German; the part before ":" is the chip name), `titleEn`, `rule` (2–5 simple German sentences), `examples`
 (3–5 correct sentences; mark the key word with stars, optional hint after a bar: `Ich kaufe *einen|ein* Tisch.`),
-`exerciseIdeas` (2–3 lines), `ruleNames` (names for the stats, reuse `lib/grammar.js` RULES where they fit) and
-optionally `appNote`. Swiss spelling, never ß. Then run `node scripts/check-curriculum.mjs`.
+`exerciseIdeas` (2–3 lines), `ruleNames` (names for the stats, reuse `lib/grammar.js` RULES where they fit), `needs`
+(topics that must come first in a plan), `role` (`productive` = solid at 80 %, `receptive` = 70 %; optional
+`threshold`) and optionally `appNote`. A new topic also goes into `TEACHING_ORDER` (the plan order) in the same file. Swiss spelling, never ß. Then run `node scripts/check-curriculum.mjs`.
 - Setup shows only the topics of the chosen level (Level is chosen first). The old lesson files in `content/` stay as
   "More lessons" at their level (`lektion-01-dativ-akkusativ` is A2).
 - Coach: its CURRICULUM text and TOPIC CATALOG are built from this list. Tutor: `/api/chat` puts a generated lesson

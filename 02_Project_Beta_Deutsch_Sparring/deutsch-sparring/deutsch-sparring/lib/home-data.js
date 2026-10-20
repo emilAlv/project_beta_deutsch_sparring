@@ -8,6 +8,20 @@ import { goalsStore } from './goals-store';
 import { cleanGoal, MAX_GOALS } from './goals';
 import { grammarStatsFromLog, slimStats } from './grammar-stats';
 import { computeHome, aggregateAnswers, answersFromLog, scoresFromCompact } from './home-stats';
+import { getWords, listSections } from './words';
+
+// What the plan generator (lib/plan-templates.js) needs for one student: the word list, the word scores and the
+// per-topic grammar counts (review R10). Used by /api/plan and, from R12, by the Coach. Stores nothing.
+//  - logged in: scores and grammarStats from the database;
+//  - accounts off: from the browser's compact copy (body.scores, body.rulelog), like /api/stats.
+export async function planContext(user, body, today) {
+  const base = { words: getWords(), sections: listSections(), today };
+  if (user) {
+    const [scores, grammarStats] = await Promise.all([progress().scores(user.id), progress().grammarStats(user.id)]);
+    return { ...base, scores, grammarStats };
+  }
+  return { ...base, scores: scoresFromCompact(body?.scores), grammarStats: grammarStatsFromLog(body?.rulelog) };
+}
 
 export async function homeData(user, body) {
   if (user) {

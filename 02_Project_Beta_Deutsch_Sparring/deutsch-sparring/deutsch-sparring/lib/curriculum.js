@@ -5,6 +5,9 @@
 // Every entry has:
 //   id            "g-<level>-<name>", lower case, unique; never change an id that students may have saved
 //   level         "A1" | "A2" | "B1"
+//   needs         ids of the topics that must come first in a plan (review R10, redesign §2.2); [] = none
+//   role          'productive' (you write and say it yourself in the exam: solid = 80 % of the last 20 answers)
+//                 or 'receptive' (you must understand it, mostly in Lesen: 70 %). Optional threshold: overrides it.
 //   title         German, short; the text before ":" is the short name on the chips
 //   titleEn       short English name
 //   rule          2–5 plain sentences in simple German with the key forms (Swiss spelling: ss, never ß)
@@ -24,6 +27,7 @@ export const CURRICULUM = [
   // ---------------------------------------------------------------- A1
   {
     id: 'g-a1-artikel-plural', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Artikel und Plural: der, die, das', titleEn: 'Articles and plural',
     rule: 'Jedes Nomen hat ein Geschlecht: der (maskulin), die (feminin) oder das (neutral). Im Plural heisst der Artikel immer die: die Tische, die Lampen, die Bücher. Den Plural bildest du mit -e, -er, -(e)n, -s oder mit Umlaut (der Stuhl – die Stühle). Lerne jedes Nomen mit Artikel und Plural.',
     examples: [
@@ -38,6 +42,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-personalpronomen', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Personalpronomen: ich, du, er/sie/es', titleEn: 'Personal pronouns',
     rule: 'Die Personalpronomen im Nominativ sind ich, du, er, sie, es, wir, ihr, sie und Sie (höflich). Das Verb passt zum Pronomen: ich bin, du bist, er ist, wir sind, ihr seid, sie sind. Für Dinge sagst du er, sie oder es, je nach Artikel: der Tisch – er, die Lampe – sie, das Buch – es.',
     examples: [
@@ -52,6 +57,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-praesens', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Präsens: regelmässige Verben', titleEn: 'Present tense',
     rule: 'Im Präsens hängst du an den Verbstamm die Endung an: ich -e, du -st, er/sie/es -t, wir -en, ihr -t, sie/Sie -en (ich lerne, du lernst, er lernt). Einige Verben ändern den Vokal bei du und er/sie/es: fahren – du fährst, sprechen – er spricht, lesen – sie liest. Unregelmässig sind sein (ich bin, du bist, er ist) und haben (ich habe, du hast, er hat).',
     examples: [
@@ -66,6 +72,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-trennbare-verben', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Trennbare Verben: aufstehen, einkaufen', titleEn: 'Separable verbs',
     rule: 'Trennbare Verben haben ein Präfix wie auf-, an-, ein-, mit-, ab-. Im Hauptsatz steht das Verb auf Position 2 und das Präfix am Satzende: Ich stehe um sieben Uhr auf. Mit einem Modalverb bleibt das Verb zusammen: Ich muss um sieben Uhr aufstehen.',
     examples: [
@@ -80,6 +87,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-modalverben', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Modalverben: können, müssen, wollen, möchten', titleEn: 'Modal verbs',
     rule: 'Modalverben sind können, müssen, wollen, möchten, dürfen und sollen. Das Modalverb steht auf Position 2, das zweite Verb steht als Infinitiv am Satzende: Ich kann gut schwimmen. Formen: ich kann, du kannst; ich muss, du musst; ich will, du willst; ich möchte, du möchtest.',
     examples: [
@@ -94,6 +102,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-wortstellung', level: 'A1',
+    needs: ['g-a1-praesens'], role: 'productive',
     title: 'Wortstellung: Verb auf Position 2, Fragen', titleEn: 'Word order and questions',
     rule: 'Im Aussagesatz steht das konjugierte Verb auf Position 2: Ich wohne in Basel. Heute wohne ich in Basel: Das Verb bleibt auf Position 2, das Subjekt folgt. W-Fragen beginnen mit dem Fragewort, danach kommt das Verb: Wo wohnst du? Bei Ja/Nein-Fragen steht das Verb auf Position 1: Wohnst du in Basel?',
     examples: [
@@ -108,6 +117,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-akkusativ', level: 'A1',
+    needs: ['g-a1-artikel-plural'], role: 'productive',
     title: 'Akkusativ: ein/einen, kein', titleEn: 'Accusative, ein/einen, kein',
     rule: 'Das direkte Objekt steht im Akkusativ. Nur der maskuline Artikel ändert sich: der – den, ein – einen, kein – keinen. Die, das, eine und der Plural bleiben gleich: Ich kaufe einen Tisch, eine Lampe, ein Buch. Typische Verben sind haben, brauchen, kaufen, sehen, suchen, essen und trinken.',
     examples: [
@@ -122,6 +132,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-possessivartikel', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Possessivartikel: mein, dein, sein, ihr', titleEn: 'Possessive articles',
     rule: 'Possessivartikel zeigen, wem etwas gehört: mein, dein, sein, ihr, unser, euer, ihr, Ihr. Sie haben dieselben Endungen wie ein und kein: mein Bruder, meine Schwester, mein Kind, meine Eltern. Im Akkusativ ändert sich nur das Maskulin: Ich besuche meinen Bruder. Sein gehört zu er und es, ihr zu sie.',
     examples: [
@@ -136,6 +147,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-dativ-praepositionen', level: 'A1',
+    needs: ['g-a1-akkusativ'], role: 'productive',
     title: 'Dativ nach mit, bei, von, zu, aus, nach', titleEn: 'Dative after mit, bei, von, zu …',
     rule: 'Nach mit, bei, von, zu, aus, nach und seit steht immer der Dativ. Die Artikel im Dativ: dem (maskulin), der (feminin), dem (neutral), den + n (Plural). Mit ein-Wörtern: einem, einer, einem. Es gibt Kurzformen: zum (zu dem), zur (zu der), beim (bei dem), vom (von dem).',
     examples: [
@@ -150,6 +162,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-perfekt', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Perfekt mit haben und sein', titleEn: 'Perfect tense, haben and sein',
     rule: 'Das Perfekt bildest du mit haben oder sein und dem Partizip II am Satzende: Ich habe Kaffee getrunken. Die meisten Verben brauchen haben. Mit sein bildest du das Perfekt bei Bewegung und Zustandswechsel: ich bin gefahren, ich bin gegangen, ich bin geblieben. Regelmässige Verben haben ge-…-t (gemacht), unregelmässige oft ge-…-en (gegessen).',
     examples: [
@@ -164,6 +177,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-imperativ', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Imperativ: Komm! Kommt! Kommen Sie!', titleEn: 'Imperative',
     rule: 'Mit dem Imperativ bittest du jemanden, etwas zu tun. Die du-Form ist der Verbstamm (Komm! Mach!), die ihr-Form wie im Präsens ohne ihr (Kommt!), die Sie-Form hat Sie nach dem Verb (Kommen Sie!). Einige Verben ändern den Vokal: Lies! Sprich! Nimm! Trennbare Verben trennen sich: Steh auf!',
     examples: [
@@ -178,6 +192,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a1-zeit-ort', level: 'A1',
+    needs: [], role: 'productive',
     title: 'Präpositionen: am, um, im, in, aus, nach', titleEn: 'Time and place prepositions',
     rule: 'Zeit: am + Tag (am Montag), um + Uhrzeit (um acht Uhr), im + Monat oder Jahreszeit (im Mai, im Sommer). Ort: in + Stadt oder Land (in Bern), aus + Herkunft (aus Italien), nach + Stadt oder Land ohne Artikel (nach Zürich). Am, im und zum sind verkürzte Formen mit dem.',
     examples: [
@@ -194,6 +209,7 @@ export const CURRICULUM = [
   // ---------------------------------------------------------------- A2
   {
     id: 'g-a2-dativ-akkusativ-objekte', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Dativ und Akkusativ: zwei Objekte', titleEn: 'Dative and accusative objects',
     rule: 'Viele Verben haben zwei Objekte: die Person im Dativ, die Sache im Akkusativ (geben, schenken, zeigen, schicken, erklären). Ich gebe dem Kind einen Apfel. Pronomen stehen vor Nomen: Ich gebe ihm einen Apfel. Bei zwei Pronomen steht der Akkusativ zuerst: Ich gebe ihn ihm. Die Dativpronomen sind mir, dir, ihm, ihr, uns, euch, ihnen.',
     examples: [
@@ -208,6 +224,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-verben-dativ', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Verben mit Dativ: helfen, gefallen, gehören', titleEn: 'Verbs with dative',
     rule: 'Einige Verben haben nur ein Dativobjekt: helfen, gefallen, gehören, danken, schmecken, passen, gratulieren, antworten. Die Person steht im Dativ: Ich helfe dem Nachbarn. Das Buch gehört mir. Lerne diese Verben immer mit dem Dativ: helfen + Dativ.',
     examples: [
@@ -222,6 +239,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-wechselpraepositionen', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Wechselpräpositionen: Wo? Wohin?', titleEn: 'Two-way prepositions',
     rule: 'An, auf, hinter, in, neben, über, unter, vor und zwischen haben zwei Fälle. Wo? (Position) → Dativ: Das Buch liegt auf dem Tisch. Wohin? (Bewegung) → Akkusativ: Ich lege das Buch auf den Tisch. Position: liegen, stehen, hängen, sitzen. Bewegung: legen, stellen, hängen, setzen.',
     examples: [
@@ -236,6 +254,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-adjektivendungen', level: 'A2',
+    needs: ['g-a2-wechselpraepositionen'], role: 'productive', threshold: 70,
     title: 'Adjektivendungen nach der/die/das und ein/eine', titleEn: 'Adjective endings',
     rule: 'Adjektive vor einem Nomen bekommen eine Endung. Nach dem bestimmten Artikel (der, die, das) ist sie im Nominativ -e (der neue Tisch), im Akkusativ nur beim Maskulin -en (den neuen Tisch), im Dativ und im Plural immer -en. Nach ein/eine zeigt das Adjektiv das Geschlecht im Nominativ: ein neuer Tisch, eine neue Lampe, ein neues Buch.',
     examples: [
@@ -250,6 +269,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-komparativ-superlativ', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Komparativ und Superlativ', titleEn: 'Comparative and superlative',
     rule: 'Mit dem Komparativ vergleichst du zwei Dinge: Adjektiv + -er und als (Der Zug ist schneller als das Auto). Der Superlativ endet auf -sten und steht mit am (am schnellsten) oder vor einem Nomen (der schnellste Zug). Viele kurze Adjektive bekommen einen Umlaut: alt – älter – am ältesten, gross – grösser – am grössten. Unregelmässig: gut – besser – am besten, gern – lieber – am liebsten, viel – mehr – am meisten.',
     examples: [
@@ -264,6 +284,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-praeteritum-sein-haben-modal', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Präteritum: sein, haben, Modalverben', titleEn: 'Simple past of sein, haben, modals',
     rule: 'Für sein, haben und die Modalverben benutzt man in der Vergangenheit meistens das Präteritum, nicht das Perfekt. Sein: ich war, du warst, er war, wir waren, ihr wart. Haben: ich hatte, du hattest, wir hatten. Modalverben verlieren den Umlaut und enden auf -te: ich konnte, musste, wollte, durfte, sollte.',
     examples: [
@@ -278,6 +299,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-perfekt-partizip', level: 'A2',
+    needs: ['g-a1-perfekt'], role: 'productive',
     title: 'Perfekt: Partizip II der Verben', titleEn: 'Perfect: past participles',
     rule: 'Regelmässige Verben bilden das Partizip II mit ge-…-t: machen – gemacht. Unregelmässige Verben haben ge-…-en und oft einen anderen Vokal: schreiben – geschrieben, trinken – getrunken, gehen – gegangen. Bei trennbaren Verben steht ge in der Mitte: aufstehen – aufgestanden. Verben auf -ieren und mit be-, ver-, er-, ent- haben kein ge-: telefoniert, bekommen, verstanden.',
     examples: [
@@ -292,6 +314,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-reflexive-verben', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Reflexive Verben: sich freuen, sich treffen', titleEn: 'Reflexive verbs',
     rule: 'Bei reflexiven Verben bezieht sich das Pronomen auf das Subjekt: ich wasche mich, du wäschst dich, er wäscht sich, wir waschen uns, ihr wascht euch, sie waschen sich. Typisch sind sich freuen, sich treffen, sich anziehen, sich setzen, sich interessieren. Im Perfekt steht haben: Ich habe mich gefreut. Mit einem Akkusativobjekt steht das Pronomen im Dativ: Ich wasche mir die Hände.',
     examples: [
@@ -306,6 +329,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-weil', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Nebensatz mit weil', titleEn: 'Subordinate clause with weil',
     rule: 'Mit weil gibst du einen Grund an. Im Nebensatz mit weil steht das konjugierte Verb am Ende: Ich bleibe zu Hause, weil ich krank bin. Hauptsatz und Nebensatz trennst du mit einem Komma. Steht der Nebensatz am Anfang, folgt danach sofort das Verb des Hauptsatzes: Weil ich krank bin, bleibe ich zu Hause.',
     examples: [
@@ -320,6 +344,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-dass-wenn', level: 'A2',
+    needs: ['g-a2-weil'], role: 'productive',
     title: 'Nebensätze mit dass und wenn', titleEn: 'Subordinate clauses with dass and wenn',
     rule: 'Dass leitet einen Inhalt ein: Ich glaube, dass du recht hast. Mit wenn sagst du eine Bedingung oder wann etwas immer passiert: Wenn es regnet, bleibe ich zu Hause. In beiden Nebensätzen steht das Verb am Ende. Steht der Nebensatz am Anfang, folgt danach sofort das Verb des Hauptsatzes.',
     examples: [
@@ -334,6 +359,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-a2-konjunktiv2-hoeflich', level: 'A2',
+    needs: [], role: 'productive',
     title: 'Konjunktiv II: höfliche Bitten', titleEn: 'Polite requests (Konjunktiv II)',
     rule: 'Mit dem Konjunktiv II fragst du höflich und äusserst Wünsche. Wichtige Formen sind ich hätte, ich wäre, ich könnte und ich würde + Infinitiv. Höfliche Bitte: Könnten Sie mir helfen? Wunsch im Café: Ich hätte gern einen Kaffee. Rat: Du solltest mehr schlafen.',
     examples: [
@@ -350,6 +376,7 @@ export const CURRICULUM = [
   // ---------------------------------------------------------------- B1
   {
     id: 'g-b1-genitiv', level: 'B1',
+    needs: [], role: 'receptive',
     title: 'Genitiv und wegen, trotz, während', titleEn: 'Genitive and wegen, trotz, während',
     rule: 'Der Genitiv zeigt Besitz oder Zugehörigkeit: das Auto des Vaters, die Tasche der Frau, das Dach des Hauses. Maskulin und neutral haben des + Nomen mit -s oder -es, feminin und Plural haben der. Nach wegen, trotz, während und statt steht der Genitiv: wegen des Regens, trotz der Kälte, während des Urlaubs. Gesprochen hört man oft den Dativ (wegen dem Regen), geschrieben ist der Genitiv richtig.',
     examples: [
@@ -364,6 +391,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-verben-praepositionen', level: 'B1',
+    needs: [], role: 'productive',
     title: 'Verben mit festen Präpositionen', titleEn: 'Verbs with fixed prepositions',
     rule: 'Viele Verben brauchen eine feste Präposition mit einem bestimmten Fall: warten auf + Akkusativ, sich freuen über + Akkusativ, sich interessieren für + Akkusativ, teilnehmen an + Dativ, träumen von + Dativ. Lerne das Verb immer mit Präposition und Fall. Frage mit wo-: Worauf wartest du? Antworte mit da-: Ich warte darauf.',
     examples: [
@@ -378,6 +406,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-relativsaetze', level: 'B1',
+    needs: [], role: 'productive',
     title: 'Relativsätze: der, die, das, den, dem', titleEn: 'Relative clauses',
     rule: 'Ein Relativsatz gibt mehr Information zu einem Nomen. Das Relativpronomen richtet sich nach dem Nomen in Geschlecht und Zahl, der Fall hängt vom Verb im Relativsatz ab. Nominativ: der Mann, der dort wohnt. Akkusativ: der Mann, den ich kenne. Dativ: der Mann, dem ich helfe. Das Verb steht am Ende, der Relativsatz steht zwischen Kommas.',
     examples: [
@@ -392,6 +421,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-praeteritum', level: 'B1',
+    needs: [], role: 'productive',
     title: 'Präteritum: häufige Verben', titleEn: 'Simple past',
     rule: 'Das Präteritum benutzt du vor allem beim Schreiben und Erzählen. Regelmässige Verben: Stamm + -te (ich machte, du machtest, wir machten). Unregelmässige Verben ändern den Vokal: gehen – ging, kommen – kam, sehen – sah, schreiben – schrieb, bleiben – blieb. Bei ich und er/sie/es hat das unregelmässige Verb keine Endung (ich ging), bei du kommt -st (du gingst).',
     examples: [
@@ -406,6 +436,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-plusquamperfekt', level: 'B1',
+    needs: ['g-b1-praeteritum'], role: 'receptive',
     title: 'Plusquamperfekt', titleEn: 'Past perfect',
     rule: 'Das Plusquamperfekt zeigt, dass etwas vor einem anderen Moment in der Vergangenheit passiert ist. Du bildest es mit hatte oder war und dem Partizip II: ich hatte gegessen, ich war gegangen. Haben oder sein wählst du wie im Perfekt. Oft steht es mit nachdem: Nachdem ich gegessen hatte, ging ich spazieren.',
     examples: [
@@ -420,6 +451,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-passiv', level: 'B1',
+    needs: [], role: 'receptive',
     title: 'Passiv: Präsens und Präteritum', titleEn: 'Passive voice',
     rule: 'Im Passiv ist die Handlung wichtig, nicht wer sie macht. Präsens: werden + Partizip II (Das Auto wird repariert). Präteritum: wurde + Partizip II (Das Auto wurde repariert). Die handelnde Person nennst du mit von + Dativ: Das Auto wird von dem Mechaniker repariert. Mit Modalverb: Das Auto muss repariert werden.',
     examples: [
@@ -434,6 +466,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-konjunktiv2', level: 'B1',
+    needs: [], role: 'productive',
     title: 'Konjunktiv II: wäre, hätte, würde', titleEn: 'Subjunctive II',
     rule: 'Der Konjunktiv II drückt Wünsche, unwirkliche Situationen und Ratschläge aus. Häufig sind wäre, hätte, könnte und würde + Infinitiv. Mit einem wenn-Satz beschreibst du eine unwirkliche Bedingung: Wenn ich Zeit hätte, würde ich reisen. Für Ratschläge: An deiner Stelle würde ich den Arzt anrufen.',
     examples: [
@@ -448,6 +481,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-zu-infinitiv', level: 'B1',
+    needs: [], role: 'productive',
     title: 'zu-Infinitiv, um … zu, damit', titleEn: 'Infinitive with zu, um … zu, damit',
     rule: 'Der Infinitiv mit zu steht am Satzende: Ich habe keine Lust, früh aufzustehen. Bei trennbaren Verben steht zu in der Mitte: aufzustehen, anzurufen. Mit um … zu nennst du den Zweck: Ich lerne Deutsch, um in der Schweiz zu arbeiten. Mit damit nennst du den Zweck, wenn das Subjekt wechselt: Ich erkläre es, damit du es verstehst.',
     examples: [
@@ -462,6 +496,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-zweiteilige-konnektoren', level: 'B1',
+    needs: [], role: 'receptive',
     title: 'Zweiteilige Konnektoren', titleEn: 'Two-part connectors',
     rule: 'Zweiteilige Konnektoren verbinden zwei Satzteile oder Sätze: nicht nur … sondern auch, entweder … oder, weder … noch, sowohl … als auch, je … desto. Bei den meisten bleibt die normale Wortstellung. Bei je … desto steht ein Komparativ in beiden Teilen, und das Verb steht im je-Satz am Ende: Je mehr du übst, desto besser sprichst du. Weder … noch bedeutet «nicht das eine und auch nicht das andere».',
     examples: [
@@ -476,6 +511,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-n-deklination', level: 'B1',
+    needs: ['g-b1-genitiv'], role: 'receptive',
     title: 'n-Deklination: der Student, den Studenten', titleEn: 'Weak masculine nouns',
     rule: 'Einige maskuline Nomen bekommen in allen Fällen ausser im Nominativ die Endung -n oder -en. Man nennt das n-Deklination: der Junge, der Student, der Kollege, der Mensch, der Nachbar, der Herr. Akkusativ: den Studenten. Dativ: dem Studenten. Genitiv: des Studenten. Nur bei der Herr ist es -n: den Herrn.',
     examples: [
@@ -490,6 +526,7 @@ export const CURRICULUM = [
   },
   {
     id: 'g-b1-nebensaetze', level: 'B1',
+    needs: [], role: 'productive',
     title: 'Nebensätze: obwohl, nachdem, bevor, während', titleEn: 'Subordinate clauses',
     rule: 'Mit obwohl nennst du einen Gegensatz: Obwohl es regnet, gehen wir spazieren. Mit nachdem sagst du, was zuerst passiert ist; im Nebensatz steht dann oft das Plusquamperfekt oder das Perfekt. Mit bevor und während verbindest du zwei Handlungen zeitlich. Im Nebensatz steht das Verb immer am Ende.',
     examples: [
@@ -503,6 +540,41 @@ export const CURRICULUM = [
     ruleNames: ['Nebensatz mit obwohl', 'Nebensatz mit nachdem/bevor/während'],
   },
 ];
+
+// ---------------------------------------------------------------- plan order (review R10, redesign §2.2)
+// The order of the topics in a goal's plan (Schritte plus Neu / Goethe): productive B1 topics first, the receptive
+// ones last (they may end at "introduced" when time is short). A topic still never comes before its `needs`.
+// Every curriculum id is in this list exactly once (scripts/check-plan.mjs).
+export const TEACHING_ORDER = {
+  A1: ['g-a1-artikel-plural', 'g-a1-personalpronomen', 'g-a1-praesens', 'g-a1-wortstellung', 'g-a1-trennbare-verben',
+    'g-a1-modalverben', 'g-a1-akkusativ', 'g-a1-possessivartikel', 'g-a1-zeit-ort', 'g-a1-dativ-praepositionen',
+    'g-a1-imperativ', 'g-a1-perfekt'],
+  A2: ['g-a2-perfekt-partizip', 'g-a2-praeteritum-sein-haben-modal', 'g-a2-verben-dativ', 'g-a2-dativ-akkusativ-objekte',
+    'g-a2-wechselpraepositionen', 'g-a2-reflexive-verben', 'g-a2-weil', 'g-a2-dass-wenn', 'g-a2-adjektivendungen',
+    'g-a2-komparativ-superlativ', 'g-a2-konjunktiv2-hoeflich'],
+  B1: ['g-b1-praeteritum', 'g-b1-konjunktiv2', 'g-b1-verben-praepositionen', 'g-b1-relativsaetze', 'g-b1-nebensaetze',
+    'g-b1-zu-infinitiv', 'g-b1-zweiteilige-konnektoren', 'g-b1-plusquamperfekt', 'g-b1-passiv', 'g-b1-genitiv',
+    'g-b1-n-deklination'],
+};
+export const PRODUCTIVE_PCT = 80;
+export const RECEPTIVE_PCT = 70;
+// the share of the last 20 counted answers that makes a topic "solid" (never stored per milestone)
+export const topicThreshold = (entry) => entry?.threshold ?? (entry?.role === 'receptive' ? RECEPTIVE_PCT : PRODUCTIVE_PCT);
+
+// The topics of one level in plan order: TEACHING_ORDER, but a topic whose `needs` are not placed yet waits for them.
+export function planOrder(level) {
+  const ids = TEACHING_ORDER[level] || [];
+  const placed = new Set(CURRICULUM.filter((e) => CURRICULUM_LEVELS.indexOf(e.level) < CURRICULUM_LEVELS.indexOf(level)).map((e) => e.id));
+  const out = [];
+  const rest = [...ids];
+  while (rest.length) {
+    const i = rest.findIndex((id) => (curriculumEntry(id)?.needs || []).every((n) => placed.has(n)));
+    const id = rest.splice(i < 0 ? 0 : i, 1)[0]; // i < 0 only with a circle of needs (the check refuses that)
+    placed.add(id);
+    out.push(id);
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------- helpers
 
