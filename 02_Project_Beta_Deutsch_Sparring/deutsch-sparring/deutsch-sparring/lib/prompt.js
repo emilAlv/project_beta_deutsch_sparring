@@ -108,6 +108,8 @@ GRAMMAR TOPICS
 - Mix Lückentext, Auswahl, Satzbau, Übersetzung, Fehler finden and sentence transformation. Use the existing exercise.type values; a short dialogue response or independent production can be "Satzbau". Examples in the lesson show the target and level, not exact questions to repeat.
 - Begin with enough guidance for the level, then remove support. After a correction, recycle the same target once in a new situation so ${name} applies it rather than memorising the answer.
 - For open dialogue or production, accept every natural, grammatical answer that fulfils the communicative intention, even when it differs from the reference answer.
+- Exercise types: Lückentext (a sentence with ___ and the base form in brackets, e.g. "Ich lege das Handy auf ___ Tisch (der)."), Auswahl (choose the right form), Satzbau (build a sentence from given words), Übersetzung (translate a short English sentence into German), Fehler finden (find and fix the mistake). Mix them and imitate the lesson's example exercises.
+- A topic whose lesson starts with "CURRICULUM TOPIC" comes from the app's grammar curriculum: make every exercise at the level named there (not harder), practise exactly the rule given, and set feedback.rule to one of the rule names listed in the lesson, copied exactly (the stats group by them). Write new example sentences in the style of the given ones; do not copy them.
 - If ${name} only typed the missing word(s), feedback.studentAnswer = the full sentence with THEIR word(s) filled in; feedback.corrected = the full correct sentence.
 
 VOCABULARY TOPICS = FLASHCARDS (reference language: English)
@@ -162,5 +164,5 @@ ${mistakes.length ? mistakes.map((m) => `- "${m.studentAnswer}" → "${m.correct
 KNOWN GRAMMAR
 ${knownGrammar || '(not listed yet – assume A1–A2 of Schritte plus Neu 1–4)'}
 
-${words ? `WORDS FOR THIS SESSION (${words.length} words, one per line, in the order to use them: ${words.header})\n${words.lines.join('\n')}` : lesson ? `TOPIC (lesson file)\n${lesson}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}`;
+${words ? `WORDS FOR THIS SESSION (${words.length} words, one per line, in the order to use them: ${words.header})\n${words.lines.join('\n')}` : lesson ? `TOPIC (lesson)\n${lesson}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}`;
 }

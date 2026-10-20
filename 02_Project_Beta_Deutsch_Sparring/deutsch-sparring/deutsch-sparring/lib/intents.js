@@ -117,11 +117,15 @@ const END = '(?![a-zäöü])';
 const word = (alts) => new RegExp(`${NOT_LETTER}(${alts})${END}`);
 const PRACTISE = word('üben|ueben|lernen|machen|practi[sc]e|learn|study|do|wechseln|switch|thema|topic|instead|stattdessen');
 const WANT = word('ich (will|möchte|moechte)|i want|id like|lieber|lass uns|lets|können wir|koennen wir');
+const SWITCH = word('wechseln|switch|instead|stattdessen|anderes thema|other topic|thema|topic');
 
 export function detectTopicWish(text, topics, { running = false } = {}) {
   const s = clean(text);
   if (!s || !short(s, running ? 8 : 10)) return null;
   if (!PRACTISE.test(s) && (running || !WANT.test(s))) return null;
+  // during a session an answer like "Mit mehr Geld könnte ich eine Reise machen" is not a topic wish:
+  // only an explicit wish to switch counts ("können wir Reisen machen?", "lieber Passiv", "switch to …")
+  if (running && !WANT.test(s) && !SWITCH.test(s)) return null;
   const hit = topics.find((t) => {
     const name = clean(t.short);
     const parts = name.split(' ').filter((w) => w.length >= 5);

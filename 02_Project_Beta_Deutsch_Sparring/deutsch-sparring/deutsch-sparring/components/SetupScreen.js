@@ -59,6 +59,7 @@ function ChoiceChips({ label, items, value, onChange }) {
           role="radio"
           aria-checked={value === it.id}
           className={`chip setup-chip${value === it.id ? ' on' : ''}`}
+          title={it.title}
           onClick={() => onChange(it.id)}
         >
           {it.label}
@@ -84,21 +85,14 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const vocab = form.kind === 'vocab';
 
-  const grammarTopics = useMemo(
-    () => topics.filter((x) => isGrammarTopic(x) && (!x.levels?.length || x.levels.includes(form.level))),
-    [topics, form.level],
-  );
+  const grammarTopics = useMemo(() => topics.filter((x) => isGrammarTopic(x) && (x.levels || []).includes(form.level)), [topics, form.level]);
+  const curriculumTopics = grammarTopics.filter((x) => x.curriculum);
+  const lessonTopics = grammarTopics.filter((x) => !x.curriculum);
   const allSections = useMemo(() => topics.filter((x) => x.type === 'Wortschatz' && !x.parent), [topics]);
   const sections = allSections.filter((x) => countOf(x, form.level, form.source) > 0);
 
   // the choice that is really used: a remembered choice that no longer fits falls back to the first
   const grammarTopic = grammarTopics.find((x) => x.id === form.grammarTopic) || grammarTopics[0] || null;
-  const grammarHelp = grammarTopic
-    ? [
-        grammarTopic.objective ? `Ziel: ${grammarTopic.objective}` : '',
-        grammarTopic.situation ? `Situation: ${grammarTopic.situation}` : '',
-      ].filter(Boolean).join(' · ') || t('setupGrammarLevels', { levels: grammarTopic.levels.join(', ') })
-    : '';
   const section = sections.find((x) => x.id === form.section) || sections[0] || null;
   const lists = section ? topics.filter((x) => x.parent === section.id && countOf(x, form.level, form.source) > 0) : [];
   const list = lists.find((x) => x.id === form.list) || null;
@@ -161,6 +155,23 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
             </div>
           </Section>
 
+          <Section title={t('setupLevelPace')} help={t(`diffHelp_${form.difficulty}`)}>
+            <div className="setup-row">
+              <div className="setup-field">
+                <p className="caps">{t('level')}</p>
+                <Segmented label={t('level')} options={LEVELS} value={form.level} onChange={(v) => set({ level: v })} />
+              </div>
+              <div className="setup-field">
+                <p className="caps">{t('difficulty')}</p>
+                <Segmented label={t('difficulty')} options={DIFFICULTIES} value={form.difficulty} onChange={(v) => set({ difficulty: v })} render={(d) => t(`diff_${d}`)} />
+              </div>
+              <div className="setup-field wide">
+                <p className="caps">{t('setupQuestions')}</p>
+                <Segmented label={t('setupQuestions')} options={QUESTION_STEPS} value={form.questions} onChange={(v) => set({ questions: v })} />
+              </div>
+            </div>
+          </Section>
+
           <Section title={t('setupTopic')}>
             {vocab ? (
               sections.length ? (
@@ -192,31 +203,29 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
                 </>
               ) : <p className="setup-help">{t('setupNoWords')}</p>
             ) : grammarTopics.length ? (
-              <ChoiceChips
-                label={t('setupTopic')}
-                items={grammarTopics.map((x) => ({ id: x.id, label: x.short }))}
-                value={grammarTopic?.id}
-                onChange={(id) => set({ grammarTopic: id })}
-              />
+              <>
+                {curriculumTopics.length > 0 && (
+                  <ChoiceChips
+                    label={t('setupTopic')}
+                    items={curriculumTopics.map((x) => ({ id: x.id, label: x.short, title: x.titleEn }))}
+                    value={grammarTopic?.id}
+                    onChange={(id) => set({ grammarTopic: id })}
+                  />
+                )}
+                {lessonTopics.length > 0 && (
+                  <>
+                    <p className="caps">{t('setupMoreLessons')}</p>
+                    <ChoiceChips
+                      label={t('setupMoreLessons')}
+                      items={lessonTopics.map((x) => ({ id: x.id, label: x.short }))}
+                      value={grammarTopic?.id}
+                      onChange={(id) => set({ grammarTopic: id })}
+                    />
+                  </>
+                )}
+                <p className="setup-help">{t('setupGrammarForLevel', { level: form.level })}</p>
+              </>
             ) : <p className="setup-help">{t('setupNoGrammar')}</p>}
-            {!vocab && grammarTopic && <p className="setup-help">{grammarHelp}</p>}
-          </Section>
-
-          <Section title={t('setupLevelPace')} help={t(`diffHelp_${form.difficulty}`)}>
-            <div className="setup-row">
-              <div className="setup-field">
-                <p className="caps">{t('level')}</p>
-                <Segmented label={t('level')} options={LEVELS} value={form.level} onChange={(v) => set({ level: v })} />
-              </div>
-              <div className="setup-field">
-                <p className="caps">{t('difficulty')}</p>
-                <Segmented label={t('difficulty')} options={DIFFICULTIES} value={form.difficulty} onChange={(v) => set({ difficulty: v })} render={(d) => t(`diff_${d}`)} />
-              </div>
-              <div className="setup-field wide">
-                <p className="caps">{t('setupQuestions')}</p>
-                <Segmented label={t('setupQuestions')} options={QUESTION_STEPS} value={form.questions} onChange={(v) => set({ questions: v })} />
-              </div>
-            </div>
           </Section>
 
           {vocab && (

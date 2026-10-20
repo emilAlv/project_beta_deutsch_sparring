@@ -1,5 +1,6 @@
 import { getLesson, getKnownGrammar, guessTopic, topicsForLevel, FREE_TOPIC } from '../../../lib/content';
 import { allTopics } from '../../../lib/topics';
+import { curriculumEntry, curriculumLesson } from '../../../lib/curriculum';
 import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEADER } from '../../../lib/words';
 import { pickWords, wordsNeeded } from '../../../lib/scores';
 import { GRAMMAR_POINTS, cleanGrammar, wantsSentenceTasks } from '../../../lib/grammar';
@@ -224,7 +225,7 @@ Keep the same target word, grammar point, level and question number, but create 
 
     const system = buildSystemPrompt({
       name: String(name || 'du').slice(0, 40),
-      lesson: filter ? null : getLesson(topicId),
+      lesson: filter ? null : (curriculumEntry(topicId) ? curriculumLesson(curriculumEntry(topicId)) : getLesson(topicId)),
       words: filter ? { header: WORD_LINE_HEADER, lines: words.map(wordLine) } : null,
       knownGrammar: getKnownGrammar(),
       catalog,

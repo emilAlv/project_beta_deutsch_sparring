@@ -207,7 +207,7 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
 - `/api/coach`, `/api/coach/messages` – the coach on Home (see above); `lib/coach.js` (cleaning, plan maths, no React),
   `lib/coach-prompt.js` (instructions + answer schema), `lib/coach-mock.js`, `lib/coach-store.js`, `lib/coach-client.js`,
   `lib/home-data.js` (the numbers, shared by `/api/stats` and `/api/coach`).
-- `/api/topics` – grammar lessons (`content/*.md`) plus the vocabulary sections/lists (`lib/words.js`),
+- `/api/topics` – the grammar curriculum (`lib/curriculum.js`, one level each) and the extra grammar lessons (`content/*.md`) plus the vocabulary sections/lists (`lib/words.js`),
   each list with its word counts per level and word source (for the setup screen).
   The old `wortschatz-*.md` lesson files are no longer used as topics.
 - `/api/chat` – for a vocabulary topic the server picks the session's words once (`pickWords` in
@@ -232,6 +232,21 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
 - Design: colours, fonts (Lora + Inter) and spacing from the Figma file "wort.", tokens at the
   top of `app/globals.css`. Desktop layout = ribbon on top, chat + right panel below; the phone
   layout is not done yet.
+
+### Grammar topics (the A1–B1 curriculum)
+
+The grammar topics students choose in Setup, the topics the coach recommends and the lessons the tutor teaches from are
+all one list: `lib/curriculum.js`. To add or change a topic, edit that file (on GitHub: open it, pencil icon, commit).
+Each entry has: `id` (`g-a2-weil` style; never change an id students may have saved), `level` (A1 / A2 / B1),
+`title` (German; the part before ":" is the chip name), `titleEn`, `rule` (2–5 simple German sentences), `examples`
+(3–5 correct sentences; mark the key word with stars, optional hint after a bar: `Ich kaufe *einen|ein* Tisch.`),
+`exerciseIdeas` (2–3 lines), `ruleNames` (names for the stats, reuse `lib/grammar.js` RULES where they fit) and
+optionally `appNote`. Swiss spelling, never ß. Then run `node scripts/check-curriculum.mjs`.
+- Setup shows only the topics of the chosen level (Level is chosen first). The old lesson files in `content/` stay as
+  "More lessons" at their level (`lektion-01-dativ-akkusativ` is A2).
+- Coach: its CURRICULUM text and TOPIC CATALOG are built from this list. Tutor: `/api/chat` puts a generated lesson
+  (title, level, rule, examples, exercise ideas, rule names) into the prompt. Demo tutor (MOCK=1): gap fills made by
+  blanking the starred word of each example.
 
 ## Run locally
 

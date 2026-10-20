@@ -1,16 +1,11 @@
-// Integration checks for the complete ordered A1–B1 curriculum and its tutor/coach wiring.
-// Plain Node: npm run check:curriculum
+// Checks the grammar curriculum (lib/curriculum.js) and everything that uses it. Plain node:
+//   node scripts/check-curriculum.mjs
 process.removeAllListeners('warning');
-
-const {
-  FREE_TOPIC, getExamples, listLessons, topicsForLevel,
-} = await import('../lib/content.js');
-const { mockReply } = await import('../lib/mock.js');
-const { buildSystemPrompt } = await import('../lib/prompt.js');
-const { coachContext } = await import('../lib/coach-prompt.js');
-const { cleanSuggestion } = await import('../lib/coach.js');
-const { DEFAULT_SETUP } = await import('../lib/session-settings.js');
-const { sameAnswer } = await import('../lib/variants.js');
+const C = await import('../lib/curriculum.js');
+const K = await import('../lib/coach.js');
+const P = await import('../lib/coach-prompt.js');
+const T = await import('../lib/topics.js');
+const M = await import('../lib/mock.js');
 
 let failed = 0;
 function check(name, ok, detail = '') {
@@ -18,119 +13,76 @@ function check(name, ok, detail = '') {
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok || !detail ? '' : ` – ${detail}`}`);
 }
 
-const lessons = listLessons();
-const units = lessons.filter((lesson) => /^lektion-(a1|a2|b1)-\d{2}-/.test(lesson.id));
-check('the complete curriculum loads (at least the original 36 units)', units.length >= 36, `loaded ${units.length}`);
-
-const counts = [];
-for (const level of ['A1', 'A2', 'B1']) {
-  const levelUnits = units.filter((lesson) => lesson.levels.length === 1 && lesson.levels[0] === level);
-  const numbers = levelUnits.map((lesson) => lesson.unit).sort((a, b) => a - b);
-  const expected = Array.from({ length: levelUnits.length }, (_, index) => index + 1);
-  counts.push(levelUnits.length);
-  check(`${level}: at least 12 contiguous ordered units`,
-    levelUnits.length >= 12 && numbers.join(',') === expected.join(','));
-  check(`${level}: level filter includes only ${level} curriculum units`,
-    topicsForLevel(units, level).length === levelUnits.length
-      && topicsForLevel(units, level).every((lesson) => lesson.levels.includes(level)));
+const list = C.CURRICULUM;
+const ids = list.map((e) => e.id);
+check('ids unique', new Set(ids).size === ids.length);
+for (const lv of C.CURRICULUM_LEVELS) {
+  const n = list.filter((e) => e.level === lv).length;
+  check(`level ${lv} has 8–13 entries`, n >= 8 && n <= 13, String(n));
 }
-check('A1, A2 and B1 contain the same number of units', new Set(counts).size === 1);
-
-check('every unit exposes objective, situation and rule',
-  units.every((lesson) => lesson.objective && lesson.situation && lesson.rule));
-check('every unit has at least eight deterministic mock examples',
-  units.every((lesson) => getExamples(lesson.id).length >= 8));
-
-const baseMockSettings = {
-  difficulty: 'medium', direction: 'en-de', grammar: [], sentences: false, variant: 'ch',
-};
-const baseSession = {
-  topicId: null, total: 20, openNumber: 0, openLine: '', openDirection: null, openWordId: '', openTask: null,
-  finished: false, skippedNumber: 0, skippedLine: '', skippedWordId: '', skippedTask: null,
-};
-const emptyProgress = { done: 0, answered: 0, correct: 0, skipped: 0 };
-const samples = {
-  A1: 'lektion-a1-01-vorstellen',
-  A2: 'lektion-a2-01-perfekt',
-  B1: 'lektion-b1-01-erzaehlen',
-};
-
-for (const [level, id] of Object.entries(samples)) {
-  const topic = units.find((lesson) => lesson.id === id);
-  const start = JSON.parse(await mockReply({
-    text: 'Start', settings: { ...baseMockSettings, level },
-    session: baseSession, progress: emptyProgress, topic, topics: [...units, FREE_TOPIC],
-  }));
-  check(`${level}: mock starts a curriculum session`,
-    start.session.topicId === id && start.exercise?.number === 1);
-  check(`${level}: objective and situation reach the mock tutor`,
-    start.grammarFocus?.boxes?.[0]?.value === topic.objective
-      && start.grammarFocus?.boxes?.[1]?.value === topic.situation);
-
-  const examples = getExamples(id);
-  const recycled = JSON.parse(await mockReply({
-    text: 'Weiter', settings: { ...baseMockSettings, level },
-    session: baseSession, progress: { ...emptyProgress, done: examples.length },
-    topic, topics: [...units, FREE_TOPIC],
-  }));
-  check(`${level}: recycled practice changes the context deterministically`,
-    recycled.exercise?.number === examples.length + 1
-      && recycled.exercise.line !== start.exercise.line
-      && recycled.exercise.line.includes('Neuer Kontext'));
+for (const e of list) {
+  const bad = [];
+  if (!/^g-(a1|a2|b1)-[a-z0-9-]+$/.test(e.id) || e.id.split('-')[1] !== e.level.toLowerCase()) bad.push('id');
+  if (!C.CURRICULUM_LEVELS.includes(e.level)) bad.push('level');
+  for (const f of ['title', 'titleEn', 'rule']) if (!e[f] || typeof e[f] !== 'string') bad.push(f);
+  if (!Array.isArray(e.examples) || e.examples.length < 3 || e.examples.length > 5) bad.push('examples count');
+  if (!Array.isArray(e.exerciseIdeas) || e.exerciseIdeas.length < 2 || e.exerciseIdeas.length > 3) bad.push('exerciseIdeas');
+  if (!Array.isArray(e.ruleNames) || !e.ruleNames.length || e.ruleNames.some((r) => !r)) bad.push('ruleNames');
+  if (JSON.stringify(e).includes('ß')) bad.push('ß');
+  for (const x of e.examples || []) {
+    const g = C.gapExample(x);
+    if (!g.words.length) bad.push(`no key word: ${x}`);
+    if (g.words.some((w) => /\s/.test(w))) bad.push(`key word with space: ${x}`);
+    if (/[*|]/.test(g.sentence)) bad.push(`markup left: ${x}`);
+  }
+  check(`entry ${e.id}`, bad.length === 0, bad.join('; '));
 }
 
-const a2 = units.find((lesson) => lesson.id === samples.A2);
-const firstA2 = JSON.parse(await mockReply({
-  text: 'Start', settings: { ...baseMockSettings, level: 'A2' },
-  session: { ...baseSession, total: 1 }, progress: emptyProgress,
-  topic: a2, topics: [...units, FREE_TOPIC],
-}));
-const finishedA2 = JSON.parse(await mockReply({
-  text: getExamples(a2.id)[0].solution, settings: { ...baseMockSettings, level: 'A2' },
-  session: { ...baseSession, total: 1, openNumber: 1, openLine: firstA2.exercise.line },
-  progress: emptyProgress, topic: a2, topics: [...units, FREE_TOPIC],
-}));
-check('mock completion keeps feedback and stops after the final question',
-  finishedA2.feedback?.correct === true && finishedA2.exercise === null);
-
-const prompt = buildSystemPrompt({
-  name: 'Test',
-  lesson: null,
-  knownGrammar: '',
-  catalog: [a2, FREE_TOPIC],
-  settings: { level: 'A2', difficulty: 'Mittel', direction: 'en-de', grammar: [], variant: 'ch' },
-  session: { ...baseSession, topicId: a2.id },
-  progress: emptyProgress,
-  mistakes: [],
-  notes: [],
-  guessed: false,
-  asked: ['Gestern habe ich gearbeitet.'],
+// topics and coach
+const topics = T.allTopics().map(({ keywords, ...t }) => t);
+check('allTopics has all curriculum ids', ids.every((id) => topics.some((t) => t.id === id && t.type === 'Grammatik' && t.levels.length === 1)));
+check('lesson lektion-01 still a topic, one level', topics.find((t) => t.id === 'lektion-01-dativ-akkusativ')?.levels.length === 1);
+check('every grammar topic has exactly one level', topics.filter((t) => t.type === 'Grammatik').every((t) => t.levels.length === 1));
+const context = P.coachContext({
+  home: { goals: [], tiles: { sessions: 0, answered: 0, pctRight: 0, learnt: 0, wordsTotal: 0 }, progress: {}, strengths: [], gaps: [], rules: [] },
+  topics, today: '2026-10-19',
 });
-check('real tutor receives objective and situation',
-  prompt.includes(a2.objective) && prompt.includes(a2.situation));
-check('real tutor uses communicative progression and accepts alternatives',
-  prompt.includes('communicative progression') && prompt.includes('different natural solution is not an error'));
-check('old no-role-play prohibition is gone', !prompt.includes('No stories, no characters, no role-play'));
+check('coach catalog lists every id', ids.every((id) => context.includes(`\n${id} |`)));
+const prompt = P.buildCoachPrompt({ name: 'Test', context });
+check('coach CURRICULUM text built from the list', ids.every((id) => prompt.includes(`[${id}]`)));
+const badSug = list.filter((e) => {
+  const s = K.cleanSuggestion({ kind: 'grammar', topicId: e.id, level: 'B1', difficulty: 'easy', questions: 10 }, topics);
+  return !s || s.topicId !== e.id || s.kind !== 'grammar' || s.level !== e.level;
+});
+check('cleanSuggestion accepts all ids (and uses the topic level)', badSug.length === 0, badSug.map((e) => e.id).join(', '));
 
-const home = {
-  goals: [], progress: {}, tiles: { sessions: 0, answered: 0, pctRight: 0, learnt: 0, wordsTotal: 0 },
-  strengths: [], gaps: [], rules: [], vocab: null,
-};
-const context = coachContext({ home, topics: [...units, FREE_TOPIC], today: '2026-10-19' });
-check('coach receives every ordered curriculum unit',
-  units.every((lesson) => context.includes(lesson.id) && context.includes(lesson.objective)));
-const correctedSuggestion = cleanSuggestion(
-  { topicId: samples.A1, level: 'B1', difficulty: 'medium', questions: 10 },
-  units,
-);
-check('coach suggestions cannot pair a curriculum unit with the wrong CEFR level',
-  correctedSuggestion?.level === 'A1' && correctedSuggestion.kind === 'grammar');
-check('Swiss Standard German remains the default', DEFAULT_SETUP.variant === 'ch');
-check('Swiss and German Standard vocabulary alternatives are equivalent',
-  sameAnswer('das Velo', 'das Fahrrad') && sameAnswer('das Spital', 'das Krankenhaus'));
-
-if (failed) {
-  console.error(`\n${failed} curriculum check(s) failed.`);
-  process.exit(1);
+// demo tutor: an exercise for every topic, and it accepts its own solution
+const settings = { level: 'A2', difficulty: 'medium', variant: 'ch', grammar: [], sentences: false, direction: 'en-de' };
+const reply = async (t, text, done, openNumber, openLine) => JSON.parse(await M.mockReply({
+  text, settings, session: { topicId: t.id, total: 10, openNumber, openLine }, progress: { done, answered: done, correct: done, skipped: 0 }, topic: t, topics, words: [],
+}));
+for (const t of topics.filter((x) => x.curriculum)) {
+  const e = C.curriculumEntry(t.id);
+  const bad = [];
+  const start = await reply(t, 'Start', 0, 0);
+  if (!start.exercise?.line) bad.push('no exercise');
+  if (!start.grammarFocus?.title) bad.push('no focus');
+  for (let i = 0; i < e.examples.length; i += 1) {
+    const q = await reply(t, 'Start', i, 0);
+    const g = C.gapExample(e.examples[i]);
+    for (const answer of [g.sentence, g.words.join(' ')]) {
+      const r = await reply(t, answer, i, i + 1, q.exercise.line);
+      if (!r.feedback?.correct) bad.push(`example ${i + 1} not accepted: "${answer}"`);
+    }
+    const wrong = await reply(t, 'xyzzy', i, i + 1, q.exercise.line);
+    if (wrong.feedback?.correct !== false) bad.push(`example ${i + 1}: wrong answer accepted`);
+  }
+  check(`mock ${t.id}`, bad.length === 0, bad.join('; '));
 }
-console.log('\nAll curriculum integration checks passed.');
+
+// the tutor's lesson text
+const lesson = C.curriculumLesson(list[0]);
+check('lesson text has rule names, level and examples', lesson.includes(list[0].ruleNames[0]) && lesson.includes('Level: A1') && lesson.includes('**Der**'));
+
+console.log(failed ? `\n${failed} check(s) FAILED` : '\nall checks passed');
+process.exit(failed ? 1 : 0);

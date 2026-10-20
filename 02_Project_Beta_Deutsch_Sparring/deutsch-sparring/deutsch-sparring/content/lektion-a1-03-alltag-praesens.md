@@ -34,7 +34,7 @@ Regelmässige Endungen: ich -e, du -st, er/sie -t, wir -en, ihr -t, sie/Sie -en.
 |---|---|---|---|
 | 1 | Ich ___ jeden Morgen Kaffee. (trinken) | trinke | Lückentext |
 | 2 | Du ___ heute Deutsch. (lernen) | lernst | Lückentext |
-| 3 | Sie ___ in Zürich. (arbeiten) | arbeitet | Lückentext |
+| 3 | Lara ___ in Zürich. (arbeiten) | arbeitet | Lückentext |
 | 4 | Wir ___ um sieben Uhr. (frühstücken) | frühstücken | Lückentext |
 | 5 | A: Was ___ du am Abend? (machen) | machst | Lückentext |
 | 6 | Er ___ jeden Tag mit dem Zug. (fahren) | fährt | Lückentext |
