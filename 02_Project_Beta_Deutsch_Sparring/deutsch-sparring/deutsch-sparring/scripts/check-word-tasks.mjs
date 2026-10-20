@@ -147,6 +147,7 @@ check('Novelty rejects a light template paraphrase', N.isNearDuplicateExercise(
   'Ergänze die Endung: Ich sehe die ___ (neu) Frau.',
   ['Ergänze die Endung: Ich sehe den ___ (alt) Mann.']
 ));
+check('Novelty rejects visible word algebra', N.hasMechanicalExerciseFormat('Auf der Strasse: ___ (jung + der Unbekannte).'));
 check('Novelty allows a genuinely different situation', !N.isNearDuplicateExercise(
   'Am Bahnhof fragt Samira nach dem nächsten Zug.',
   ['In der Praxis untersucht die Ärztin das kleine Baby.']
@@ -158,6 +159,7 @@ check('Prompt removes old disconnected noun template', !promptSource.includes('B
 check('Prompt removes generic brauchen example', !promptSource.includes('Ich brauche den alten Schrank'));
 check('Prompt requires creative, non-repeating contexts', promptSource.includes('CREATIVE VARIATION') && promptSource.includes('exclusion list') && promptSource.includes('VARY THE TASK'));
 check('Prompt removes remaining stock carrier sentences', !promptSource.includes('Ich möchte dem Freund helfen') && !promptSource.includes('Ich sehe den ___ (alt) Mann'));
+check('Prompt forbids plus-sign word algebra', promptSource.includes('separated by semicolons rather than symbols'));
 check('Prompt requires a private answer for hint safety', promptSource.includes('private exercise.answer'));
 
 const fahren = { id: 'f', type: 'verb', de: 'abbiegen', perfekt: 'ist abgebogen', case: 'in + Akk' };

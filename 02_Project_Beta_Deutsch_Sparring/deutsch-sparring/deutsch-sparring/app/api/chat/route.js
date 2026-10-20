@@ -10,7 +10,7 @@ import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
 } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
-import { isNearDuplicateExercise, normalizeExerciseLine } from '../../../lib/novelty';
+import { hasMechanicalExerciseFormat, isNearDuplicateExercise, normalizeExerciseLine } from '../../../lib/novelty';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
 import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
@@ -169,15 +169,15 @@ async function handle(req) {
     } else {
       text = await askGemini();
       const firstDraft = parseModelJson(text);
-      if (repeatsEarlierExercise(firstDraft)) {
+      if (draftNeedsRegeneration(firstDraft)) {
         const rejected = String(firstDraft?.exercise?.line || '').slice(0, 300);
         text = await askGemini(`
 
 NOVELTY RETRY
-The first draft below was rejected because it repeats or closely paraphrases an earlier exercise:
+The first draft below was rejected because it repeats an earlier exercise or uses a mechanical word-algebra format:
 <rejected-draft>${rejected}</rejected-draft>
 Keep the same target word, grammar point, level and question number, but create a genuinely different task. Change at least three of: setting, speaker, relationship, purpose, speech act, main verb and sentence structure. Do not reuse the rejected line. Return the complete JSON response again.`);
-        if (repeatsEarlierExercise(parseModelJson(text))) {
+        if (draftNeedsRegeneration(parseModelJson(text))) {
           throw Object.assign(new Error('Gemini repeated an earlier exercise twice.'), { status: 'novelty' });
         }
       }
@@ -193,14 +193,15 @@ Keep the same target word, grammar point, level and question number, but create 
     return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
   }
 
-  function repeatsEarlierExercise(candidate) {
+  function draftNeedsRegeneration(candidate) {
     const line = candidate?.exercise?.line;
     if (!line) return false;
     const repeatsOpenWithoutFeedback = session.openLine
       && !candidate.feedback
       && normalizeExerciseLine(line) === normalizeExerciseLine(session.openLine);
     if (repeatsOpenWithoutFeedback) return false;
-    return isNearDuplicateExercise(line, [...asked, session.openLine, session.skippedLine]);
+    return hasMechanicalExerciseFormat(line)
+      || isNearDuplicateExercise(line, [...asked, session.openLine, session.skippedLine]);
   }
 
   async function askGemini(extraInstruction = '') {

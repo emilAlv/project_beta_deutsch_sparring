@@ -43,3 +43,8 @@ export function isNearDuplicateExercise(line, previous = []) {
     return common >= 5 && common / shortest >= 0.62;
   });
 }
+
+export function hasMechanicalExerciseFormat(line) {
+  const value = String(line || '');
+  return value.includes('+') || /·\s*(?:nominativ|akkusativ|dativ|genitiv)\b/iu.test(value);
+}
