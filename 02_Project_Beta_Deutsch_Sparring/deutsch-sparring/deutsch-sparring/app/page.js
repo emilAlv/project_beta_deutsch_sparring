@@ -30,6 +30,7 @@ import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
 import { suggestionToSetup } from '../lib/coach';
 import { score, summaryOf } from '../lib/stats';
+import { mergeQuestions, recentQuestions, sessionQuestions } from '../lib/question-history';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
   recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount,
@@ -322,6 +323,7 @@ export default function Home() {
   function remember(s) {
     if (!s.answers.length) return;
     const sc = score(s.answers);
+    const previous = historyRef.current.sessions.find((entry) => entry.id === s.id);
     setHistory(recordSession({
       id: s.id,
       topicId: s.topicId,
@@ -334,6 +336,7 @@ export default function Home() {
       endedEarly: s.endedEarly,
       finished: Boolean(s.finished),
       updatedAt: Date.now(),
+      questions: mergeQuestions(previous?.questions || [], sessionQuestions(s)),
       mistakes: s.answers.filter((a) => !a.correct && !a.skipped).slice(-5)
         .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule })),
     }));
@@ -670,8 +673,9 @@ export default function Home() {
       wordIds: s.wordIds,
       ...(isVocab(s) && !s.wordIds?.length ? { scores: loadScores(), source: st.source || 'both' } : {}),
       progress: score(s.answers),
-      // what was already asked in this session, so 20–50 questions don't repeat
-      asked: s.answers.map((a) => a.line || a.skippedLine).filter(Boolean).slice(-50),
+      // Recent questions from this session and earlier sessions with the same setup.
+      // Starting again should continue with fresh exercises, not reset the tutor's memory.
+      asked: recentQuestions(s, historyRef.current.sessions),
       mistakes: recentMistakes(s.answers, historyRef.current.sessions),
       clientId: profileRef.current.clientId,
       notes: [], // (nothing changes during a session any more)
