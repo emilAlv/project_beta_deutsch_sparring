@@ -436,6 +436,12 @@ export default function Home() {
     openSetup();
   }
 
+  // "Practise this" on Home: the setup screen opens with the milestone's choices filled in; everything can still be changed
+  function openSetupPatch(patch) {
+    if (patch) setPrefs({ setup: sanitizeSetup({ ...prefsRef.current.setup, ...patch }) });
+    openSetup();
+  }
+
   // back from the setup screen to the session (only offered when there is one)
   function cancelSetup() {
     setSetupError(null);
@@ -862,6 +868,7 @@ export default function Home() {
           onContinue={goSparring}
           onAgain={(settings) => startSession(settings)}
           onSetupSuggested={openSetupSuggested}
+          onPractise={openSetupPatch}
         />
       ) : stage === 'summary' ? (
         <SessionSummary

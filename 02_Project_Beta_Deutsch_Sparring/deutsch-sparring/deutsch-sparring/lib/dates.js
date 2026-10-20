@@ -10,10 +10,13 @@ const fmt = (opts) => {
 };
 const DAY = fmt({ day: 'numeric', month: 'short' });
 const DAY_YEAR = fmt({ day: 'numeric', month: 'short', year: 'numeric' });
+const DAY_WEEK = fmt({ weekday: 'short', day: 'numeric', month: 'short' });
 const MONTH = fmt({ month: 'short' });
 const at = (day) => new Date(`${day}T00:00:00Z`);
 
 export const fmtDay = (day, year = false) => ((year ? DAY_YEAR : DAY)?.format(at(day))) || day;
+// "Fri 6 Nov"
+export const fmtWeekday = (day) => DAY_WEEK?.format(at(day)) || day;
 // month tick: "Nov"; January (and the first tick) also show the year
 export const fmtMonth = (day) => {
   const d = at(day);

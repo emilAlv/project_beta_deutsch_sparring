@@ -9,9 +9,12 @@ import { t } from '../lib/ui-text';
 import { goalState, todayKey } from '../lib/goals';
 import { PLAN_VERSION } from '../lib/plan';
 import { fmtDay } from '../lib/dates';
-import { loadHome, saveGoal, removeGoal, buildGoal, previewFix, changeGoal } from '../lib/home-client';
+import { loadHome, saveGoal, removeGoal, buildGoal, previewFix, changeGoal, tickMilestone } from '../lib/home-client';
+import { loadZoom, saveZoom } from '../lib/storage';
+import { setupFromSession, cleanZoom, isPlanGoal, milestoneForItem, milestoneView } from '../lib/home-plan';
 import Coach from './Coach';
 import PlanTimeline from './PlanTimeline';
+import { NextUpCard, PartRows, ZoomPlan, countText, dueText } from './HomePlan';
 
 function greeting(name) {
   const h = new Date().getHours();
@@ -32,7 +35,7 @@ const PLAN_TAG = { ontrack: 'onTrack', ahead: 'onTrack', behind: 'behind', done:
 
 // A goal with a plan (version 2, made through the Coach): parts and milestones reached. An old-style goal still shows
 // its old bar until the student switches it to a plan (the dialog below).
-function GoalCard({ goal, pct, plan, today, onDelete }) {
+function GoalCard({ goal, pct, plan, today, open, onToggle, onOpenPart, onDelete }) {
   const isPlan = Number(goal.version) === PLAN_VERSION;
   const st = goalState(goal, pct, today);
   const tag = isPlan ? (st.tag === 'upcoming' ? 'upcoming' : PLAN_TAG[plan?.status] || 'onTrack') : st.tag;
@@ -45,13 +48,23 @@ function GoalCard({ goal, pct, plan, today, onDelete }) {
           <button type="button" className="text-button" onClick={onDelete}>{t('goalDelete')}</button>
         </span>
       </div>
-      <h3 className="goal-name">{goal.title}</h3>
+      <h3 className="goal-name">
+        {isPlan ? (
+          <button type="button" className="goal-toggle" aria-expanded={open} onClick={onToggle}>
+            <span aria-hidden="true">{open ? '▾' : '▸'}</span> {goal.title}
+          </button>
+        ) : goal.title}
+      </h3>
       <p className="detail">{t('goalDates', { from: fmtDay(goal.startDate), to: fmtDay(goal.endDate, true) })} · {weeks}</p>
       {isPlan ? (
-        <p className="detail">
-          {goal.subPlans.filter((p) => p.include).length === 1 ? t('goalPartsOne') : t('goalPartsCount', { n: goal.subPlans.filter((p) => p.include).length })}
-          {plan ? ` · ${t('goalReachedOf', { n: plan.reached, total: plan.total })}` : ''}
-        </p>
+        <>
+          <p className="detail">
+            {goal.subPlans.filter((p) => p.include).length === 1 ? t('goalPartsOne') : t('goalPartsCount', { n: goal.subPlans.filter((p) => p.include).length })}
+            {plan ? ` · ${t('goalReachedOf', { n: plan.reached, total: plan.total })}` : ''}
+          </p>
+          {plan?.status === 'done' && <p className="goal-done">{t('goalReachedTitle')}</p>}
+          {open && <PartRows goal={goal} plan={plan} today={today} onOpenPart={onOpenPart} />}
+        </>
       ) : (
         <>
           <p className="detail">{t(`goalType_${goal.type}`)} · {goal.level}</p>
@@ -97,8 +110,9 @@ const SKIP_KEY = 'wort_upgrade_skip';
 const skippedToday = (today) => { try { return localStorage.getItem(SKIP_KEY) === today; } catch { return false; } };
 const skipToday = (today) => { try { localStorage.setItem(SKIP_KEY, today); } catch {} };
 
-function SgColumn({ kind, items, goals, empty }) {
+function SgColumn({ kind, items, goals, empty, onGo, onAdd }) {
   const goalName = (id) => goals.find((g) => g.id === id)?.title;
+  const hasPlan = goals.some(isPlanGoal);
   return (
     <div className={`sg-col ${kind}`}>
       <h3 className="sg-head"><span className="dot" />{t(kind === 'strengths' ? 'sgStrengths' : 'sgGaps')}</h3>
@@ -108,14 +122,24 @@ function SgColumn({ kind, items, goals, empty }) {
           <li key={`${x.kind}:${x.label}`}>
             <div className="sg-line">
               <span className="sg-label">{x.label}</span>
-              <span className="sg-pct">{x.pct} %</span>
+              <span className="sg-pct">{t('sgRight', { ok: Math.round((x.pct * x.n) / 100), n: x.n })}</span>
             </div>
             <div className="sg-bar"><span style={{ width: `${x.pct}%` }} /></div>
             <p className="detail">
               {t('sgAnswers', { n: x.n })}
               {x.kind === 'list' && x.v != null && ` · ${x.g != null ? t('sgAvg', { v: x.v, g: x.g }) : t('sgAvgV', { v: x.v })}`}
-              {' · '}{goalName(x.goalId) ? t('sgGoal', { goal: goalName(x.goalId) }) : t('sgNoGoal')}
+              {!hasPlan && ` · ${goalName(x.goalId) ? t('sgGoal', { goal: goalName(x.goalId) }) : t('sgNoGoal')}`}
             </p>
+            {hasPlan && (() => {
+              const hit = milestoneForItem(x, goals);
+              return hit ? (
+                <p className="detail">
+                  <button type="button" className="text-button" onClick={() => onGo(hit)}>{t('sgMilestone', { title: hit.title, part: hit.partTitle })}</button>
+                </p>
+              ) : (
+                <p className="detail">{t('sgNotInPlan')} · <button type="button" className="text-button" onClick={() => onAdd(x)}>{t('sgAddToPlan')}</button></p>
+              );
+            })()}
           </li>
         ))}
       </ul>
@@ -123,7 +147,33 @@ function SgColumn({ kind, items, goals, empty }) {
   );
 }
 
-export default function Home({ name, classCode, clientId, streak, sessions, topics, running, onStart, onContinue, onAgain, onSetupSuggested }) {
+// The one line under the greeting (redesign §3.2): content first. Plan goals say what is next or what is late.
+function heroLine({ data, goals, behind, progress, today }) {
+  if (!data) return '';
+  if (!goals.length) return t('homeSummaryNone');
+  const plans = data.plans || {};
+  const late = goals.filter(isPlanGoal).filter((g) => plans[g.id]?.status === 'behind')
+    .map((g) => ({ g, n: Object.values(plans[g.id].parts).reduce((s, p) => s + (p.overdue || 0), 0) }))
+    .sort((a, b) => b.n - a.n)[0];
+  if (late && late.n > 0) return late.n === 1 ? t('homeSumLateOne', { goal: late.g.title }) : t('homeSumLate', { n: late.n, goal: late.g.title });
+  const old = behind.filter((g) => !isPlanGoal(g));
+  if (late || old.length) return t('homeSummaryBehind', { names: [...(late ? [late.g] : []), ...old].map((g) => g.title).join(', ') });
+  const nu = data.nextUp;
+  const hit = nu && goals.find((g) => g.id === nu.goalId);
+  const part = hit?.subPlans.find((p) => p.milestones.some((m) => m.id === nu.milestoneId));
+  const m = part?.milestones.find((x) => x.id === nu.milestoneId);
+  if (m) {
+    const v = milestoneView(hit, part, m, plans[hit.id], today);
+    return v.date ? t('homeSumOnTrack', { title: v.title, count: countText(v), date: dueText(v.date, v.inDays) }) : t('homeSumOnTrackNoDate', { title: v.title, count: countText(v) });
+  }
+  const done = goals.filter(isPlanGoal).find((g) => plans[g.id]?.status === 'done');
+  if (done) return t('homeSumDone', { goal: done.title });
+  const ended = goals.filter(isPlanGoal).find((g) => plans[g.id]?.status === 'ended');
+  if (ended) return t('homeSumEnded', { goal: ended.title });
+  return t('homeSummaryOn');
+}
+
+export default function Home({ name, classCode, clientId, streak, sessions, topics, running, onStart, onContinue, onAgain, onSetupSuggested, onPractise }) {
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
   const [mode, setMode] = useState('whole');
@@ -131,6 +181,16 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
   const [notice, setNotice] = useState('');
   const [upgrading, setUpgrading] = useState({ busy: false, error: '', skipped: false });
   const today = useMemo(() => todayKey(), []);
+  const [zoom, setZoomState] = useState({ level: 'overview', goalId: null, partId: null, milestoneId: null });
+  const [openGoal, setOpenGoal] = useState(null); // the goal card that is open (the first one by default)
+  const zoomLoaded = useRef(false);
+  const planRef = useRef(null);
+
+  function setZoom(next) {
+    const clean = cleanZoom(next, data?.goals || []);
+    setZoomState(clean);
+    saveZoom(clean.level === 'overview' ? null : clean);
+  }
 
   const reload = useCallback(async () => {
     const d = await loadHome();
@@ -157,6 +217,30 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
   }
 
   const goals = data?.goals || [];
+
+  // the zoom level survives a reload: read it once, when the goals have arrived, and check it against them
+  useEffect(() => {
+    if (!data || zoomLoaded.current) return;
+    zoomLoaded.current = true;
+    setZoomState(cleanZoom(loadZoom(), data.goals || []));
+  }, [data]);
+  const planGoals = goals.filter(isPlanGoal);
+  const oldGoals = goals.filter((g) => !isPlanGoal(g));
+
+  function zoomTo(goalId, partId, milestoneId = null) {
+    setZoom(milestoneId ? { level: 'milestone', goalId, partId, milestoneId } : { level: 'part', goalId, partId });
+    planRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  }
+  // "Practise this": the setup screen opens with this milestone filled in (everything can still be changed)
+  function practise(milestoneId) {
+    const patch = setupFromSession(data?.sessions?.[milestoneId], topics);
+    onPractise(patch);
+  }
+  async function tick(goal, milestoneId, points) {
+    const ok = await tickMilestone(goal, milestoneId, points);
+    if (ok) await reload();
+    return ok;
+  }
 
   // ---- goals through the Coach (R12): the server builds and checks the plan, the browser saves it after Accept / Apply ----
   async function acceptGoal(proposal) {
@@ -198,11 +282,11 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
   }
   const progress = data?.progress || {};
   const behind = goals.filter((g) => (Number(g.version) === PLAN_VERSION ? data?.plans?.[g.id]?.status === 'behind' : goalState(g, progress[g.id], today).tag === 'behind'));
-  const summary = !goals.length ? t('homeSummaryNone')
-    : behind.length ? t('homeSummaryBehind', { names: behind.map((g) => g.title).join(', ') })
-      : t('homeSummaryOn');
+  const summary = heroLine({ data, goals, behind, progress, today });
   const tiles = data?.tiles;
   const recent = sessions.filter((x) => x.answered > 0).slice(0, 5);
+  const hasNumbers = Boolean(tiles?.answered) || recent.length > 0;
+  const addToPlan = (x) => setStarter((y) => ({ n: (y?.n || 0) + 1, text: t('sgAddStarter', { label: x.label }) }));
 
   return (
     <main className="home">
@@ -224,60 +308,69 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
           </p>
         )}
 
-        <section className="tiles" aria-label={t('tilePeriod')}>
-          <Tile label={t('tileSessions')} value={tiles ? tiles.sessions : '–'} sub={t('tilePeriod')} />
-          <Tile
-            label={t('tileQuestions')}
-            value={tiles ? tiles.answered : '–'}
-            sub={tiles && tiles.answered ? `${t('tileRight', { pct: tiles.pctRight })} · ${t('tilePeriod')}` : t('tilePeriod')}
-          />
-          <Tile
-            label={t('tileWords')}
-            value={tiles ? tiles.learnt : '–'}
-            sub={tiles ? t('tileWordsOf', { total: tiles.wordsTotal }) : ''}
-          />
-          <Tile
-            label={t('tileStreak')}
-            value={streak === 1 ? t('tileStreakDay') : streak > 1 ? t('tileStreakDays', { n: streak }) : '0'}
-            sub={streak > 0 ? '' : t('tileStreakNone')}
-          />
-        </section>
+        {data && !goals.length && (
+          <section className="card welcome-card" aria-labelledby="welcome-title">
+            <h2 id="welcome-title" className="section-title">{t('welcomeTitle')}</h2>
+            <p className="muted">{t('welcomeText')}</p>
+            <div>
+              <button type="button" className="button-primary" onClick={() => setStarter((x) => ({ n: (x?.n || 0) + 1, text: t('goalNewStarter') }))}>{t('welcomeButton')}</button>
+            </div>
+          </section>
+        )}
 
-        <section className="home-section">
-          <div className="section-head">
-            <h2 className="section-title">{t('goalsTitle')}</h2>
-            <button type="button" className="button-outline small" onClick={() => setStarter((x) => ({ n: (x?.n || 0) + 1, text: t('goalNewStarter') }))}>{t('goalNew')}</button>
-          </div>
-          {notice && <p className="form-error" role="alert">{notice}</p>}
-          {data && !goals.length && <p className="card empty-card muted">{t('goalsEmpty')}</p>}
-          <div className="goal-grid">
-            {goals.map((g) => (
-              <GoalCard
-                key={g.id}
-                goal={g}
-                pct={progress[g.id] ?? 0}
-                plan={data?.plans?.[g.id]}
-                today={today}
-                onDelete={() => remove(g)}
-              />
-            ))}
-          </div>
-        </section>
+        {data && planGoals.length > 0 && <NextUpCard data={data} goals={goals} today={today} onPractise={practise} onOpen={(g, p, m) => zoomTo(g, p, m)} />}
 
-        <section className="card plan-card">
-          <div className="section-head">
-            <h2 className="section-title">{t('planTitle')}</h2>
-            <div className="segmented small plan-switch" role="radiogroup" aria-label={t('planSwitch')}>
-              {['whole', 'still'].map((k) => (
-                <button key={k} type="button" role="radio" aria-checked={mode === k} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>
-                  {t(k === 'whole' ? 'planWhole' : 'planStill')}
-                </button>
+        {goals.length > 0 && (
+          <section className="home-section">
+            <div className="section-head">
+              <h2 className="section-title">{t('goalsTitle')}</h2>
+              <button type="button" className="button-outline small" onClick={() => setStarter((x) => ({ n: (x?.n || 0) + 1, text: t('goalNewStarter') }))}>{t('goalNew')}</button>
+            </div>
+            {notice && <p className="form-error" role="alert">{notice}</p>}
+            <div className="goal-grid">
+              {goals.map((g, i) => (
+                <GoalCard
+                  key={g.id}
+                  goal={g}
+                  pct={progress[g.id] ?? 0}
+                  plan={data?.plans?.[g.id]}
+                  today={today}
+                  open={(openGoal ?? planGoals[0]?.id) === g.id}
+                  onToggle={() => setOpenGoal((openGoal ?? planGoals[0]?.id) === g.id ? '' : g.id)}
+                  onOpenPart={(goalId, partId) => zoomTo(goalId, partId)}
+                  onDelete={() => remove(g)}
+                />
               ))}
             </div>
-          </div>
-          <PlanTimeline goals={goals} progress={progress} mode={mode} today={today} />
-        </section>
+          </section>
+        )}
 
+        {planGoals.length > 0 && (
+          <section className="card plan-card" ref={planRef} aria-labelledby="plan-title">
+            <div className="section-head">
+              <h2 id="plan-title" className="section-title">{t('planTitle')}</h2>
+            </div>
+            <ZoomPlan goals={goals} data={data} today={today} zoom={zoom} onZoom={setZoom} onPractise={practise} onTick={tick} />
+          </section>
+        )}
+
+        {oldGoals.length > 0 && (
+          <section className="card plan-card">
+            <div className="section-head">
+              <h2 className="section-title">{planGoals.length ? t('planOldTitle') : t('planTitle')}</h2>
+              <div className="segmented small plan-switch" role="radiogroup" aria-label={t('planSwitch')}>
+                {['whole', 'still'].map((k) => (
+                  <button key={k} type="button" role="radio" aria-checked={mode === k} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>
+                    {t(k === 'whole' ? 'planWhole' : 'planStill')}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <PlanTimeline goals={oldGoals} progress={progress} mode={mode} today={today} />
+          </section>
+        )}
+
+        {(goals.length > 0 || hasNumbers) && (
         <section className="card sg-card">
           <div className="section-head">
             <h2 className="section-title">{t('sgTitle')}</h2>
@@ -287,11 +380,29 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
             <p className="muted">{t('sgNone')}</p>
           ) : (
             <div className="sg-grid">
-              <SgColumn kind="strengths" items={data?.strengths || []} goals={goals} empty={t('sgNoneStrong')} />
-              <SgColumn kind="gaps" items={data?.gaps || []} goals={goals} empty={t('sgNoneGaps')} />
+              <SgColumn kind="strengths" items={data?.strengths || []} goals={goals} empty={t('sgNoneStrong')} onGo={(h) => zoomTo(h.goal.id, h.part.id, h.m.id)} onAdd={addToPlan} />
+              <SgColumn kind="gaps" items={data?.gaps || []} goals={goals} empty={t('sgNoneGaps')} onGo={(h) => zoomTo(h.goal.id, h.part.id, h.m.id)} onAdd={addToPlan} />
             </div>
           )}
         </section>
+        )}
+
+        {hasNumbers ? (
+          <section className="tiles" aria-label={t('tilePeriod')}>
+            <Tile label={t('tileSessions')} value={tiles ? tiles.sessions : '–'} sub={t('tilePeriod')} />
+            <Tile
+              label={t('tileQuestions')}
+              value={tiles ? tiles.answered : '–'}
+              sub={tiles && tiles.answered ? `${t('tileRightOf', { ok: tiles.correct, n: tiles.answered })} · ${t('tilePeriod')}` : t('tilePeriod')}
+            />
+            <Tile label={t('tileWords')} value={tiles ? tiles.learnt : '–'} sub={tiles ? t('tileWordsOf', { total: tiles.wordsTotal }) : ''} />
+            <Tile
+              label={t('tileStreak')}
+              value={streak === 1 ? t('tileStreakDay') : streak > 1 ? t('tileStreakDays', { n: streak }) : '0'}
+              sub={streak > 0 ? '' : t('tileStreakNone')}
+            />
+          </section>
+        ) : data && <p className="card empty-card muted">{t('tilesLater')}</p>}
 
         <section className="card recent-card">
           <h2 className="section-title">{t('recentTitle')}</h2>

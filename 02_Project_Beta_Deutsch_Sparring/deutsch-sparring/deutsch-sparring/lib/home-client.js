@@ -7,6 +7,7 @@ import {
 } from './storage';
 import { postNow } from './progress-client';
 import { todayKey } from './goals';
+import { tickExam } from './home-plan';
 
 // Accounts off: the compact copy of the browser's own goals, word scores and answer log, from which the
 // server works out the numbers (nothing is stored there). The coach gets the same copy.
@@ -82,6 +83,25 @@ export async function removeGoal(id) {
   }
   try {
     const res = await fetch(`/api/goals?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// The student ticks an exam milestone done (a mock exam, Schreiben/Sprechen done outside the app), with optional points.
+// → true when saved
+export async function tickMilestone(goal, milestoneId, result) {
+  if (!usesServer()) {
+    const next = tickExam(goal, milestoneId, todayKey(), result);
+    return Boolean(next) && saveGoalLocal(next);
+  }
+  try {
+    const res = await fetch('/api/goals', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goalId: goal.id, milestoneId, result: result || null }),
+    });
     return res.ok;
   } catch {
     return false;
