@@ -1,3 +1,5 @@
+import { ruleTopicPairs } from './rules.js';
+
 // The database tables. Each statement is safe to run again ("IF NOT EXISTS"), so this is the
 // whole migration: the app runs it on first use, or run `node scripts/db-migrate.mjs`.
 export const SCHEMA = [
@@ -46,6 +48,17 @@ export const SCHEMA = [
   // May be empty on older answers. Safe to run again on the live database.
   'ALTER TABLE answers ADD COLUMN IF NOT EXISTS hinted boolean',
   'ALTER TABLE answers ADD COLUMN IF NOT EXISTS difficulty text',
+  // Review R9: the grammar topic of every answer (a curriculum topic or a situation lesson), for the plan's progress.
+  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS topic_id text',
+  'CREATE INDEX IF NOT EXISTS answers_user_topic_idx ON answers (user_id, topic_id, created_at DESC)',
+  // Fill in the topic of OLD answers; only rows that have none yet, so running it again changes nothing. Nothing is deleted.
+  //  1. answers of a grammar session → the topic of that session
+  `UPDATE answers a SET topic_id = s.settings->>'topicId' FROM sessions s
+     WHERE a.topic_id IS NULL AND s.user_id = a.user_id AND s.id = a.session_id
+       AND s.settings->>'kind' = 'grammar' AND COALESCE(s.settings->>'topicId', '') NOT IN ('', 'free')`,
+  //  2. the rest with a grammar rule → the lowest-level topic that lists that rule (same list as topicForRule)
+  `UPDATE answers a SET topic_id = m.topic_id FROM (VALUES ${ruleTopicPairs().map(([r, t]) => `('${r.replace(/'/g, "''")}', '${t}')`).join(', ')}) AS m(rule_key, topic_id)
+     WHERE a.topic_id IS NULL AND lower(regexp_replace(btrim(a.rule), '\\s+', ' ', 'g')) = m.rule_key`,
   `CREATE TABLE IF NOT EXISTS word_scores (
     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     word_id text NOT NULL,

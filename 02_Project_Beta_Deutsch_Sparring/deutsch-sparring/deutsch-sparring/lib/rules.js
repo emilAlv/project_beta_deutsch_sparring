@@ -28,11 +28,24 @@ export function cleanRule(raw, topicId = null) {
 
 export const isRuleName = (raw) => cleanRule(raw) !== null;
 
-// The curriculum topic an answer belongs to: the session's own topic if it is a curriculum topic, otherwise the
-// lowest-level topic whose ruleNames contain the rule (settles "Perfekt mit sein", shared by two topics). Or null.
-export function topicForRule(rule, sessionTopicId = null) {
+// The topic an answer belongs to (review R9, redesign §4.4 point 2):
+//  - in a GRAMMAR session → the session's own topic: a curriculum topic or a situation lesson (content/lektion-*.md);
+//  - otherwise → the lowest-level curriculum topic whose ruleNames contain the rule (settles "Perfekt mit sein",
+//    shared by two topics). Or null (a vocabulary answer without a grammar rule belongs to no grammar topic).
+// kind = the session's kind ('grammar' | 'vocab'); a curriculum id is always accepted, other ids only in a grammar session.
+const TOPIC_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/;
+export function topicForRule(rule, sessionTopicId = null, kind = null) {
   if (sessionTopicId && curriculumEntry(sessionTopicId)) return sessionTopicId;
+  if (kind === 'grammar' && typeof sessionTopicId === 'string' && sessionTopicId !== 'free' && TOPIC_ID.test(sessionTopicId)) return sessionTopicId;
   const r = cleanRule(rule);
   if (!r) return null;
   return CURRICULUM.find((e) => e.ruleNames.includes(r))?.id || null; // CURRICULUM is in level order A1 → B1
 }
+
+// Rule name (lower case, single spaces) → the lowest-level topic: the list the database backfill uses (lib/schema.mjs).
+export function ruleTopicPairs() {
+  const out = new Map();
+  for (const e of CURRICULUM) for (const r of e.ruleNames) if (!out.has(key(r))) out.set(key(r), e.id);
+  return [...out];
+}
+export const ruleKey = key;

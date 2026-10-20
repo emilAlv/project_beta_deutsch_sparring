@@ -8,7 +8,10 @@ import { databaseUrl } from './schema.mjs';
 import { sql, ensureSchema } from './db';
 import { applyAnswer } from './scores';
 import { getWord } from './words';
-import { cleanRule } from './rules';
+import { cleanRule, topicForRule } from './rules';
+import { isCurriculumId } from './curriculum';
+import { listLessons } from './content';
+import { grammarStatsFromAnswers, STATS_WINDOW } from './grammar-stats';
 import { aggregateAnswers, cleanRuleRows, WINDOW_DAYS } from './home-stats';
 
 const MAX_SCORE_ROWS = 2000;
@@ -76,7 +79,7 @@ export function cleanSession(raw) {
   };
 }
 
-// → { sessionId, n, task, wordId, question, studentAnswer, corrected, rule, errorType, correct, skipped, hinted, difficulty, hasG } or null
+// → { sessionId, n, task, wordId, question, studentAnswer, corrected, rule, errorType, correct, skipped, hinted, difficulty, topicId, hasG } or null
 export function cleanAnswer(raw) {
   const sessionId = cleanId(raw?.sessionId);
   const n = int(raw?.n, 0, 99);
@@ -97,7 +100,17 @@ export function cleanAnswer(raw) {
     skipped: raw.skipped === true,
     hinted: raw.hinted === true,
     difficulty: ['easy', 'medium', 'hard'].includes(raw.difficulty) ? raw.difficulty : null,
+    topicId: topicOf(raw, cleanRule(text(raw.rule, 200))),
   };
+}
+
+// the grammar topic of an answer (lib/rules.js topicForRule); a lesson id from the browser must be a real lesson
+function topicOf(raw, rule) {
+  const kind = raw.kind === 'grammar' ? 'grammar' : 'vocab';
+  const id = text(raw.topicId, 80);
+  const t = topicForRule(rule, id, kind);
+  if (t && t === id && !isCurriculumId(t) && !listLessons().some((l) => l.id === t)) return topicForRule(rule);
+  return t;
 }
 
 // word scores: only known word ids, only numbers → { [wordId]: { v:{s,k,due}, g:{s,k,due}, last } }
@@ -226,6 +239,9 @@ const memoryStore = {
     const since = Date.now() - WINDOW_DAYS * DAY;
     return aggregateAnswers(box(userId).answers.filter((a) => a.createdAt >= since));
   },
+  async grammarStats(userId) {
+    return grammarStatsFromAnswers(box(userId).answers.map((a) => ({ ...a, t: a.createdAt })));
+  },
   async hasData(userId) {
     const b = box(userId);
     return b.imported || b.sessions.size > 0 || b.scores.size > 0;
@@ -263,10 +279,10 @@ const dbStore = {
     await ensureSchema();
     await sql().query('INSERT INTO sessions (id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [a.sessionId, userId]);
     const inserted = await sql().query(
-      `INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped, hinted, difficulty)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped, hinted, difficulty, topic_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        ON CONFLICT DO NOTHING RETURNING id`,
-      [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped, a.hinted, a.difficulty],
+      [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped, a.hinted, a.difficulty, a.topicId],
     );
     if (!inserted.length) return { saved: false, rec: null };
     let rec = null;
@@ -331,6 +347,19 @@ const dbStore = {
     ]);
     const t = tot[0] || {};
     return { sessions: t.sessions || 0, total: t.total || 0, correct: t.correct || 0, skipped: t.skipped || 0, rules: cleanRuleRows(rules).slice(0, 80), words };
+  },
+  // the last 40 counted answers per topic (skip = wrong, hinted = 0.5, Leicht left out) → { [topicId]: { n, points, pct, recent } }
+  async grammarStats(userId) {
+    await ensureSchema();
+    const rows = await sql().query(
+      `SELECT topic_id, correct, skipped, hinted, extract(epoch FROM created_at) * 1000 AS t FROM (
+         SELECT topic_id, correct, skipped, hinted, created_at,
+                row_number() OVER (PARTITION BY topic_id ORDER BY created_at DESC, id DESC) AS rn
+         FROM answers WHERE user_id = $1 AND topic_id IS NOT NULL AND COALESCE(difficulty, '') <> 'easy'
+       ) x WHERE rn <= ${STATS_WINDOW}`,
+      [userId],
+    );
+    return grammarStatsFromAnswers(rows.map((r) => ({ topicId: r.topic_id, correct: r.correct, skipped: r.skipped, hinted: r.hinted, t: Number(r.t) })));
   },
   async hasData(userId) {
     await ensureSchema();

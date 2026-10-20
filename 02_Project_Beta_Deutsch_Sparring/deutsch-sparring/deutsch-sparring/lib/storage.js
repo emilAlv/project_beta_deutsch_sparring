@@ -1,5 +1,6 @@
 import { cleanRule, topicForRule } from './rules';
 import { applyAnswer } from './scores';
+import { addToRuleLog } from './grammar-stats';
 import { queuePost, whenSaved, getJson, postNow } from './progress-client';
 
 // What the app remembers. Without accounts (or MOCK=1 / no database) everything lives in the
@@ -14,6 +15,7 @@ const KEYS = {
   history: 'wort_history', // { sessions: [...last 5], streak: { count, lastDay } }
   chat: 'wort_chat', // the current conversation, so a reload doesn't lose it
   goals: 'wort_goals', // [goal, …] – the goals with their milestones (lib/goals.js); with an account they live on the server
+  rulelog: 'wort_rulelog', // { [topicId]: [[ok, hinted, t], … last 40] } – how the student does per grammar topic (no 30-day cut; lib/grammar-stats.js)
   alog: 'wort_answerlog', // the last answers (compact) for the Home page's 30-day stats; with an account the server has them
   coach: 'wort_coach', // [message, …] – the last 30 coach messages (lib/coach.js); with an account they live on the server
   coachTry: 'wort_coachtry', // { day } – the day the coach was last asked to greet by itself (at most one automatic call a day)
@@ -22,7 +24,7 @@ const KEYS = {
 
 // With accounts, the conversation and the session history are kept per username, so two
 // students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
-const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog', 'coach', 'coachTry']);
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog', 'rulelog', 'coach', 'coachTry']);
 let account = '';
 const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
 
@@ -142,6 +144,10 @@ export const deleteGoalLocal = (id) => write('goals', loadGoalsLocal().filter((x
 // the last answers, kept small: { i: session, r: rule, o: right, s: skipped, w: word id, t: time }
 const LOG_MAX = 1500;
 const LOG_DAYS = 30;
+export const loadRuleLog = () => {
+  const l = read('rulelog', {});
+  return l && !Array.isArray(l) ? l : {};
+};
 export const loadAnswerLog = () => {
   const l = read('alog', []);
   return Array.isArray(l) ? l : [];
@@ -242,6 +248,7 @@ export function recordWordAnswer(wordId, answer, extra = null, now = Date.now())
       queuePost('/api/progress/answer', {
         ...extra, wordId: wordId || '', task: answer.task, correct: answer.correct, skipped: answer.skipped,
         errorType: answer.errorType, hinted: answer.hinted, hasG: answer.hasG,
+        topicId: extra.topicId || '', kind: extra.kind || '', difficulty: extra.difficulty || '',
       });
     }
     return null;
@@ -249,10 +256,13 @@ export function recordWordAnswer(wordId, answer, extra = null, now = Date.now())
   if (extra) {
     // g = grammar topic id, h = a hint was used, d = difficulty (review R8; the rule is cleaned the same way as on the server)
     const rule = cleanRule(extra.rule) || '';
+    const g = topicForRule(rule, extra.topicId, extra.kind) || '';
     logAnswer({
       i: extra.sessionId || '', r: rule, o: answer.correct === true, s: answer.skipped === true, w: wordId || '', t: now,
-      g: (rule && topicForRule(rule, extra.topicId)) || '', h: answer.hinted === true, d: extra.difficulty || '',
+      g, h: answer.hinted === true, d: extra.difficulty || '',
     });
+    // review R9: every answer with a grammar topic also goes into the per-topic log
+    if (g) write('rulelog', addToRuleLog(loadRuleLog(), g, { ok: answer.correct === true && answer.skipped !== true, hinted: answer.hinted === true, difficulty: extra.difficulty, t: now }));
   }
   if (!wordId) return null;
   const all = loadScores();

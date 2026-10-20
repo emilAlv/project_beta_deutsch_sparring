@@ -6,14 +6,18 @@
 import { progress } from './progress';
 import { goalsStore } from './goals-store';
 import { cleanGoal, MAX_GOALS } from './goals';
+import { grammarStatsFromLog, slimStats } from './grammar-stats';
 import { computeHome, aggregateAnswers, answersFromLog, scoresFromCompact } from './home-stats';
 
 export async function homeData(user, body) {
   if (user) {
-    const [goals, agg, scores] = await Promise.all([goalsStore().list(user.id), progress().answerStats(user.id), progress().scores(user.id)]);
-    return { goals, ...computeHome({ goals, scores, agg }) };
+    const [goals, agg, scores, grammarStats] = await Promise.all([
+      goalsStore().list(user.id), progress().answerStats(user.id), progress().scores(user.id), progress().grammarStats(user.id),
+    ]);
+    return { goals, ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats) };
   }
   const goals = (Array.isArray(body?.goals) ? body.goals : []).slice(0, MAX_GOALS).map(cleanGoal).filter(Boolean);
   const agg = aggregateAnswers(answersFromLog(body?.log));
-  return { goals, ...computeHome({ goals, scores: scoresFromCompact(body?.scores), agg }) };
+  // accounts off: the per-topic log (wort_rulelog) comes from the browser
+  return { goals, ...computeHome({ goals, scores: scoresFromCompact(body?.scores), agg }), grammarStats: slimStats(grammarStatsFromLog(body?.rulelog)) };
 }
