@@ -70,4 +70,3 @@ export function recentWordHistory(session = {}, sessions = []) {
 export function mergeQuestions(...lists) {
   return uniqueQuestions(lists.flat()).slice(-50);
 }
-

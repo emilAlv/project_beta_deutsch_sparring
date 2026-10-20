@@ -410,4 +410,3 @@ const dbStore = {
 };
 
 export const progress = () => (databaseUrl() ? dbStore : memoryStore);
-

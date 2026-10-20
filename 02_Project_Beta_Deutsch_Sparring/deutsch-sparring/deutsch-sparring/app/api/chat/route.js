@@ -272,4 +272,3 @@ Keep the same target word, grammar point, level and question number, but create 
     return filter ? words.map((w) => ({ id: w.id, type: w.type, label: (w.noun ? `${w.article} ${w.noun}` : w.de || w.id).slice(0, 60) })) : undefined;
   }
 }
-

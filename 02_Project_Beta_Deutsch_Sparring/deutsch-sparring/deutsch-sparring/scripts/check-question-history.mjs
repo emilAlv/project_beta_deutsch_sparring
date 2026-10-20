@@ -42,4 +42,3 @@ check('sessionQuestions includes a question that is still open', sessionQuestion
 check('matching sessions expose their recent word order', recentWordHistory(current, [previous]).first === 'abfahren');
 
 process.exit(failed ? 1 : 0);
-

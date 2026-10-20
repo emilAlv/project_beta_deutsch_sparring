@@ -139,4 +139,3 @@ check('due mastered words can be checked', tensIn >= 1 && tensIn <= 2);
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll checks passed.');
 process.exit(failed ? 1 : 0);
-

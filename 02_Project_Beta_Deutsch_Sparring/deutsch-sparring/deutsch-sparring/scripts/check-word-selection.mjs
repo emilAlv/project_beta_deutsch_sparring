@@ -46,4 +46,3 @@ const nextNew = nextSession.map((w) => w.id).filter((id) => !scores[id]);
 check('the next session prefers different new material', nextNew.some((id) => !firstNew.includes(id)));
 
 process.exit(failed ? 1 : 0);
-
