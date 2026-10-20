@@ -20,14 +20,14 @@
 //   grammarStats  { topicId: { n, points, pct, recent: [[ok, hinted, t]] } } (lib/grammar-stats.js) – optional
 //   today         "YYYY-MM-DD"
 import { addDays, dayNum, dayOf, isDay, newGoalId, cleanGoalId, GOAL_LEVELS } from './goals.js';
-import { curriculumEntry, curriculumByLevel, planOrder, shortTitle, topicThreshold } from './curriculum.js';
+import { curriculumEntry, curriculumByLevel, planOrder, shortTitle, topicThreshold, CURRICULUM } from './curriculum.js';
 import { vScore } from './scores.js';
 import {
   LEARNT_FROM, CHUNK_REACHED, SOLID_ANSWERS, INTRODUCED_ANSWERS, lessonDone, topicMet, lastPoints, isLearnt as learnt,
   wordMatches, chunkWords, SEP,
 } from './plan-progress.js';
 import {
-  PLAN_VERSION, TEMPLATE_IDS, MINUTES_PER_DAY, DEFAULT_MINUTES, MAX_PARTS, MAX_PART_MILESTONES, MAX_SPAN_DAYS,
+  PLAN_VERSION, TEMPLATE_IDS, CUTS, MINUTES_PER_DAY, DEFAULT_MINUTES, MAX_PARTS, MAX_PART_MILESTONES, MAX_SPAN_DAYS,
   cleanPlanGoal, milestoneId, isReached, allMilestones,
 } from './plan.js';
 
@@ -317,7 +317,7 @@ const snapMinutes = (x) => {
   if (!Number.isFinite(n)) return DEFAULT_MINUTES;
   return MINUTES_PER_DAY.reduce((best, v) => (Math.abs(v - n) < Math.abs(best - n) ? v : best), MINUTES_PER_DAY[0]);
 };
-export const CUTS = ['kursWords', 'receptiveIntroduced'];
+export { CUTS };
 
 // { template, endDate, minutesPerDay, startLevel, options: { level?, sources?, section?, list?, topicIds?, cut? }, level?, startDate?, id? }
 // → { ok: true, draft } or { ok: false, error } (a fixed code). Nothing here is free text that ends up as a name.
@@ -797,5 +797,38 @@ export function cleanPlan(raw) {
   if (!goal) return null;
   if (goal.template === 'topic' && !goal.options.topicIds.length) return null;
   if (goal.template === 'wordtopic' && !goal.options.section) return null;
-  return { ...goal, title: goalTitle(goal) };
+  return { ...goal, title: goal.label || goalTitle(goal) };
+}
+
+// ---------- converting an old goal (R12, redesign §4.8, D6) ----------
+// An old-style goal ({ type, level, scope, milestones: "N %" … }) → a new plan made from the same kind, level and
+// scope. Its "% ready" milestones are NOT kept (Emilio, D6), and its title is not kept either: the template makes
+// the new one. The id stays, so the converted goal replaces the old one. Nothing is saved here: the student confirms first.
+// → { goal, tight } or null when the old goal cannot be turned into a plan.
+export function upgradeGoal(old, ctx = {}) {
+  if (!old || typeof old !== 'object' || Number(old.version) === PLAN_VERSION || !GOAL_LEVELS.includes(old.level)) return null;
+  const today = isDay(ctx.today) ? ctx.today : dayOf(Math.floor(Date.now() / DAY_MS));
+  const sc = old.scope || {};
+  let template = { exam: 'exam', vocab: 'vocab', grammar: 'grammar' }[old.type];
+  if (!template) return null;
+  const options = {};
+  if (old.type === 'vocab' && sc.section && orderedSections(ctx.words || [], ctx).some((s) => s.name === sc.section)) {
+    template = 'wordtopic';
+    options.section = sc.section;
+    options.list = sc.list || null;
+  }
+  if (old.type === 'grammar' && Array.isArray(sc.rules) && sc.rules.length) {
+    const ids = CURRICULUM.filter((e) => e.level <= old.level && (e.ruleNames || []).some((r) => sc.rules.includes(r))).map((e) => e.id);
+    if (ids.length) {
+      template = 'topic';
+      options.topicIds = ids.slice(0, 12);
+    }
+  }
+  const full = { ...ctx, today };
+  // keep the old end date when it still gives a usable time frame, else the template's own length
+  const tryEnd = (endDate) => {
+    const r = planRequest({ id: old.id, template, level: old.level, endDate, minutesPerDay: DEFAULT_MINUTES, options }, full);
+    return r.ok ? buildPlan(r.draft, full) : null;
+  };
+  return tryEnd(old.endDate) || tryEnd(null);
 }

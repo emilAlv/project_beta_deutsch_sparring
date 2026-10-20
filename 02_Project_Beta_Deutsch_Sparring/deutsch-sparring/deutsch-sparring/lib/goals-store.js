@@ -4,7 +4,7 @@
 // plans); every query is parameterised and always restricted to the student's own user_id (taken from the login
 // cookie, never from the request).
 //
-// Two kinds of goal (until R12 converts the old ones):
+// Two kinds of goal (old ones are converted by the student on Home, R12):
 //   - new plans (version 2, review R10): the whole plan is ONE value in goals.plan, saved with ONE statement (an UPSERT
 //     that also checks the 12-goal limit), so a save can never be half-done;
 //   - old goals: goals row + milestones rows (read only while goals.plan is empty).
@@ -112,9 +112,11 @@ const dbStore = {
       const rows = await sql().query(UPSERT_PLAN, [
         goal.id, userId, goal.template, goal.level, goal.title, goal.startDate, goal.endDate, JSON.stringify(goal), MAX_GOALS,
       ]);
+      // a converted old goal (R12): its old "% ready" milestones are deleted for good (D6); for a new goal this deletes nothing
+      if (rows.length) await sql().query('DELETE FROM milestones WHERE user_id = $1 AND goal_id = $2', [userId, goal.id]);
       return rows.length > 0;
     }
-    // ---- old-style goal (the goal form until R12) ----
+    // ---- old-style goal (kept only so an old goal can still be saved or tested; the goal form is gone, R12) ----
     const count = await sql().query(
       'SELECT count(*)::int AS n, COALESCE(bool_or(id = $2), false) AS has FROM goals WHERE user_id = $1',
       [userId, goal.id],

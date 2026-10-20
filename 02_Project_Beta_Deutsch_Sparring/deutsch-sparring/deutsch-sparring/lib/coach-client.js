@@ -39,7 +39,7 @@ export async function askCoach({ messages, kind, name, classCode, clientId, toda
     if (usesServer()) await progressSaved(); // the answers just given are on the server first
     const body = {
       kind, today, clientId, name, classCode,
-      messages: turnsForModel(messages, 10, { summary: false }).map((m) => ({ role: m.role === 'model' ? 'coach' : 'student', text: m.text, ...(m.plan ? { plan: m.plan } : {}) })),
+      messages: turnsForModel(messages, 10, { summary: false }).map((m) => ({ role: m.role === 'model' ? 'coach' : 'student', text: m.text, ...(m.plan ? { plan: m.plan } : {}), ...(m.proposal ? { proposal: { request: m.proposal.request, status: m.proposal.status } } : {}) })),
       ...(usesServer() ? {} : localNumbers()),
     };
     const res = await fetch('/api/coach', {

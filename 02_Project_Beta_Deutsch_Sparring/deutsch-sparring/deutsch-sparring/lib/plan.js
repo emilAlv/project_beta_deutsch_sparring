@@ -26,6 +26,8 @@ export const ORIGINS = ['template', 'coach', 'student'];
 export const MAX_PARTS = 8;
 export const MAX_PART_MILESTONES = 40; // replaces MAX_MILESTONES = 12 of the old goals
 export const MAX_SPAN_DAYS = 3 * 366;
+export const MAX_LABEL = 40;
+export const CUTS = ['kursWords', 'receptiveIntroduced']; // what a plan can leave out when it does not fit
 export const MAX_LESSONS_PER_MILESTONE = 3;
 
 const text = (x, max) => (typeof x === 'string' ? x.replace(/\s+/g, ' ').trim().slice(0, max) : '');
@@ -176,6 +178,9 @@ export function cleanPlanGoal(raw) {
     },
     pace: { minutesPerDay: MINUTES_PER_DAY.includes(minutes) ? minutes : DEFAULT_MINUTES },
   };
+  // the student's own name for the goal (R12): the Coach may set it, but only with words the student typed (lib/coach-goal.js)
+  const label = text(raw.label, MAX_LABEL);
+  if (label) goal.label = label;
   const seen = new Set();
   const ids = new Set();
   goal.subPlans = (Array.isArray(raw.subPlans) ? raw.subPlans : []).slice(0, MAX_PARTS)

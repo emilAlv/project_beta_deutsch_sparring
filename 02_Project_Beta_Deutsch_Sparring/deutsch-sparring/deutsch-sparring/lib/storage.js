@@ -2,6 +2,8 @@ import { cleanRule, topicForRule } from './rules';
 import { applyAnswer } from './scores';
 import { addToRuleLog } from './grammar-stats';
 import { applyReached } from './plan-progress';
+import { PLAN_VERSION, cleanPlanGoal } from './plan';
+import { MAX_GOALS } from './goals';
 import { queuePost, whenSaved, getJson, postNow } from './progress-client';
 
 // What the app remembers. Without accounts (or MOCK=1 / no database) everything lives in the
@@ -136,9 +138,20 @@ export const loadGoalsLocal = () => {
   const g = read('goals', []);
   return Array.isArray(g) ? g : [];
 };
+// A new plan (version 2, R12) is cleaned like the server does it (parts, milestones, ids, dates); its title is the template's
+// title, which the server made and the student's browser only passes on. Anything that is not a plan or an old goal is refused.
+// → true when saved
 export const saveGoalLocal = (goal) => {
+  let stored = goal;
+  if (Number(goal?.version) === PLAN_VERSION) {
+    const clean = cleanPlanGoal(goal);
+    stored = clean && { ...clean, title: String(goal.title || '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Goal' };
+  }
+  if (!stored || typeof stored !== 'object' || !stored.id) return false;
   const all = loadGoalsLocal();
-  write('goals', all.some((x) => x.id === goal.id) ? all.map((x) => (x.id === goal.id ? goal : x)) : [...all, goal]);
+  if (!all.some((x) => x.id === stored.id) && all.length >= MAX_GOALS) return false;
+  write('goals', all.some((x) => x.id === stored.id) ? all.map((x) => (x.id === stored.id ? stored : x)) : [...all, stored]);
+  return true;
 };
 // Latching without an account (R11): /api/stats says which milestones were reached for the first time
 // ({ goalId: [milestoneId] }); they are saved here for good. reachedAt is set only where it is still empty.

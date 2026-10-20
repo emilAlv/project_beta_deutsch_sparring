@@ -219,13 +219,12 @@ check('normalizeReply: unknown wordId dropped, wrong flashcard = vocab, directio
 
 // ---------- the coach: one number for the changes, a note when the plan is lost ----------
 const prompt = CP.buildCoachPrompt({ name: 'Test', context: '(no data)' });
-check('coach prompt: "at most N changes" comes from MAX_CHANGES, and no other number', prompt.includes(`at most ${C.MAX_CHANGES} changes`) && !/at most 6 changes/.test(prompt));
-const goalsList = [{ id: 'g1', milestones: [], startDate: '2026-10-01', endDate: '2026-12-31', level: 'B1', title: 'x', type: 'exam', scope: { section: null, list: null, rules: [] } }];
-const nc = C.normalizeCoach({ message: 'Here is a plan.', planChanges: { goalId: 'g1', changes: [{ action: 'remove', milestoneId: 'nope' }] }, suggestedSession: null, quickReplies: [] }, { topics: [], goals: goalsList, today: '2026-10-20' });
-check('normalizeCoach: unusable planChanges add a short note (no silent missing Apply box)', nc?.planChanges === null && nc.message.includes(C.PLAN_UNREADABLE_NOTE));
-const nc2 = C.normalizeCoach({ message: 'Just a tip.', planChanges: null }, { topics: [], goals: goalsList, today: '2026-10-20' });
-check('normalizeCoach: no plan proposed = no note', nc2?.message === 'Just a tip.');
-check('startsPlanChanges: sees a cut-off plan proposal', C.startsPlanChanges('{"message":"a","planChanges":{"goalId":"g1","changes":[{"act') && !C.startsPlanChanges('{"message":"a","planChanges":null}'));
+check('coach prompt: the coach proposes goals and never writes names', /proposeGoal/.test(prompt) && /never write names or titles/.test(prompt) && !/"add" a milestone/.test(prompt));
+const nc = C.normalizeCoach({ message: 'Here is a plan.', proposeGoal: { template: 'nope' }, suggestedSession: null, quickReplies: [] }, { topics: [], actions: { goalProposal: null, planChanges: null, note: C.PLAN_UNREADABLE_NOTE } });
+check('normalizeCoach: an unusable proposal adds a short note (no silent missing card)', nc?.goalProposal === null && nc.message.includes(C.PLAN_UNREADABLE_NOTE));
+const nc2 = C.normalizeCoach({ message: 'Just a tip.', planChanges: null }, { topics: [] });
+check('normalizeCoach: nothing proposed = no note', nc2?.message === 'Just a tip.' && nc2.goalProposal === null && nc2.planChanges === null);
+check('startsPlanChanges: sees a cut-off proposal', C.startsPlanChanges('{"message":"a","planChanges":{"goalId":"g1","minu') && C.startsPlanChanges('{"message":"a","proposeGoal":{"template":"ex') && !C.startsPlanChanges('{"message":"a","planChanges":null}'));
 
 console.log(failed ? `\n${failed} check(s) failed.` : '\nAll Gemini checks passed.');
 process.exit(failed ? 1 : 0);

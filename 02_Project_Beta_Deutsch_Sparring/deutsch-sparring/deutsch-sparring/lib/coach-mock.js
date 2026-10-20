@@ -1,7 +1,10 @@
 // The demo coach for MOCK=1 (no Gemini key needed). It answers in the same format as the real model
 // (COACH_SCHEMA) and uses the REAL numbers of the student (gaps, goals), so the whole chain can be tried:
-// suggestion → setup screen, plan change → Apply / Keep. Server only.
-import { addDays, dayNum, dayOf, goalState, MAX_MILESTONES } from './goals.js';
+// suggestion → setup screen, a new goal → preview → Accept, plan change → Apply. Server only.
+// Goals (R12): it understands "Goethe B1 by <month>", "A1 vocabulary", "A2 grammar", "30 minutes a day",
+// "move it to <month>" and "rename it to <name>" and answers with proposeGoal / planChanges like the real model.
+import { dayNum } from './goals.js';
+import { PLAN_VERSION } from './plan.js';
 
 const wordsAny = (text, re) => re.test(String(text || ''));
 
@@ -62,55 +65,63 @@ function suggestionFor(home, topics, goalLevel) {
   return first ? { ...base, kind: first.type === 'Wortschatz' ? 'vocab' : 'grammar', topicId: first.id, grammar: [] } : null;
 }
 
-// A milestone with real content, like a teacher would set it: the weakest grammar rule of the goal
-// ("Genitiv nach wegen: 80 % right"), else the word list of the goal's level with the most words still to learn
-// ("Furniture: all 45 words learnt").
-// an exam goal needs the words of every lower level too
-const levelsOfGoal = (goal) => (goal.type === 'exam' ? ['A1', 'A2', 'B1'].slice(0, ['A1', 'A2', 'B1'].indexOf(goal.level) + 1) : [goal.level]);
-function concreteStep(home, goal) {
-  const rule = home.gaps.find((x) => x.kind === 'rule' && (!x.goalId || x.goalId === goal.id));
-  if (goal.type !== 'vocab' && rule) return `${rule.label}: 80 % right`;
-  const lists = (home.vocab?.byList || [])
-    .filter((l) => levelsOfGoal(goal).some((lv) => (l.levels[lv] || 0) > 0) && l.learnt < l.total)
-    .filter((l) => !goal.scope.section || l.topic.startsWith(goal.scope.section))
-    .sort((a, b) => (b.total - b.learnt) - (a.total - a.learnt));
-  const l = lists[0];
-  if (l) return `${l.topic.split(' › ').pop()}: all ${l.total} words learnt`;
-  return rule ? `${rule.label}: 80 % right` : `${goal.level} words: next 40 learnt`;
+// ---------- goals by talking (R12) ----------
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const MONTHS_DE = ['januar', 'februar', 'märz', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'dezember'];
+const MONTH_RE = new RegExp(`\\b(${[...MONTHS, ...MONTHS_DE].join('|')})\\b`, 'i');
+
+// the last day of the next time this month comes (at least 3 weeks away), as YYYY-MM-DD
+function monthEnd(text, today) {
+  const m = String(text || '').match(MONTH_RE);
+  if (!m) return null;
+  const name = m[1].toLowerCase();
+  const index = MONTHS.includes(name) ? MONTHS.indexOf(name) : MONTHS_DE.indexOf(name);
+  const year = Number(today.slice(0, 4));
+  const last = (y) => new Date(Date.UTC(y, index + 1, 0)).toISOString().slice(0, 10);
+  return dayNum(last(year)) - dayNum(today) >= 21 ? last(year) : last(year + 1);
+}
+const levelIn = (text) => (String(text || '').match(/\b(a1|a2|b1)\b/i) || [])[1]?.toUpperCase() || null;
+const minutesIn = (text) => {
+  const n = Number((String(text || '').match(/(\d{1,3})\s*(?:min|minutes)\b/i) || [])[1]);
+  return [15, 20, 30, 45].includes(n) ? n : n ? [15, 20, 30, 45].reduce((b, v) => (Math.abs(v - n) < Math.abs(b - n) ? v : b), 15) : null;
+};
+const niceDay = (day) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+// the goal the last coach message proposed ("[proposed goal: template exam, B1, until 2026-12-31, 20 min a day …]")
+function lastProposal(history) {
+  const last = [...(history || [])].reverse().find((m) => m.role === 'model' && /\[proposed goal:/.test(m.text));
+  const m = last && last.text.match(/\[proposed goal: template (\w+), (A1|A2|B1)(?:, until (\d{4}-\d{2}-\d{2}))?, (\d+) min a day/);
+  if (!m || /the student accepted it/.test(last.text)) return null;
+  return { template: m[1], level: m[2], endDate: m[3] || null, minutesPerDay: Number(m[4]) };
 }
 
-// a plan for fewer minutes: the next two open milestones move 14 days, plus one concrete step halfway
-function replan(home, today, minutes) {
-  const open = home.goals.filter((g) => g.endDate >= today);
-  if (!open.length) return null;
-  const goal = open.find((g) => goalState(g, home.progress?.[g.id] ?? 0, today).tag === 'behind') || open[0];
-  const progress = home.progress?.[goal.id] ?? 0;
-  const next = goal.milestones
-    .filter((m) => m.status !== 'done' && m.target > progress && m.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const changes = [];
-  for (const m of next.slice(0, 2)) {
-    const date = dayOf(Math.min(dayNum(goal.endDate), dayNum(m.date) + 14));
-    if (date !== m.date) changes.push({ action: 'move', milestoneId: m.id, date, title: null, target: null });
-  }
-  // one concrete step on the way to the first open milestone (after it was moved), so the targets still rise with the date
-  const first = next[0];
-  const firstDate = first ? (changes.find((c) => c.milestoneId === first.id)?.date || first.date) : goal.endDate;
-  const firstTarget = first ? first.target : 100;
-  const gap = dayNum(firstDate) - dayNum(today);
-  const target = Math.round((progress + firstTarget) / 2);
-  if (gap >= 6 && target > progress && target < firstTarget && goal.milestones.length < MAX_MILESTONES) {
-    changes.push({ action: 'add', milestoneId: null, date: addDays(today, Math.round(gap / 2)), title: concreteStep(home, goal), target });
-  }
-  if (!changes.length) return { goal, planChanges: null, minutes };
-  return { goal, planChanges: { goalId: goal.id, changes }, minutes };
+const KIND_OF = (text) => {
+  const t = String(text || '');
+  if (/goethe|exam|prüfung|pruefung|zertifikat/i.test(t)) return 'exam';
+  if (/grammar|grammatik/i.test(t)) return 'grammar';
+  if (/vocab|words?\b|wortschatz/i.test(t)) return 'vocab';
+  return null;
+};
+
+function proposalAnswer(p, quick) {
+  const when = p.endDate ? ` It ends on ${niceDay(p.endDate)}.` : '';
+  const what = { exam: `the Goethe ${p.level} exam`, vocab: `${p.level} vocabulary`, grammar: `${p.level} grammar` }[p.template];
+  return {
+    message: `Good goal: ${what}.${when} Here is the plan I would make, with ${p.minutesPerDay} minutes a day. Accept it if it looks right, or tell me what to change.`,
+    suggestedSession: null,
+    proposeGoal: {
+      template: p.template, level: p.level, endDate: p.endDate || null, minutesPerDay: p.minutesPerDay, startLevel: null, options: null,
+    },
+    planChanges: null,
+    quickReplies: quick,
+  };
 }
 
 // → the raw answer (like the model's JSON object); lib/coach.js cleans it
-export function mockCoach({ text, kind, name, home, topics, today }) {
-  const quick = ['What should I practise today?', 'I only have 30 minutes a day, redo my plan', 'Where am I weakest?'];
+export function mockCoach({ text, kind, name, home, topics, today, history = [] }) {
+  const quick = ['What should I practise today?', 'Where am I weakest?', 'I only have 30 minutes a day'];
   const level = home.goals[0]?.level || 'B1';
-  const noGoal = home.goals.length ? '' : ' You have no goal yet. Press "New goal" on this page and I can plan with you.';
+  const noGoal = home.goals.length ? '' : ' You have no goal yet. Tell me what you want to reach, for example "Goethe B1 by March", and I will make a plan.';
   const gap = home.gaps[0];
 
   const recommend = (intro) => {
@@ -123,6 +134,7 @@ export function mockCoach({ text, kind, name, home, topics, today }) {
     return {
       message: `${intro} ${why} Let's practise it today.${noGoal}`,
       suggestedSession,
+      proposeGoal: null,
       planChanges: null,
       quickReplies: quick.slice(1),
     };
@@ -130,21 +142,77 @@ export function mockCoach({ text, kind, name, home, topics, today }) {
 
   if (kind === 'greeting') return recommend(`Hi ${name || 'there'}!`);
 
-  const asksPlan = wordsAny(text, /minute|plan|schedule|re-?plan|busy|time|week|milestone|deadline/i);
-  if (asksPlan) {
-    const minutes = Number((String(text).match(/(\d{1,3})\s*min/i) || [])[1]) || null;
-    const r = replan(home, today, minutes);
-    if (!home.goals.length) {
-      return { message: 'I cannot plan without a goal. Press "New goal" on this page, then ask me again.', suggestedSession: null, planChanges: null, quickReplies: quick.slice(0, 2) };
+  const v2 = home.goals.filter((g) => Number(g.version) === PLAN_VERSION);
+  const target = v2.at(-1);
+  const t = String(text || '');
+  const end = monthEnd(t, today);
+
+  // changing a proposal that is still waiting ("make it 30 minutes", "a month later")
+  const waiting = lastProposal(history);
+  if (waiting && (minutesIn(t) || end || levelIn(t) || KIND_OF(t))) {
+    return proposalAnswer({
+      template: KIND_OF(t) || waiting.template,
+      level: levelIn(t) || waiting.level,
+      endDate: end || waiting.endDate,
+      minutesPerDay: minutesIn(t) || waiting.minutesPerDay,
+    }, ['Looks good', 'What should I practise today?']);
+  }
+
+  // a new goal
+  const goalKind = KIND_OF(t);
+  const wantsNew = /new goal|set a goal|neues ziel|my goal|goal/i.test(t) && !/rename|call it|move|push|extend/i.test(t);
+  if (goalKind && !/weak|gap|worst/i.test(t) && !/rename|call it|move|push|extend/i.test(t)) {
+    const level = levelIn(t);
+    if (!level && goalKind !== 'exam') {
+      return {
+        message: 'Which level do you want to work on: A1, A2 or B1?', suggestedSession: null, proposeGoal: null, planChanges: null, quickReplies: ['A1', 'A2', 'B1'],
+      };
     }
-    if (!r?.planChanges) {
-      return { message: 'Your plan already fits the time you have left. I would not change anything.', suggestedSession: null, planChanges: null, quickReplies: quick.slice(0, 2) };
-    }
-    const how = minutes ? `${minutes} minutes a day is about ${Math.max(10, Math.round((minutes / 1.5) / 10) * 10)} questions.` : 'A calmer plan is fine.';
+    return proposalAnswer({
+      template: goalKind, level: level || 'B1', endDate: end || null, minutesPerDay: minutesIn(t) || 20,
+    }, ['30 minutes a day instead', 'What should I practise today?']);
+  }
+  if (wantsNew) {
     return {
-      message: `${how} For "${r.goal.title}" I would move your next milestones a little later and add one concrete step on the way: \"${r.planChanges.changes.find((c) => c.action === 'add')?.title || 'the next list'}\". Do you want these changes?`,
+      message: 'Tell me what you want to reach and by when. For example: "Goethe B1 by March", "A1 vocabulary" or "A2 grammar".',
       suggestedSession: null,
-      planChanges: r.planChanges,
+      proposeGoal: null,
+      planChanges: null,
+      quickReplies: ['Goethe B1 by March', 'A1 vocabulary', 'A2 grammar'],
+    };
+  }
+
+  // changing a goal the student has: rename, new end date, new time per day
+  const rename = t.match(/\b(?:rename|call)\b.*?\b(?:to|as)\s+["“']?([^"”']{2,40}?)["”']?\s*$/i)
+    || t.match(/\bcall (?:it|my goal|this)\s+["“']?([^"”']{2,40}?)["”']?\s*$/i);
+  const asksDate = end && /move|push|extend|later|end date|until|postpone/i.test(t);
+  const asksMinutes = minutesIn(t) && /day|daily|plan|time/i.test(t);
+  if (rename || asksDate || asksMinutes || wordsAny(t, /re-?plan|redo my plan|busy|less time/i)) {
+    if (!target) {
+      return {
+        message: 'I do not see a goal to change yet. Tell me what you want to reach, for example "Goethe B1 by March".', suggestedSession: null, proposeGoal: null, planChanges: null, quickReplies: ['Goethe B1 by March', 'A1 vocabulary'],
+      };
+    }
+    const planChanges = {
+      goalId: target.id,
+      label: rename ? rename[1].trim() : null,
+      endDate: asksDate && target.template !== 'exam' ? end : null,
+      minutesPerDay: asksMinutes ? minutesIn(t) : null,
+      cut: [],
+    };
+    const bits = [];
+    if (planChanges.label) bits.push(`call it "${planChanges.label}"`);
+    if (planChanges.endDate) bits.push(`move the end date to ${niceDay(planChanges.endDate)}`);
+    if (planChanges.minutesPerDay) bits.push(`plan with ${planChanges.minutesPerDay} minutes a day`);
+    if (asksDate && target.template === 'exam') bits.push('keep the exam date (it does not move)');
+    if (!planChanges.label && !planChanges.endDate && !planChanges.minutesPerDay) {
+      return { message: 'Tell me what to change: the name, the end date or the minutes per day.', suggestedSession: null, proposeGoal: null, planChanges: null, quickReplies: ['30 minutes a day'] };
+    }
+    return {
+      message: `For "${target.title}" I would ${bits.join(' and ')}. Look at the changes below and tap Apply if they are right.`,
+      suggestedSession: null,
+      proposeGoal: null,
+      planChanges,
       quickReplies: ['What should I practise today?'],
     };
   }
@@ -154,6 +222,7 @@ export function mockCoach({ text, kind, name, home, topics, today }) {
     return {
       message: lines.length ? `Your weakest spots in the last 30 days: ${lines.join(', ')}. I suggest we start with the first one.` : 'I see no clear gaps yet. Answer a few more questions and I can tell you more.',
       suggestedSession: lines.length ? suggestionFor(home, topics, level) : null,
+      proposeGoal: null,
       planChanges: null,
       quickReplies: quick.slice(1),
     };

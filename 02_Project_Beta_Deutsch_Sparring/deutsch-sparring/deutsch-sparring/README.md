@@ -114,7 +114,8 @@ survives a reload. Home shows (`components/Home.js`):
   Coach (R12) only calls `previewPlan({ template, endDate, minutesPerDay, startLevel, options })` and `replan(goal, …,
   { minutesPerDay, endDate (never for an exam), focus, cut })`. Exam goals include the course-only words as a core
   target (D2). `POST /api/plan` returns the preview and stores nothing. New plans are saved in `goals.plan` (jsonb, one
-  UPSERT that also checks the 12-goal limit); old goals keep their `milestones` rows until R12 converts them.
+  UPSERT that also checks the 12-goal limit); old goals are converted by the student on Home (R12): a dialog offers the new plan, the old "% ready" milestones are deleted, nothing is saved before "Use the new plan".
+  Goals are made only through the Coach (R12): the model sends `proposeGoal` (a template and numbers), the app builds the plan (`lib/coach-goal.js`, `lib/plan-templates.js`) and the chat shows a preview with Accept / Change; a plan that does not fit shows the generator's fixes as buttons. Renaming, a new end date and a new daily time also go through the Coach (`planChanges`, before → after, then Apply); a name is accepted only if the student typed it. The student can only delete a goal and tick exam milestones. `POST /api/plan` also takes `{fix}` and `{goal, levers, label}`.
   `node scripts/check-plan.mjs` proves it on the B1 example (Goethe B1, 20 Oct 2026 → 24 Apr 2027, 20 min a day).
 - Measuring and latching (review R11, nothing on screen yet): `lib/plan-progress.js` is the ONE place that decides
   whether a milestone is reached (the generator asks the same functions). Word chunk: 90 % of its words learnt (V >= 8).
