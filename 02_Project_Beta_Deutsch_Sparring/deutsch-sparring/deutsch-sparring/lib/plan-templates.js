@@ -35,6 +35,7 @@ import {
 export const DAYS_PER_WEEK = 6; // practice days the plan assumes
 export const BUFFER_DAYS = 14; // an exam plan finishes 2 weeks before the exam (review only)
 export const SHARE = { vocab: 0.5, grammar: 0.35, exam: 0.15 }; // weekly budget; the exam share only once the exam part has started
+export const B1_WORD_SHARE = 0.4; // "B1 words start early": while A1/A2 word gaps remain, B1 words get this share of the weekly word time (the lower levels keep 60 %)
 export const MIN_FLASHCARD = 0.5; // minutes per word answer
 export const MIN_SENTENCE = 1.5; // minutes per grammar answer
 export const ANSWERS_NEW_WORD = 6; // a new word to "learnt"
@@ -454,13 +455,19 @@ const newWordsCap = (min) => NEW_WORDS_PER_WEEK[min] ?? Math.round(min);
 
 // items: [{ m, track, w: workOf }] in schedule order → Map(milestoneId → day number when it is reached), finish day
 function simulate(items, { minutesPerDay, startDay, examStartDay, focusTrack, learntAtStart }) {
-  const queue = { vocab: items.filter((x) => x.track === 'vocab'), grammar: items.filter((x) => x.track === 'grammar') };
+  // vocabulary: the lower-level gaps (A1, A2) keep priority; B1 words run in a second queue that shares the weekly word time
+  const isB1 = (x) => x.track === 'vocab' && x.part?.level === 'B1';
+  const queue = {
+    vocab: items.filter((x) => x.track === 'vocab' && !isB1(x)),
+    vocabB1: items.filter(isB1),
+    grammar: items.filter((x) => x.track === 'grammar'),
+  };
   const left = new Map(items.map((x) => [x.m.id, { minutes: x.w.minutes, newWords: x.w.newWords || 0, newTopics: x.w.newTopics || 0, reviewTopics: x.w.reviewTopics || 0 }]));
   const doneDay = new Map();
   let learntWords = learntAtStart;
   const week = minutesPerDay * DAYS_PER_WEEK;
   let wk = 0;
-  for (; wk < MAX_WEEKS && (queue.vocab.length || queue.grammar.length); wk += 1) {
+  for (; wk < MAX_WEEKS && (queue.vocab.length || queue.vocabB1.length || queue.grammar.length); wk += 1) {
     const weekStart = startDay + wk * 7;
     const examOn = examStartDay != null && weekStart + 6 >= examStartDay;
     const share = examOn ? { vocab: SHARE.vocab, grammar: SHARE.grammar } : { vocab: SHARE.vocab / (1 - SHARE.exam), grammar: SHARE.grammar / (1 - SHARE.exam) };
@@ -474,10 +481,10 @@ function simulate(items, { minutesPerDay, startDay, examStartDay, focusTrack, le
     const caps = { newWords: newWordsCap(minutesPerDay), newTopics: NEW_TOPICS_PER_WEEK, reviewTopics: REVIEW_TOPICS_PER_WEEK };
     const used = { vocab: 0, grammar: 0 };
     const finished = [];
-    const run = (track, minutes) => {
+    const run = (track, minutes, q = track) => {
       let free = minutes;
-      while (free > 1e-9 && queue[track].length) {
-        const x = queue[track][0];
+      while (free > 1e-9 && queue[q].length) {
+        const x = queue[q][0];
         const l = left.get(x.m.id);
         let can = Math.min(free, l.minutes);
         for (const k of ['newWords', 'newTopics', 'reviewTopics']) {
@@ -493,25 +500,32 @@ function simulate(items, { minutesPerDay, startDay, examStartDay, focusTrack, le
         free -= can;
         used[track] += can;
         if (l.minutes <= 1e-6) {
-          queue[track].shift();
+          queue[q].shift();
           finished.push({ x, track, at: used[track] });
           if (track === 'vocab') learntWords += x.w.learntWords || 0;
         }
       }
       return free;
     };
-    const restV = run('vocab', allot.vocab);
+    // 60/40 lower/B1 while lower gaps remain; time one of them cannot use goes to the other (so B1 gets it all when A1/A2 are done)
+    const lowerShare = queue.vocab.length ? 1 - B1_WORD_SHARE : 0;
+    const restLow = run('vocab', allot.vocab * lowerShare, 'vocab');
+    const restB1 = run('vocab', allot.vocab * (1 - lowerShare), 'vocabB1');
+    const restV = (restB1 > 0 ? run('vocab', restB1, 'vocab') : 0) + (restLow > 0 ? run('vocab', restLow, 'vocabB1') : 0);
     const restG = run('grammar', allot.grammar);
     // time a track cannot use (finished, or a pace limit) goes to the other one
     if (restV > 0) run('grammar', restV);
-    if (restG > 0) run('vocab', restG);
+    if (restG > 0) {
+      const left = run('vocab', restG, 'vocab');
+      if (left > 0) run('vocab', left, 'vocabB1');
+    }
     for (const f of finished) {
       const total = Math.max(used[f.track], 1e-9);
       const off = Math.min(7, Math.max(1, Math.ceil((7 * f.at) / total)));
       doneDay.set(f.x.m.id, weekStart + off);
     }
   }
-  const unfinished = [...queue.vocab, ...queue.grammar];
+  const unfinished = [...queue.vocab, ...queue.vocabB1, ...queue.grammar];
   for (const x of unfinished) doneDay.set(x.m.id, startDay + MAX_WEEKS * 7);
   const finish = Math.max(startDay, ...doneDay.values());
   return { doneDay, finish };

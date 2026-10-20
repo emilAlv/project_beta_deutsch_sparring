@@ -184,7 +184,26 @@ eq('D2: the preview counts all course-only words', b1.summary.courseWords, kursO
 
 // order: levels A1 → A2 → B1 in each track; no topic before its needs (also across levels); milestone names
 const openDates = (pid) => goal.subPlans.find((p) => p.id === pid).milestones.filter((m) => m.date && !m.alreadySolid).map((m) => m.date).sort();
-check('vocabulary levels in order (A2 starts after A1 ends, B1 after A2)', openDates('vocab-a1').at(-1) <= openDates('vocab-a2')[0] && openDates('vocab-a2').at(-1) <= openDates('vocab-b1')[0]);
+check('vocabulary: A2 starts after A1 ends (lower levels stay in order)', openDates('vocab-a1').at(-1) <= openDates('vocab-a2')[0]);
+// Emilio's decision "B1 words start early": B1 words share the weekly word time with the lower gaps (about 60/40)
+check('B1 words start before all A1/A2 word milestones are done', openDates('vocab-b1')[0] < openDates('vocab-a2').at(-1), `${openDates('vocab-b1')[0]} vs ${openDates('vocab-a2').at(-1)}`);
+check('lower-level gaps keep priority: A1/A2 words finish before B1 words do', openDates('vocab-a2').at(-1) <= openDates('vocab-b1').at(-1));
+for (const [label, c, mins] of [['start level B1 (gaps in A1/A2)', ctx, 20], ['a fresh student (everything new)', ctxFresh, 45]]) {
+  const call = { template: 'exam', endDate: c === ctx ? '2027-10-23' : '2028-10-20', minutesPerDay: mins, startLevel: c === ctx ? 'B1' : 'A1', options: { level: 'B1', cut: ['kursWords', 'receptiveIntroduced'] } };
+  const pv = PT.previewPlan(call, c);
+  if (c === ctxFresh) check('the fresh-student plan fits, so its weekly dates are real (not squeezed)', pv.ok && !pv.tight);
+  const wk = PT.milestoneWork(pv.goal, c);
+  const vms = PL.allMilestones(pv.goal).filter(({ m }) => m.criterion.kind === 'words' && m.date && !m.reachedAt && m.status === 'open').sort((a, b) => a.m.date.localeCompare(b.m.date));
+  const lastLow = vms.filter(({ m }) => m.criterion.level !== 'B1').at(-1)?.m.date;
+  const firstB1 = vms.find(({ m }) => m.criterion.level === 'B1')?.m.date;
+  check(`${label}: B1 word milestones start before the last A1/A2 one`, !lastLow || (firstB1 && firstB1 < lastLow), `${firstB1} vs ${lastLow}`);
+  const capW = PT.NEW_WORDS_PER_WEEK[mins] ?? mins;
+  let sum = 0;
+  check(`${label}: never more than ${capW} new words a week`, vms.every(({ m }) => {
+    sum += wk.get(m.id).newWords || 0;
+    return sum <= capW * Math.ceil((dn(m.date) - dn(TODAY)) / 7) + 1e-6;
+  }));
+}
 check('grammar levels in order', openDates('grammar-a2').at(-1) <= openDates('grammar-b1')[0]);
 const topicDay = new Map(all.filter(({ m }) => m.criterion.kind === 'grammar').map(({ m }) => [m.criterion.topicId, m.alreadySolid ? '0000' : m.date]));
 check('no grammar topic is scheduled before a topic it needs', [...topicDay].every(([id, d]) => C.curriculumEntry(id).needs.every((n) => topicDay.get(n) <= d)));

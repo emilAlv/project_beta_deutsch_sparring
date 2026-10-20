@@ -144,25 +144,37 @@ async function callModel(model, opts) {
 }
 
 const THINKING_LEVELS = ['low', 'medium', 'high'];
-const COACH_FALLBACK_DEFAULT = 'gemini-3.5-flash'; // the coach never falls back to a "lite" model
+const COACH_FALLBACK_DEFAULT = 'gemini-3.5-flash'; // the coach does not use a "lite" model as its normal fallback
 
 // The coach's own settings (it plans the learning, so it may use a stronger model than the tutor):
 //   COACH_MODEL (default: the tutor's model), COACH_FALLBACK_MODEL (default: gemini-3.5-flash when the coach
 //   model is something else, otherwise none), COACH_THINKING low | medium | high (default medium).
+// quotaFallback: only when COACH_FALLBACK_MODEL is not set, a 429 (quota used up) may use the tutor's fallback
+// model (GEMINI_FALLBACK_MODEL, default gemini-3.5-flash-lite) for that call: a simpler answer beats "quota used up".
+// Every other failure keeps the rule above (no lite model for the coach).
 export function coachModelSettings() {
   const model = process.env.COACH_MODEL || process.env.GEMINI_MODEL || 'gemini-3.5-flash';
   const fallback = process.env.COACH_FALLBACK_MODEL || (model !== COACH_FALLBACK_DEFAULT ? COACH_FALLBACK_DEFAULT : null);
   const level = String(process.env.COACH_THINKING || '').toLowerCase();
-  return { model, fallback, thinking: THINKING_LEVELS.includes(level) ? level : 'medium' };
+  const quotaFallback = process.env.COACH_FALLBACK_MODEL ? null : (process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite');
+  return { model, fallback, quotaFallback, thinking: THINKING_LEVELS.includes(level) ? level : 'medium' };
 }
 
 // schema: undefined = plain text, true = any JSON, object = Gemini responseSchema.
 // Optional per-call settings: model, fallback (null = none), thinking 'low' | 'medium' | 'high'.
 // The tutor passes none of them: GEMINI_MODEL, GEMINI_FALLBACK_MODEL and low thinking.
-export async function generate({ system, contents, schema, deadline, model, fallback: fallbackModel, thinking }) {
+export async function generate({ system, contents, schema, deadline, model, fallback: fallbackModel, quotaFallback, thinking }) {
   const primary = model || process.env.GEMINI_MODEL || 'gemini-3.5-flash';
   const fallback = fallbackModel !== undefined ? fallbackModel : (process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite');
   const opts = { system, contents, schema, deadline, thinking: THINKING_LEVELS.includes(thinking) ? thinking : 'low' };
+  // the coach only: a 429 on every model it may use → one call on the quota fallback (lite) model
+  const lastResort = async (e) => {
+    if (e.status === 429 && quotaFallback && quotaFallback !== primary && quotaFallback !== fallback && msLeft(deadline) > 5000) {
+      console.log('gemini: quota (429), using the quota fallback model for this call');
+      return callModel(quotaFallback, opts);
+    }
+    throw e;
+  };
   try {
     return await callModel(primary, opts);
   } catch (e) {
@@ -172,9 +184,10 @@ export async function generate({ system, contents, schema, deadline, model, fall
       try {
         return await callModel(fallback, opts);
       } catch (e2) {
-        throw e.status === 'config' ? e : e2;
+        if (e.status === 'config') throw e;
+        return lastResort(e2.status === 429 ? e2 : e.status === 429 ? e : e2);
       }
     }
-    throw e;
+    return lastResort(e);
   }
 }
