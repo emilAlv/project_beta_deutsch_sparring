@@ -215,12 +215,150 @@ check('mock greeting without data still suggests a session', C.normalizeCoach(em
 // ---- prompt ----
 const home = { ...noGoals, goals: [myGoal, old], plans: {}, vocab: null, rules: [] };
 const text = P.coachContext({ home, topics, today });
-check('context: today, goal id, title and next milestones of a plan', text.includes('TODAY: 2026-10-19 (Monday)') && text.includes(`id ${myGoal.id}`) && text.includes('A2 vocabulary') && /next: "/.test(text));
+check('context: today, goal id, title and next milestones of a plan', text.includes('TODAY: 2026-10-19 (Monday)') && text.includes(`id ${myGoal.id}`) && text.includes('A2 vocabulary') && /next \[[A-Za-z0-9_-]+\]: "/.test(text));
 check('context: an old goal is marked, and no percentage line about readiness', text.includes('old-style goal') && !/Exam readiness|% of the time used|progress \d+ %/.test(text));
 check('context: no free-practice topic in the catalog', !text.includes('\nfree |'));
 check('schema: proposeGoal and planChanges with fixed templates, no title field', ['message', 'suggestedSession', 'proposeGoal', 'planChanges', 'quickReplies'].every((k) => P.COACH_SCHEMA.properties[k])
   && !JSON.stringify(P.COACH_SCHEMA).includes('"title"') && P.COACH_SCHEMA.properties.proposeGoal.properties.template.enum.includes('exam') && !P.COACH_SCHEMA.properties.proposeGoal.properties.template.enum.includes('manual'));
 check('today: a date far from the server day is ignored', P.pickToday('2020-01-01', '2026-10-19') === '2026-10-19' && P.pickToday('2026-10-20', '2026-10-19') === '2026-10-20');
+
+
+// ================= R15: the Coach ties every suggestion to the next milestone =================
+const PP = await import('../lib/plan-progress.js');
+const HP = await import('../lib/home-plan.js');
+const PL = await import('../lib/plan.js');
+const words = W.getWords();
+const r15ctx = { words, sections: W.listSections(), today, scores: {}, grammarStats: {} };
+const r15 = T.previewPlan({ template: 'exam', level: 'B1', endDate: '2027-04-24', minutesPerDay: 20, startLevel: 'A1' }, r15ctx);
+const r15goal = T.cleanPlan(r15.goal);
+const homeFor = (g, over = {}) => {
+  const { plans } = PP.computePlans({ goals: [g], words, scores: {}, grammarStats: {}, today, lastPractice: Date.parse(today), ...over });
+  const extras = HP.homeExtras([g], plans, today, { grammarStats: {} });
+  return { ...noGoals, goals: [g], plans, ...extras };
+};
+const planHome = homeFor(r15goal);
+const nu = planHome.nextUp;
+check('R15 setup: a plan with a Next up milestone', !!nu && !!planHome.sessions[nu.milestoneId]);
+
+// suggestion = the next milestone (the same one Home shows)
+const sg = G.milestoneSuggestion({ milestoneId: nu.milestoneId }, planHome);
+check('suggestion matches the next milestone (= Home "Next up")', sg.milestoneId === nu.milestoneId && sg.title && sg.title === T.milestoneTitle(PL.allMilestones(r15goal).find(({ m }) => m.id === nu.milestoneId).m.criterion));
+check('suggestion: the settings come from the app (sessionForMilestone), not from the model', (() => {
+  const x = G.milestoneSuggestion({ milestoneId: nu.milestoneId, kind: 'grammar', topicId: 'free', level: 'A1', difficulty: 'hard', questions: 999 }, planHome);
+  const s = planHome.sessions[nu.milestoneId];
+  return x.kind === s.kind && x.questions === s.questions && x.difficulty === s.difficulty && x.topicId === (s.topicId || null);
+})());
+check('unknown milestone id → falls back to the next milestone', G.milestoneSuggestion({ milestoneId: 'm-does-not-exist' }, planHome).milestoneId === nu.milestoneId);
+check('no milestone id (old-style topic suggestion) → the next milestone', G.milestoneSuggestion({ topicId: 'w:essen', kind: 'vocab' }, planHome).milestoneId === nu.milestoneId);
+check('a made-up object, a number or null → the next milestone', [null, 7, { milestoneId: 42 }, { milestoneId: { x: 1 } }].every((raw) => G.milestoneSuggestion(raw, planHome).milestoneId === nu.milestoneId));
+const farMilestone = PL.allMilestones(r15goal).map(({ m }) => m.id).find((id) => id !== nu.milestoneId && !(nu.others || []).includes(id));
+check('a real milestone that Home does not list as next → the next milestone', G.milestoneSuggestion({ milestoneId: farMilestone }, planHome).milestoneId === nu.milestoneId);
+check('a listed "other" milestone is allowed', !nu.others.length || G.milestoneSuggestion({ milestoneId: nu.others[0] }, planHome).milestoneId === nu.others[0]);
+check('no plan → no milestone suggestion', G.milestoneSuggestion({ milestoneId: 'x' }, noGoals) === null);
+// when the next milestone is reached, Home and the Coach move on together
+const reachedGoal = structuredClone(r15goal);
+PL.allMilestones(reachedGoal).find(({ m }) => m.id === nu.milestoneId).m.reachedAt = '2026-10-18';
+const homeAfter = homeFor(reachedGoal);
+check('after the next milestone is reached, Home and Coach move on together', homeAfter.nextUp.milestoneId !== nu.milestoneId
+  && G.milestoneSuggestion({ milestoneId: nu.milestoneId }, homeAfter).milestoneId === homeAfter.nextUp.milestoneId);
+// through the whole answer
+const sgAnswer = C.normalizeCoach({ message: 'x', suggestedSession: { topicId: 'nope' } }, { topics, actions: { suggestion: sg } });
+check('answer: the milestone suggestion survives cleaning', sgAnswer.suggestedSession?.milestoneId === nu.milestoneId && sgAnswer.suggestedSession.title === sg.title);
+const setup = HP.setupFromSession(sgAnswer.suggestedSession, [{ id: sg.topicId, type: sg.kind === 'vocab' ? 'Wortschatz' : 'Grammatik' }]);
+check('suggestion → setup screen prefilled (kind, difficulty, questions)', setup && setup.kind === sg.kind && setup.questions === sg.questions && setup.difficulty === sg.difficulty);
+
+// exam end date never moves
+const examPlan = G.applyPlanChange(r15goal, r15ctx, today, { levers: { endDate: '2027-07-31' } });
+check('exam end date never moves (replan refuses)', !examPlan.ok && examPlan.error === 'exam_date_fixed');
+const examAsk = G.goalActions({ message: 'x', planChanges: { goalId: r15goal.id, endDate: '2027-07-31', minutesPerDay: 30 } }, { goals: [r15goal], ctx: r15ctx, today, lastUser: '' });
+check('exam end date never moves (the Coach card is refused, with a note)', examAsk.planChanges === null && /exam date/.test(examAsk.note));
+const examPace = G.goalActions({ message: 'x', planChanges: { goalId: r15goal.id, minutesPerDay: 30 } }, { goals: [r15goal], ctx: r15ctx, today, lastUser: '' });
+check('exam goal: more time is fine, and the goal keeps its exam date', examPace.planChanges && G.applyPlanChange(r15goal, r15ctx, today, { levers: examPace.planChanges.levers }).goal.endDate === r15goal.endDate);
+
+// reached milestones never move
+const reachedAll = structuredClone(r15goal);
+PL.allMilestones(reachedAll).slice(0, 6).forEach(({ m }, i) => { m.reachedAt = `2026-10-${String(10 + i).padStart(2, '0')}`; });
+const sig = (g) => JSON.stringify(PL.allMilestones(g).filter(({ m }) => m.reachedAt).map(({ m }) => [m.id, m.date, m.reachedAt, m.status || '']));
+const keep = sig(reachedAll);
+const partIds = reachedAll.subPlans.map((p) => p.id);
+const stays = (levers) => {
+  const out = G.applyPlanChange(reachedAll, r15ctx, today, { levers });
+  return out.ok && sig(out.goal) === keep;
+};
+check('reached milestones never move (less time)', stays({ minutesPerDay: 15 }));
+check('reached milestones never move (more time)', stays({ minutesPerDay: 45 }));
+check('reached milestones never move (focus on a part)', stays({ focus: [partIds[0]] }));
+check('reached milestones never move (leave something out)', stays({ cut: ['kursWords', 'receptiveIntroduced'] }));
+check('reached milestones never move (a later end date, non-exam goal)', (() => {
+  const v = T.cleanPlan(T.previewPlan({ template: 'vocab', level: 'A2', endDate: '2027-03-31', minutesPerDay: 20 }, r15ctx).goal);
+  const first = v.subPlans[0].milestones[0];
+  first.reachedAt = '2026-10-10';
+  const out = G.applyPlanChange(v, r15ctx, today, { levers: { endDate: '2027-06-30' } });
+  const m2 = out.goal.subPlans[0].milestones.find((x) => x.id === first.id);
+  return out.ok && m2.reachedAt === '2026-10-10' && m2.date === first.date && out.goal.endDate === '2027-06-30';
+})());
+check('Apply checks again: a goal that has ended is refused, not applied', !G.applyPlanChange({ ...r15goal, endDate: '2026-10-01' }, r15ctx, today, { levers: { minutesPerDay: 30 } }).ok);
+check('a focus part id the goal does not have is ignored', (() => {
+  const out = G.applyPlanChange(r15goal, r15ctx, today, { levers: { focus: ['p-nope'] } });
+  return out.ok && !out.changes.some((c) => c.type === 'focus');
+})());
+check('the model cannot add titles or targets to a plan change', (() => {
+  const r = G.goalActions({ message: 'x', planChanges: { goalId: r15goal.id, minutesPerDay: 30, title: 'HACKED', target: 99, changes: [{ action: 'add', title: 'HACKED' }] } }, { goals: [r15goal], ctx: r15ctx, today, lastUser: '' });
+  return r.planChanges && !/HACKED/.test(JSON.stringify(r.planChanges));
+})());
+check('the plan card shows the end-date effect (finish before / after, goal end date)', examPace.planChanges.finishBefore && examPace.planChanges.finishAfter && examPace.planChanges.endDate === r15goal.endDate);
+
+// the mock coach agrees with Home
+const planMock = M.mockCoach({ text: '', kind: 'greeting', name: 'Anna', home: planHome, topics, today });
+const planMsg = C.normalizeCoach(planMock, { topics, actions: { suggestion: G.milestoneSuggestion(planMock.suggestedSession, planHome) } });
+check('mock greeting: names the next milestone and suggests exactly that one', planMock.suggestedSession.milestoneId === nu.milestoneId && planMsg.message.includes(sg.title));
+check('mock greeting: the count is the one Home shows (have of total)', (() => { const i = planHome.plans[nu.goalId].milestones[nu.milestoneId]; return planMsg.message.includes(`${i.have} of ${i.total} ${i.unit}`); })());
+check('mock greeting: never says "Press New goal"', !/press|new goal/i.test(planMsg.message));
+check('mock: the suggestion has the level of the milestone, not a fixed B1', planMsg.suggestedSession.level === sg.level);
+
+// tone: read the mock answers; at most one boxing phrase, and not in every message
+const BOXING = /good round|guard|back in the ring|on your toes|one more round|knock|corner|\bbell\b|\bjab\b|punch|\bring\b/gi;
+const asks = [
+  ['', 'greeting', planHome], ['', 'greeting', noGoals], ['What should I practise today?', 'chat', planHome], ['Where am I weakest?', 'chat', planHome],
+  ['I have less time, redo my plan', 'chat', planHome], ['rename my goal to My B1 plan', 'chat', planHome], ['Goethe B1 by December', 'chat', noGoals],
+  ['A2 grammar', 'chat', noGoals], ['Move my goal date', 'chat', planHome], ['hello coach', 'chat', planHome],
+  ['What should I practise today?', 'chat', noGoals], ['30 minutes a day', 'chat', planHome],
+];
+const answers = asks.map(([text, kind, h]) => M.mockCoach({ text, kind, name: 'Anna', home: h, topics, today }).message);
+const counts = answers.map((m) => (m.match(BOXING) || []).length);
+console.log(answers.map((m, i) => `   [${i + 1}] ${m}`).join('\n'));
+check('tone: never more than one boxing phrase in a message', counts.every((n) => n <= 1), counts.join(','));
+check('tone: not in every message', counts.some((n) => n === 0) && counts.filter((n) => n > 0).length <= Math.ceil(answers.length / 2), counts.join(','));
+const daysCount = ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25'].map((d) => (M.mockCoach({ text: '', kind: 'greeting', name: 'Anna', home: planHome, topics, today: d }).message.match(BOXING) || []).length);
+check('tone: over a week of greetings, some with a phrase, most without, never two', daysCount.every((n) => n <= 1) && daysCount.some((n) => n === 1) && daysCount.filter((n) => n === 0).length >= 3, daysCount.join(','));
+check('plan chips: without a goal the mock offers no plan or date change', (() => {
+  const r = M.mockCoach({ text: 'What should I practise today?', kind: 'chat', name: 'A', home: noGoals, topics, today });
+  return !r.quickReplies.some((q) => /less time|redo my plan|goal date|minutes a day/i.test(q));
+})());
+check('plan chips: "Move my goal date" is not offered for an exam goal', !planMock.quickReplies.some((q) => /goal date/i.test(q)));
+check('mock "less time" → a replan with fewer minutes per day', (() => {
+  const r = M.mockCoach({ text: 'I have less time, redo my plan', kind: 'chat', name: 'A', home: planHome, topics, today });
+  return r.planChanges && r.planChanges.minutesPerDay < r15goal.pace.minutesPerDay;
+})());
+
+// the prompt: the model sees ids to copy, and the personality / teaching rules
+const planText = P.coachContext({ home: planHome, topics, today });
+check('context: NEXT UP lists the milestone id Home shows', planText.includes('NEXT UP') && planText.includes(`[${nu.milestoneId}]`) && planText.includes('THIS IS THE NEXT MILESTONE'));
+check('context: part ids are there for "focus"', planText.includes(`part id ${r15goal.subPlans[0].id}`));
+const promptText = P.buildCoachPrompt({ name: 'Anna', context: planText });
+check('prompt: boxing coach kept light, name Coach, teaching rules', /ONE boxing phrase/.test(promptText) && /NOT in every message/.test(promptText) && /Spaced repetition/.test(promptText) && /Productive before receptive/.test(promptText) && /chooses their sessions freely/.test(promptText));
+check('schema: suggestedSession has milestoneId; planChanges has focus; still no title field', !!P.COACH_SCHEMA.properties.suggestedSession.properties.milestoneId && !!P.COACH_SCHEMA.properties.planChanges.properties.focus && !JSON.stringify(P.COACH_SCHEMA).includes('"title"'));
+check('stored: a saved milestone suggestion survives; an old topic one too', (() => {
+  const m = C.cleanStoredMessages([{ id: 'x1', role: 'coach', text: 'hi', suggestion: sg }, { id: 'x2', role: 'coach', text: 'hi', suggestion: { topicId: 'w:essen' } }], topics);
+  return m[0].suggestion.milestoneId === nu.milestoneId && m[1].suggestion.topicId === 'w:essen';
+})());
+
+check('replan: less time a day never pulls an open milestone earlier', (() => {
+  const g = T.cleanPlan(T.previewPlan({ template: 'vocab', level: 'A1', endDate: '2026-12-01', minutesPerDay: 30 }, ctx).goal);
+  const r = T.replan(g, ctx, today, { minutesPerDay: 15 });
+  const before = new Map(g.subPlans.flatMap((p) => p.milestones.map((m) => [m.id, m.date])));
+  return r.ok && r.goal.subPlans.every((p) => p.milestones.every((m) => !before.get(m.id) || !m.date || m.date >= before.get(m.id)));
+})());
 
 console.log(failed ? `\n${failed} check(s) failed.` : '\nAll coach checks passed.');
 process.exit(failed ? 1 : 0);

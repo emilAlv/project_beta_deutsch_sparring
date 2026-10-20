@@ -767,6 +767,15 @@ export function replan(goal, ctx = {}, today, levers = {}) {
   const before = new Map(allMilestones(next).map(({ m }) => [m.id, m.date]));
   const startDay = Math.max(dayNum(now), dayNum(next.startDate));
   const { tight } = schedule(next, next.subPlans, ctx, { minutesPerDay: next.pace.minutesPerDay, startDay, focus, cut });
+  // less time a day never pulls a milestone earlier (a squeezed plan would otherwise shift dates back by a day or two)
+  const slower = next.pace.minutesPerDay < goal.pace.minutesPerDay && !focus.length && !cut.length
+    && (levers.endDate == null || levers.endDate >= goal.endDate);
+  if (slower) {
+    for (const { m } of allMilestones(next)) {
+      const from = before.get(m.id);
+      if (from && m.date && m.date < from && m.date >= now && !isReached(m)) m.date = from;
+    }
+  }
   for (const { m } of allMilestones(next)) {
     const from = before.get(m.id);
     if (from !== m.date && m.status !== 'skipped' && !isReached(m)) changes.push({ type: 'move', milestoneId: m.id, title: milestoneTitle(m.criterion), from, to: m.date });

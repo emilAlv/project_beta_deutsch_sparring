@@ -9,7 +9,8 @@
 // Nothing is saved here: the browser saves only after the student taps Accept / Apply.
 import { isDay, MAX_GOALS } from './goals.js';
 import { MAX_LABEL, PLAN_VERSION } from './plan.js';
-import { planRequest, buildPlan, describePlan, replan, cleanPlan } from './plan-templates.js';
+import { planRequest, buildPlan, describePlan, replan, cleanPlan, milestoneTitle } from './plan-templates.js';
+import { allMilestones } from './plan.js';
 import { cleanProposal, cleanLever, cleanRequest, cleanStoredPlan, MAX_CHANGES } from './coach.js';
 
 const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
@@ -119,8 +120,14 @@ export function applyPlanChange(goal, ctx, today, { levers = {}, label = '' } = 
   return { ...out, ...describePlan(out.goal, ctx, out.tight) };
 }
 
+// when the goal finishes as it is now (the generator's own estimate, which is later than the end date when the plan does not fit)
+function finishNow(goal, ctx, today) {
+  const now = replan(goal, ctx, today, {});
+  return now.ok ? describePlan(goal, ctx, now.tight).summary.finishesOn : null;
+}
+
 const dayLine = (d) => d || '';
-function planCard(goal, out, lev, label) {
+function planCard(goal, out, lev, label, ctx, today) {
   const shown = out.changes.slice(0, MAX_CHANGES);
   return cleanStoredPlan({
     goalId: goal.id,
@@ -133,6 +140,9 @@ function planCard(goal, out, lev, label) {
     more: Math.max(0, out.changes.length - shown.length),
     fits: !out.tight,
     needsUntil: out.tight ? out.tight.needsUntil : null,
+    finishBefore: finishNow(goal, ctx, today),
+    finishAfter: out.summary?.finishesOn || null,
+    endDate: out.goal.endDate,
     status: 'open',
   });
 }
@@ -162,7 +172,7 @@ export function goalActions(raw, { goals, ctx, today, lastUser }) {
     }
     const label = labelFrom(pc.label, lastUser);
     const lev = cleanLever({
-      minutesPerDay: pc.minutesPerDay, endDate: isDay(pc.endDate) ? pc.endDate : undefined, cut: pc.cut,
+      minutesPerDay: pc.minutesPerDay, endDate: isDay(pc.endDate) ? pc.endDate : undefined, cut: pc.cut, focus: pc.focus,
     });
     if (!label && !Object.keys(lev).length) {
       out.note = NOTES.default;
@@ -174,7 +184,31 @@ export function goalActions(raw, { goals, ctx, today, lastUser }) {
       return out;
     }
     if (!r.changes.length) return out; // nothing would change: no card
-    out.planChanges = planCard(goal, r, lev, label);
+    out.planChanges = planCard(goal, r, lev, label, ctx, today);
   }
   return out;
+}
+
+// ---------- the suggested session, tied to a milestone (R15, redesign §4.5 and §4.6) ----------
+// home = the numbers of /api/stats ({ goals, plans, nextUp, sessions }, lib/home-data.js). The model only names a milestone id.
+// Allowed: the milestone Home shows as "Next up" and the other open ones Home lists next to it. Anything else (no id, an unknown
+// id, a milestone that is reached, left out or done outside the app) becomes the "Next up" milestone, so the Coach and Home always agree.
+// The settings (topic, level, difficulty, questions) are filled in by the app (sessionForMilestone), never by the model.
+// → a suggestion for lib/coach.js cleanSuggestion, or null when there is no open milestone to practise.
+export function milestoneSuggestion(raw, home) {
+  const nu = home?.nextUp;
+  if (!nu) return null;
+  const asked = isObj(raw) && typeof raw.milestoneId === 'string' ? raw.milestoneId : '';
+  const allowed = [nu.milestoneId, ...(nu.others || [])];
+  const id = allowed.includes(asked) && home.sessions?.[asked] ? asked : nu.milestoneId;
+  const s = home.sessions?.[id];
+  if (!s || s.outside) return null;
+  const goal = (home.goals || []).find((g) => g.id === nu.goalId);
+  const hit = goal && Number(goal.version) === PLAN_VERSION ? allMilestones(goal).find(({ m }) => m.id === id) : null;
+  return {
+    milestoneId: id,
+    title: hit ? milestoneTitle(hit.m.criterion) : '',
+    kind: s.kind, topicId: s.topicId || null, level: s.level || goal?.level, difficulty: s.difficulty, questions: s.questions,
+    source: s.source, grammar: [],
+  };
 }

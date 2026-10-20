@@ -4,7 +4,8 @@
 // Goals (R12): it understands "Goethe B1 by <month>", "A1 vocabulary", "A2 grammar", "30 minutes a day",
 // "move it to <month>" and "rename it to <name>" and answers with proposeGoal / planChanges like the real model.
 import { dayNum } from './goals.js';
-import { PLAN_VERSION } from './plan.js';
+import { PLAN_VERSION, allMilestones } from './plan.js';
+import { milestoneTitle } from './plan-templates.js';
 
 const wordsAny = (text, re) => re.test(String(text || ''));
 
@@ -65,6 +66,27 @@ function suggestionFor(home, topics, goalLevel) {
   return first ? { ...base, kind: first.type === 'Wortschatz' ? 'vocab' : 'grammar', topicId: first.id, grammar: [] } : null;
 }
 
+// ---------- the voice (R15): an old-school boxing coach, kept light ----------
+// At most ONE boxing phrase per message, and in only about one message of three (picked from the day and the text, so a
+// demo run looks the same every time).
+const PUNCH = ['Good round.', 'Keep your guard up.', 'Back in the ring.', 'Stay on your toes.', 'One more round.'];
+function punch(seed, today) {
+  const n = [...`${today}${seed}`].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 9973, 7);
+  return n % 3 === 0 ? PUNCH[n % PUNCH.length] : '';
+}
+const join = (...parts) => parts.filter(Boolean).join(' ');
+
+// the milestone Home shows as "Next up" (lib/home-plan.js nextUp), with its numbers → { id, title, have, need, unit, date, session } or null
+function nextMilestone(home) {
+  const nu = home.nextUp;
+  const goal = nu && home.goals.find((g) => g.id === nu.goalId);
+  const hit = goal && Number(goal.version) === PLAN_VERSION ? allMilestones(goal).find(({ m }) => m.id === nu.milestoneId) : null;
+  const session = nu && home.sessions?.[nu.milestoneId];
+  if (!hit || !session) return null;
+  const info = home.plans?.[goal.id]?.milestones?.[hit.m.id] || {};
+  return { id: nu.milestoneId, goal, title: milestoneTitle(hit.m.criterion), have: info.have ?? 0, total: info.total ?? 0, unit: info.unit || 'words', date: hit.m.date || null, session };
+}
+
 // ---------- goals by talking (R12) ----------
 const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
 const MONTHS_DE = ['januar', 'februar', 'märz', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'dezember'];
@@ -119,12 +141,32 @@ function proposalAnswer(p, quick) {
 
 // → the raw answer (like the model's JSON object); lib/coach.js cleans it
 export function mockCoach({ text, kind, name, home, topics, today, history = [] }) {
-  const quick = ['What should I practise today?', 'Where am I weakest?', 'I only have 30 minutes a day'];
-  const level = home.goals[0]?.level || 'B1';
-  const noGoal = home.goals.length ? '' : ' You have no goal yet. Tell me what you want to reach, for example "Goethe B1 by March", and I will make a plan.';
+  const hasGoals = home.goals.length > 0;
+  // plan chips only with a goal
+  const examGoal = home.goals.some((g) => g.template === 'exam' || g.isExam);
+  const quick = hasGoals
+    ? ['What should I practise today?', 'Where am I weakest?', 'I have less time, redo my plan', ...(examGoal ? [] : ['Move my goal date'])]
+    : ['What should I practise today?', 'Where am I weakest?', 'I want to set a goal'];
+  const level = home.goals[0]?.level || (home.tiles.answered ? 'B1' : 'A1'); // a first session starts at the beginning
+  const noGoal = hasGoals ? '' : ' You have no goal yet. Tell me what you want to reach, for example "Goethe B1 by March", and I will make a plan.';
   const gap = home.gaps[0];
+  const next = nextMilestone(home);
 
   const recommend = (intro) => {
+    // With a plan, the session is always the next milestone: the same one the Home page shows as "Next up".
+    if (next) {
+      const s = next.session;
+      const counted = next.total && ['words', 'lessons'].includes(next.unit) ? `${next.have} of ${next.total} ${next.unit}` : next.total && next.unit === 'answers' ? `${next.have} of the last ${next.total} right` : '';
+      const count = counted ? ` ${counted}${next.date ? `, due ${niceDay(next.date)}` : ''}.` : '';
+      const sessionLine = `${s.questions} questions on ${s.difficulty === 'easy' ? 'easy' : s.difficulty === 'hard' ? 'hard' : 'medium'} should move it.`;
+      return {
+        message: join(intro, `${next.title} is next.${count}`, sessionLine, punch(next.title, today)),
+        suggestedSession: { milestoneId: next.id, kind: s.kind, level: s.level || next.goal.level, difficulty: s.difficulty, questions: s.questions },
+        proposeGoal: null,
+        planChanges: null,
+        quickReplies: quick.slice(1),
+      };
+    }
     const suggestedSession = suggestionFor(home, topics, level);
     const why = gap
       ? `Your biggest gap is "${gap.label}": ${gap.pct} % right in ${gap.n} answers.`
@@ -132,7 +174,7 @@ export function mockCoach({ text, kind, name, home, topics, today, history = [] 
         ? `You answered ${home.tiles.answered} questions and ${home.tiles.pctRight} % were right. No clear gap yet.`
         : 'You have no answers in the last 30 days, so a short first session shows us where you are.';
     return {
-      message: `${intro} ${why} Let's practise it today.${noGoal}`,
+      message: join(intro, why, 'Practise it today.', noGoal.trim(), punch(why, today)),
       suggestedSession,
       proposeGoal: null,
       planChanges: null,
@@ -140,7 +182,7 @@ export function mockCoach({ text, kind, name, home, topics, today, history = [] 
     };
   };
 
-  if (kind === 'greeting') return recommend(`Hi ${name || 'there'}!`);
+  if (kind === 'greeting') return recommend(`Hi ${name || 'there'}.`);
 
   const v2 = home.goals.filter((g) => Number(g.version) === PLAN_VERSION);
   const target = v2.at(-1);
@@ -187,17 +229,25 @@ export function mockCoach({ text, kind, name, home, topics, today, history = [] 
     || t.match(/\bcall (?:it|my goal|this)\s+["“']?([^"”']{2,40}?)["”']?\s*$/i);
   const asksDate = end && /move|push|extend|later|end date|until|postpone/i.test(t);
   const asksMinutes = minutesIn(t) && /day|daily|plan|time/i.test(t);
+  if (/move my goal date|goal date|end date/i.test(t) && !end && target) {
+    return target.template === 'exam' || target.isExam
+      ? { message: 'The exam date does not move. I can give your plan less time per day or leave something out instead. Which one?', suggestedSession: null, proposeGoal: null, planChanges: null, quickReplies: ['I have less time, redo my plan'] }
+      : { message: 'To which month? For example "move it to June".', suggestedSession: null, proposeGoal: null, planChanges: null, quickReplies: [] };
+  }
   if (rename || asksDate || asksMinutes || wordsAny(t, /re-?plan|redo my plan|busy|less time/i)) {
     if (!target) {
       return {
         message: 'I do not see a goal to change yet. Tell me what you want to reach, for example "Goethe B1 by March".', suggestedSession: null, proposeGoal: null, planChanges: null, quickReplies: ['Goethe B1 by March', 'A1 vocabulary'],
       };
     }
+    // "less time, redo my plan" without a number: one step down from the pace of the plan
+    const lessTime = !asksMinutes && wordsAny(t, /re-?plan|redo my plan|busy|less time/i);
+    const lower = [15, 20, 30, 45].filter((x) => x < (target.pace?.minutesPerDay || 20)).at(-1) || 15;
     const planChanges = {
       goalId: target.id,
       label: rename ? rename[1].trim() : null,
       endDate: asksDate && target.template !== 'exam' ? end : null,
-      minutesPerDay: asksMinutes ? minutesIn(t) : null,
+      minutesPerDay: asksMinutes ? minutesIn(t) : lessTime ? lower : null,
       cut: [],
     };
     const bits = [];
@@ -209,7 +259,7 @@ export function mockCoach({ text, kind, name, home, topics, today, history = [] 
       return { message: 'Tell me what to change: the name, the end date or the minutes per day.', suggestedSession: null, proposeGoal: null, planChanges: null, quickReplies: ['30 minutes a day'] };
     }
     return {
-      message: `For "${target.title}" I would ${bits.join(' and ')}. Look at the changes below and tap Apply if they are right.`,
+      message: join(`For "${target.title}" I would ${bits.join(' and ')}.`, 'Look at the before and after below and tap Apply if it is right.', punch(bits.join(), today)),
       suggestedSession: null,
       proposeGoal: null,
       planChanges,
@@ -218,15 +268,18 @@ export function mockCoach({ text, kind, name, home, topics, today, history = [] 
   }
 
   if (wordsAny(text, /weak|gap|worst|mistake|problem/i)) {
+    if (next && !home.gaps.length) return recommend('No clear gaps yet.');
     const lines = home.gaps.slice(0, 3).map((x) => `"${x.label}" (${x.pct} %)`);
     return {
-      message: lines.length ? `Your weakest spots in the last 30 days: ${lines.join(', ')}. I suggest we start with the first one.` : 'I see no clear gaps yet. Answer a few more questions and I can tell you more.',
-      suggestedSession: lines.length ? suggestionFor(home, topics, level) : null,
+      message: lines.length
+        ? join(`Your weakest spots in the last 30 days: ${lines.join(', ')}.`, next ? `Your next milestone, ${next.title}, is the best place to work on them.` : 'Start with the first one.', punch('weak', today))
+        : 'I see no clear gaps yet. Answer a few more questions and I can tell you more.',
+      suggestedSession: next ? recommend('').suggestedSession : lines.length ? suggestionFor(home, topics, level) : null,
       proposeGoal: null,
       planChanges: null,
       quickReplies: quick.slice(1),
     };
   }
 
-  return recommend('Good question.');
+  return recommend('');
 }

@@ -26,14 +26,19 @@ function topicName(topic, topics) {
 
 function SuggestionBox({ suggestion, topics, onSetup }) {
   const topic = topics.find((x) => x.id === suggestion.topicId);
-  if (!topic) return null;
-  const line = t('coachSuggestLine', {
-    topic: topicName(topic, topics), level: suggestion.level, difficulty: t(`diff_${suggestion.difficulty}`), n: suggestion.questions,
-  });
+  // tied to a milestone of the plan (R15): the same one the Home page shows as "Next up"; the setup screen stays free
+  const forMilestone = Boolean(suggestion.milestoneId && suggestion.title);
+  if (!topic && !forMilestone) return null;
+  const line = forMilestone
+    ? t('coachSuggestNext', { title: suggestion.title, difficulty: t(`diff_${suggestion.difficulty}`), n: suggestion.questions })
+    : t('coachSuggestLine', {
+      topic: topicName(topic, topics), level: suggestion.level, difficulty: t(`diff_${suggestion.difficulty}`), n: suggestion.questions,
+    });
   return (
     <div className="coach-box">
       <p className="caps brand">{t('coachSuggested')}</p>
       <p className="coach-box-line">{line}</p>
+      {forMilestone && <p className="detail">{t('coachSuggestFree')}</p>}
       <button type="button" className="button-primary coach-box-button" onClick={() => onSetup(suggestion)}>{t('coachSetup')}</button>
     </div>
   );
@@ -144,6 +149,14 @@ function PlanBox({ plan, goals, busy, error, onApply, onKeep }) {
         ))}
         {plan.more > 0 && <li className="move">{t('cpMore', { n: plan.more })}</li>}
       </ul>
+      {plan.finishAfter && (
+        <p className="detail cp-finish">
+          {plan.finishBefore && plan.finishBefore !== plan.finishAfter
+            ? t('cpFinish', { from: fmtDay(plan.finishBefore, true), to: fmtDay(plan.finishAfter, true) })
+            : t('cpFinishNow', { to: fmtDay(plan.finishAfter, true) })}
+          {plan.fits && plan.endDate ? ` · ${t(goal?.isExam ? 'cpFitsExam' : 'cpFits', { end: fmtDay(plan.endDate, true) })}` : ''}
+        </p>
+      )}
       {!plan.fits && plan.needsUntil && <p className="detail">{t('cpNoFit', { date: fmtDay(plan.needsUntil, true) })}</p>}
       {plan.status === 'open' ? (
         <div className="coach-actions">
@@ -160,9 +173,10 @@ function PlanBox({ plan, goals, busy, error, onApply, onKeep }) {
 
 // name / classCode / clientId: for the server (class code when accounts are off)
 // goals: the goals as the Home page shows them now
+// lastSession: the newest saved session { id, answered, correct } – a short local line (no AI) is added once after it ends
 // starter: { n, text } – "+ New goal" on Home sends a starter message (n counts up so the same text can be sent again)
 // onAcceptGoal(proposal) / onFix(request, lever) / onApplyPlan(plan): Home does the saving and the calls to /api/plan
-export default function Coach({ name, classCode, clientId, goals, topics, today, starter, onSetup, onAcceptGoal, onFix, onApplyPlan }) {
+export default function Coach({ name, classCode, clientId, goals, topics, today, starter, lastSession, running, onSetup, onAcceptGoal, onFix, onApplyPlan }) {
   const [messages, setMessages] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -226,7 +240,17 @@ export default function Coach({ name, classCode, clientId, goals, topics, today,
     if (started.current) return;
     started.current = true;
     (async () => {
-      const saved = await loadCoachMessages();
+      let saved = await loadCoachMessages();
+      // a session has just ended: one local line, no AI call (the id keeps it from coming twice)
+      const sid = lastSession && !running && lastSession.answered > 0 ? `s-${String(lastSession.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 36)}` : '';
+      if (sid && !saved.some((m) => m.id === sid) && dayKey(lastSession.updatedAt || Date.now()) === dayKey()) {
+        saved = [...saved, {
+          id: sid, role: 'coach', auto: true, at: Date.now(),
+          text: t('coachLineSession', { correct: lastSession.correct, answered: lastSession.answered }),
+          quick: [t('coachChip_today'), t('coachChip_weak')],
+        }].slice(-MAX_MESSAGES);
+        saveCoachMessages(saved);
+      }
       msgsRef.current = saved;
       setMessages(saved);
       setLoaded(true);
@@ -278,8 +302,11 @@ export default function Coach({ name, classCode, clientId, goals, topics, today,
     setError2(msg.id, '');
     const out = await onAcceptGoal(msg.proposal);
     setApplying('');
-    if (out?.ok) setCard(msg.id, 'proposal', 'accepted');
-    else setError2(msg.id, t('gpSaveError'));
+    if (out?.ok) {
+      setCard(msg.id, 'proposal', 'accepted');
+      // a local line, no AI call
+      commit([...msgsRef.current, { id: newGoalId('c'), role: 'coach', auto: true, at: Date.now(), text: t('coachLineGoal', { title: msg.proposal.preview.title }), quick: [t('coachChip_today'), t('coachChip_plan')] }]);
+    } else setError2(msg.id, t('gpSaveError'));
   }
 
   // one of the generator's fixes: the same goal previewed again, as a new card
@@ -308,8 +335,11 @@ export default function Coach({ name, classCode, clientId, goals, topics, today,
   // day labels between the messages
   let lastDay = '';
   const last = messages.at(-1);
-  const defaultChips = goals.length ? ['today', 'plan', 'weak'] : ['goal', 'today', 'weak'];
-  const chips = !loaded || busy ? [] : last?.role === 'coach' ? last.quick || [] : !messages.length ? defaultChips.map((k) => t(`coachChip_${k}`)) : [];
+  const defaultChips = goals.length ? ['today', 'plan', ...(goals.some((g) => g.isExam) ? [] : ['date']), 'weak'] : ['goal', 'today', 'weak'];
+  // plan chips ("less time", "move my goal date") make no sense without a goal
+  const planChip = /less time|redo my plan|goal date|minutes a day|weniger Zeit|Zieldatum/i;
+  const quick = goals.length ? last?.quick || [] : (last?.quick || []).filter((c) => !planChip.test(c));
+  const chips = !loaded || busy ? [] : last?.role === 'coach' ? quick : !messages.length ? defaultChips.map((k) => t(`coachChip_${k}`)) : [];
 
   return (
     <section className="card coach-card" aria-label={t('coachTitle')} ref={rootRef}>
