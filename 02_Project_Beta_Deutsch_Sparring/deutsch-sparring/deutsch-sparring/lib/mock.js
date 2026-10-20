@@ -40,6 +40,17 @@ const FOCUS = {
   },
 };
 
+function grammarErrorType(topic) {
+  const text = `${topic?.title || ''} ${topic?.rule || ''}`.toLowerCase();
+  if (/adjektiv|endung/.test(text)) return 'Adjektivendung';
+  if (/präposition|praeposition/.test(text)) return 'Präposition';
+  if (/artikel/.test(text)) return 'Artikel';
+  if (/wortstellung|nebensatz|konnektor|satzbau|relativsatz/.test(text)) return 'Wortstellung';
+  if (/perfekt|präteritum|praeteritum|passiv|konjunktiv|modal|verb/.test(text)) return 'Verbform';
+  if (/dativ|akkusativ|genitiv|kasus/.test(text)) return 'Kasus';
+  return 'Andere';
+}
+
 // A curriculum entry → the same shape as the rows of a lesson file's example table (task, solution, type) + the rule name
 function curriculumExamples(entry) {
   return entry.examples.map((x) => {
@@ -121,7 +132,7 @@ function checkGrammar(item, answer) {
   return { correct, studentAnswer, corrected: item.solved };
 }
 
-function grammarQuestion(examples, n, difficulty, strongHint = false) {
+function grammarQuestion(examples, n, difficulty, strongHint = false, topic = null) {
   const item = grammarItem(examples, n);
   const first = item.parts[0];
   const choices = item.gaps === 1 && WRONG_FORM[norm(first)] ? [first, WRONG_FORM[norm(first)]].sort() : [];
@@ -130,8 +141,15 @@ function grammarQuestion(examples, n, difficulty, strongHint = false) {
     : difficulty === 'hard' ? null
       : difficulty === 'easy' ? (choices.length ? `(${choices.join(' oder ')}?)` : '(Achte auf das Verb.)')
         : item.type === 'Fehler finden' ? 'Schreib den Satz richtig.' : item.gaps ? 'Achte auf das Verb.' : null;
+  const baseLine = item.type === 'Fehler finden'
+    ? item.ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: ')
+    : item.ex.task;
+  const cycle = Math.floor((n - 1) / examples.length);
+  const line = cycle
+    ? `Neuer Kontext${topic?.situation ? ` – ${topic.situation}` : ''}: ${baseLine}`
+    : baseLine;
   return {
-    exercise: { number: n, type: item.type, direction: null, line: item.type === 'Fehler finden' ? item.ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: ') : item.ex.task, hint },
+    exercise: { number: n, type: item.type, direction: null, line, answer: item.gaps ? item.parts.join(' ') : item.solved, hint },
     options: difficulty === 'easy' && choices.length ? choices : [],
   };
 }
@@ -204,7 +222,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
     const task = pin?.task || taskOf(word, settings, idx);
     if (task) {
       return {
-        exercise: { number: n, type: task.type, direction: null, line: task.line, hint: task.hint(strongHint, d) },
+        exercise: { number: n, type: task.type, direction: null, line: task.line, answer: task.solution, hint: task.hint(strongHint, d) },
         options: task.options(d),
         word,
         task,
@@ -224,6 +242,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         type: 'Karteikarte',
         direction: 'en-de',
         line: word.en[0],
+        answer: isNoun(word) ? `${word.de}${plural ? `, ${word.plural}` : ''}` : word.de,
         hint: strongHint ? `(${word.article ? `${word.article} …, ` : ''}Anfang: ${word.noun.slice(0, 3)}…)`
           : d === 'hard' ? null : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : isNoun(word) ? (plural ? 'mit Artikel und Plural' : 'mit Artikel') : null,
       },
@@ -240,6 +259,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         type: 'Karteikarte',
         direction: 'de-en',
         line: word.noun,
+        answer: `${word.article} – ${meaningOf(word)}`,
         hint: strongHint ? `(Artikel: ${word.article}, ${meaningOf(word).slice(0, 3)}…)` : d === 'hard' ? null : d === 'easy' ? '(Wähle Artikel und Bedeutung.)' : 'mit Artikel, auf Englisch',
       },
       options: d === 'easy' ? wrong.map((a) => `${a} – ${meaningOf(word)}`) : [],
@@ -254,6 +274,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
       type: 'Karteikarte',
       direction: 'de-en',
       line: word.de,
+      answer: meaningOf(word),
       hint: strongHint ? `(${word.en[0].replace(/^the /, '').slice(0, 3)}…)` : d === 'hard' ? null : d === 'easy' ? '(Wähle die Bedeutung.)' : 'auf Englisch',
     },
     options: d === 'easy' ? choices : [],
@@ -333,7 +354,12 @@ function openVocabQuestion(vocab, n, settings, line, wordId = '', task = null) {
 
 function openGrammarItem(examples, n, line) {
   const same = (x, y) => toVariant(x, 'ch') === toVariant(y, 'ch'); // the line may be shown with ß
-  const i = examples.findIndex((ex) => same(ex.task, line) || same(line, ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: ')));
+  const shown = toVariant(line, 'ch');
+  const i = examples.findIndex((ex) => {
+    const task = toVariant(ex.task, 'ch');
+    const errorTask = toVariant(ex.task.replace(/^[^:]*:\s*/, 'Finde den Fehler: '), 'ch');
+    return same(ex.task, line) || same(line, errorTask) || norm(shown).includes(norm(task)) || norm(shown).includes(norm(errorTask));
+  });
   return grammarItem(examples, i >= 0 ? i + 1 : n);
 }
 
@@ -378,7 +404,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     // grammar was switched on while a card was open: the card's own grammar task comes next
     else if (openQ && settings.sentences && !openQ.task && taskOf(openQ.word, settings, vocab.indexOf(openQ.word))) pin = { word: openQ.word, kind: 'sentence' };
     else if (openQ && !settings.sentences) pin = { kind: 'card' };
-    const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint);
+    const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint, topic);
     out.exercise = q.exercise;
     if (q.word?.id) {
       out.exercise.wordId = q.word.id;
@@ -486,10 +512,12 @@ export async function mockReply({ text, settings, session, progress, topic, topi
       correct: r.correct,
       studentAnswer: r.studentAnswer,
       corrected: r.corrected,
-      changedWords: [],
-      explanation: item.ex.type ? `${item.ex.type.replace(/→/g, '→')}: ${r.correct ? 'genau richtig.' : `richtig ist «${item.parts.join(' – ')}».`}` : '',
-      rule: item.ex.rule || (item.ex.type || '').replace(/Akk$/, 'Akkusativ').replace(/Dat$/, 'Dativ'),
-      errorType: r.correct ? null : 'Kasus',
+      changedWords: r.correct ? [] : item.parts,
+      explanation: item.ex.type
+        ? `${item.ex.type.replace(/→/g, '→')}: ${r.correct ? 'genau richtig.' : `Die Bedeutung bleibt klar; korrigiere die Zielform zu «${item.parts.join(' – ')}».`}`
+        : '',
+      rule: item.ex.rule || (item.ex.type || topic?.short || '').replace(/Akk$/, 'Akkusativ').replace(/Dat$/, 'Dativ'),
+      errorType: r.correct ? null : grammarErrorType(topic),
     };
   }
   const right = out.feedback.correct;

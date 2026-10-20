@@ -1,6 +1,6 @@
 // Grammar tasks for ONE word, used by the demo tutor (MOCK=1). The real tutor (Gemini) gets the
 // same rules as text in lib/prompt.js; this file builds and checks the same kinds of tasks without AI.
-//   nouns      → a sentence with the word in Akkusativ / Dativ / Genitiv (+ its adjective with the right ending)
+//   nouns      → the noun phrase in Akkusativ / Dativ / Genitiv (+ its adjective with the right ending)
 //   verbs      → Perfekt (hat/ist + Partizip) and a sentence with the case the verb needs
 //   adjectives → fill in the ending
 // Every task: { kind, type, line, rule, hint(strong, difficulty), options(difficulty), solution, check(answer) }
@@ -36,20 +36,13 @@ const usableAdjective = (a) => (/^[a-zäöü]+$/.test(a || '') ? a : '');
 const NO_ENDING = new Set(['lila', 'rosa', 'orange', 'online', 'egal', 'fit', 'allein', 'bio', 'chic', 'mittlere', 'verschiedene']);
 
 // ---------- nouns ----------
-// frames: the sentence the noun phrase is put into (the phrase is in the middle or at the end)
-const NOUN_FRAMES = {
-  Akkusativ: [
-    { rule: RULES.akkBrauchen, prep: null, build: (p) => `Ich brauche ${p}.`, cue: 'Ich brauche …', why: 'Nach «brauchen» steht der Akkusativ (Wen oder was?).' },
-    { rule: RULES.akkIn, prep: 'in', build: (p) => `Ich stelle das Buch in ${p}.`, cue: 'Ich stelle das Buch in …', why: 'Bei «in» mit Bewegung (Wohin?) steht der Akkusativ.' },
-  ],
-  Dativ: [
-    { rule: RULES.datMit, prep: 'mit', build: (p) => `Ich bin zufrieden mit ${p}.`, cue: 'Ich bin zufrieden mit …', why: 'Nach «mit» steht immer der Dativ.' },
-    { rule: RULES.datIn, prep: 'in', build: (p) => `Das Buch liegt in ${p}.`, cue: 'Das Buch liegt in …', why: 'Bei «in» mit Position (Wo?) steht der Dativ.' },
-  ],
-  Genitiv: [
-    { rule: RULES.genWegen, prep: null, build: (p) => `Wegen ${p} bleiben wir zu Hause.`, cue: 'Wegen … bleiben wir zu Hause.', why: 'Nach «wegen» steht der Genitiv.' },
-    { rule: RULES.genTrotz, prep: null, build: (p) => `Trotz ${p} kommen wir pünktlich.`, cue: 'Trotz … kommen wir pünktlich.', why: 'Nach «trotz» steht der Genitiv.' },
-  ],
+// The vocabulary table knows a noun's fitting adjective, but not which verbs or situations fit
+// that noun. Noun tasks therefore practise the noun phrase itself. The live tutor can create
+// contextual sentences; the deterministic demo must not manufacture arbitrary predicates.
+const NOUN_RULES = {
+  Akkusativ: RULES.nounAkk,
+  Dativ: RULES.nounDat,
+  Genitiv: RULES.nounGen,
 };
 
 function nounTasks(w, grammar) {
@@ -58,79 +51,74 @@ function nounTasks(w, grammar) {
   const useAdj = grammar.includes('adjective-endings');
   const adj = useAdj ? usableAdjective(w.adjective) || 'neu' : null;
   let cases = Object.entries(CASE_POINTS).filter(([point]) => grammar.includes(point)).map(([, c]) => c);
-  if (!cases.length) cases = ['Akkusativ', 'Dativ']; // nothing chosen for nouns: the usual two
+  if (!cases.length) cases = ['Akkusativ', 'Dativ'];
   const out = [];
-  for (let f = 0; f < 2; f++) {
-    for (const kase of cases) {
-      const frame = NOUN_FRAMES[kase][f];
-      const np = nounPhrase(w, kase, { adj });
-      if (!np) continue; // e.g. a genitive we are not sure about
-      out.push(nounTask(w, kase, frame, np, adj));
-    }
+  for (const kase of cases) {
+    const np = nounPhrase(w, kase, { adj });
+    if (np) out.push(nounTask(w, kase, np, adj));
   }
   return out;
 }
 
-function nounTask(w, kase, frame, np, adj) {
+function nounTask(w, kase, np, adj) {
   const g = np.gender;
-  const phrases = [np.phrase, ...np.alts];
-  const accepted = (frame.prep ? phrases.flatMap((p) => prepForms(frame.prep, p)) : phrases);
-  const solution = frame.build(np.phrase);
-  const line = `Bilde einen Satz: ${w.article} ${w.noun}${adj ? ` + ${adj}` : ''} · ${frame.rule}`;
+  // The prompt supplies the definite base article, so only definite variants are valid.
+  const phrases = [np.phrase, ...np.alts.filter((p) => p.split(' ')[0] === np.art)];
+  const solution = np.phrase;
+  const cue = [w.article, adj, w.noun].filter(Boolean).join(' · ');
+  const line = `Setze in den ${kase}: ${cue}`;
+  const rule = NOUN_RULES[kase];
   const nounForms = [w.noun, pluralOf(w), np.noun].filter(Boolean).map(norm);
   const ending = adj ? `Das Adjektiv endet auf -${np.ending} nach «${np.art}».` : '';
   const caseNote = kase === 'Genitiv' && g !== 'f' && g !== 'pl' ? `Maskulin und neutral: ${np.noun} (${kase}).` : '';
   return {
-    kind: 'noun', type: 'Satzbau', line, rule: frame.rule, solution, wordId: w.id,
-    hint: (strong, d) => (strong ? `(${np.phrase} …)` : d === 'hard' ? null : d === 'easy' ? `(${np.art} …, ${frame.cue})` : `(${frame.cue})`),
+    kind: 'noun', type: 'Nomen-Drill', line, rule, solution, wordId: w.id,
+    hint: (strong, d) => {
+      if (d === 'hard' && !strong) return null;
+      const parts = [GENDER_DE[g], kase];
+      if (strong || d === 'easy') {
+        parts.push(`Artikel: ${np.art}`);
+        if (adj) parts.push(`Adjektivendung: -${np.ending}`);
+      }
+      return `(${parts.join(' · ')})`;
+    },
     options: () => [],
     check(answer) {
       const a = norm(answer);
-      const correct = accepted.some((p) => has(a, p));
-      const explanation = [frame.why, `${cap(kase)}: ${np.phrase}.`, ending, caseNote].filter(Boolean).join(' ');
-      if (correct) return { correct: true, corrected: answer.trim(), changedWords: [], explanation, rule: frame.rule, errorType: null };
+      const correct = phrases.some((p) => has(a, p));
+      const explanation = [`${kase}: ${np.phrase}.`, ending, caseNote].filter(Boolean).join(' ');
+      if (correct) return { correct: true, corrected: answer.trim(), changedWords: [], explanation, rule, errorType: null };
 
       const tokens = a.split(' ');
       const nounAt = tokens.findIndex((t) => nounForms.some((f) => t.startsWith(f) && t.length <= f.length + 4));
       let errorType = 'Kasus';
-      let rule = frame.rule;
+      let ruleOut = rule;
       let note = '';
       if (nounAt < 0) {
-        errorType = 'Wortschatz'; // the word itself is missing
-        rule = `${w.article} ${w.noun}`;
+        errorType = 'Wortschatz';
+        ruleOut = `${w.article} ${w.noun}`;
         note = `Benutze das Wort «${w.article} ${w.noun}».`;
       } else {
         const artAt = nounAt - (adj ? 2 : 1);
         const art = artAt >= 0 ? tokens[artAt] : '';
-        const okArts = [np.art, ...np.alts.map((p) => p.split(' ')[0])];
-        const sameGender = [...articlesOfGender(g), ...['ein', 'eine', 'einen', 'einem', 'einer', 'eines']];
+        const sameGender = articlesOfGender(g);
         const anyDefinite = ['der', 'die', 'das', 'den', 'dem', 'des'];
-        if (okArts.includes(art) || (accepted.some((p) => p.startsWith('im ') || p.startsWith('ins ')) && ['im', 'ins'].includes(art))) {
-          errorType = adj && tokens[nounAt - 1] !== norm(withEnding(adj, np.ending)) && !np.alts.some((p) => p.split(' ').includes(tokens[nounAt - 1])) ? 'Adjektivendung' : 'Kasus';
-        } else if (anyDefinite.includes(art) && !sameGender.includes(art)) {
-          errorType = 'Artikel'; // an article this noun does not have in any case → wrong gender
-          rule = `${w.article} ${w.noun}`;
-          note = `Der Artikel von «${w.noun}» ist «${w.article}».`;
-        }
-      }
-      // keep the student's sentence and fix only "article (+ adjective) + noun", if it sits where the phrase belongs
-      const original = answer.trim();
-      let corrected = solution;
-      if (nounAt >= 0) {
-        const parts = original.split(/\s+/);
-        const from = Math.max(0, nounAt - (adj ? 2 : 1));
-        if (from > 0 && parts.length >= nounAt + 1) {
-          const punct = (parts[nounAt].match(/[.!?,]+$/) || [''])[0];
-          parts.splice(from, nounAt - from + 1, `${np.phrase}${punct}`);
-          corrected = parts.join(' ');
+        if (art === np.art) {
+          errorType = adj && tokens[nounAt - 1] !== norm(withEnding(adj, np.ending))
+            && !phrases.some((p) => p.split(' ').includes(tokens[nounAt - 1]))
+            ? 'Adjektivendung' : 'Kasus';
+        } else if (!art || !anyDefinite.includes(art) || !sameGender.includes(art)) {
+          errorType = 'Artikel';
+          ruleOut = `${w.article} ${w.noun}`;
+          note = `Der Ausgangsartikel von «${w.noun}» ist «${w.article}».`;
         }
       }
       return {
         correct: false,
-        corrected,
+        corrected: solution,
         changedWords: [np.phrase],
         explanation: [note, explanation].filter(Boolean).join(' '),
-        rule,
+        rule: ruleOut,
         errorType,
       };
     },

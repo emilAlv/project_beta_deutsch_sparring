@@ -1,4 +1,4 @@
-import { getLesson, getKnownGrammar, guessTopic, FREE_TOPIC } from '../../../lib/content';
+import { getLesson, getKnownGrammar, guessTopic, topicsForLevel, FREE_TOPIC } from '../../../lib/content';
 import { allTopics } from '../../../lib/topics';
 import { curriculumEntry, curriculumLesson } from '../../../lib/curriculum';
 import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEADER } from '../../../lib/words';
@@ -11,6 +11,7 @@ import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
 } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
+import { hasMechanicalExerciseFormat, isNearDuplicateExercise, normalizeExerciseLine } from '../../../lib/novelty';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
 import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
@@ -70,13 +71,16 @@ async function handle(req) {
     direction: ['en-de', 'de-en', 'mixed'].includes(s.direction) ? s.direction : 'en-de',
     grammar,
     sentences: wantsSentenceTasks(grammar),
-    // 'ch' (Swiss: ss) | 'de' (German: ß); anything else = 'ch'
+    // 'ch' (Swiss Standard German: ss, Velo, Spital) | 'de' (German Standard German: ß);
+    // anything else = 'ch'. Neither option is dialect.
     variant: cleanVariant(s.variant),
   };
   const ses = body.session || {};
   const lessons = allTopics();
-  const catalog = [...lessons, FREE_TOPIC];
-  const topicIds = new Set(catalog.map((t) => t.id));
+  const selectableLessons = topicsForLevel(lessons, settings.level);
+  // Keep every old id valid for a session already in progress, but only offer/guess topics for its CEFR level.
+  const allCatalog = [...lessons, FREE_TOPIC];
+  const topicIds = new Set(allCatalog.map((t) => t.id));
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.text || '';
   const count = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
 
@@ -104,10 +108,14 @@ async function handle(req) {
   // nothing chosen yet: guess the lesson from the wish ("Dativ und Akkusativ, Stufe mittel")
   let guessed = false;
   if (!session.topicId && !session.openNumber && !progress.done) {
-    session.topicId = guessTopic(lastUser, lessons);
+    session.topicId = guessTopic(lastUser, selectableLessons);
     guessed = Boolean(session.topicId);
   }
   const topicId = session.topicId;
+  const currentTopic = allCatalog.find((t) => t.id === topicId) || null;
+  const catalog = [...selectableLessons];
+  if (currentTopic && currentTopic.id !== FREE_TOPIC.id && !catalog.some((t) => t.id === currentTopic.id)) catalog.push(currentTopic);
+  catalog.push(FREE_TOPIC);
   const mistakes = (Array.isArray(body.mistakes) ? body.mistakes : []).slice(0, 8).map((m) => ({
     studentAnswer: String(m?.studentAnswer || '').slice(0, 200),
     corrected: String(m?.corrected || '').slice(0, 200),
@@ -157,9 +165,24 @@ async function handle(req) {
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;
   try {
-    text = process.env.MOCK === '1'
-      ? await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null })
-      : await askGemini();
+    if (process.env.MOCK === '1') {
+      text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null });
+    } else {
+      text = await askGemini();
+      const firstDraft = parseModelJson(text);
+      if (draftNeedsRegeneration(firstDraft)) {
+        const rejected = String(firstDraft?.exercise?.line || '').slice(0, 300);
+        text = await askGemini(`
+
+NOVELTY RETRY
+The first draft below was rejected because it repeats an earlier exercise or uses a mechanical word-algebra format:
+<rejected-draft>${rejected}</rejected-draft>
+Keep the same target word, grammar point, level and question number, but create a genuinely different task. Change at least three of: setting, speaker, relationship, purpose, speech act, main verb and sentence structure. Do not reuse the rejected line. Return the complete JSON response again.`);
+        if (draftNeedsRegeneration(parseModelJson(text))) {
+          throw Object.assign(new Error('Gemini repeated an earlier exercise twice.'), { status: 'novelty' });
+        }
+      }
+    }
   } catch (e) {
     console.error('Tutor failed:', e.status, e.message);
     if (e.status === 429) {
@@ -167,10 +190,22 @@ async function handle(req) {
     }
     if (e.status === 504) return fail('Der Tutor hat zu lange gebraucht. Bitte versuche es nochmal.', 504, 'timeout');
     if (e.status === 'config') return fail(e.message, 500, 'config');
+    if (e.status === 'novelty') return fail('Der Tutor konnte gerade keine neue Aufgabe formulieren. Bitte versuche es nochmal.', 502, 'novelty');
     return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
   }
 
-  async function askGemini() {
+  function draftNeedsRegeneration(candidate) {
+    const line = candidate?.exercise?.line;
+    if (!line) return false;
+    const repeatsOpenWithoutFeedback = session.openLine
+      && !candidate.feedback
+      && normalizeExerciseLine(line) === normalizeExerciseLine(session.openLine);
+    if (repeatsOpenWithoutFeedback) return false;
+    return hasMechanicalExerciseFormat(line)
+      || isNearDuplicateExercise(line, [...asked, session.openLine, session.skippedLine]);
+  }
+
+  async function askGemini(extraInstruction = '') {
     if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY fehlt auf dem Server.'), { status: 'config' });
 
     // Gemini wants user and model turns to alternate: two student messages in a row (after an
@@ -202,7 +237,7 @@ async function handle(req) {
       guessed,
       asked,
     });
-    return generate({ system, contents: recent, schema: RESPONSE_SCHEMA, deadline });
+    return generate({ system: `${system}${extraInstruction}`, contents: recent, schema: RESPONSE_SCHEMA, deadline });
   }
 
   // --- turn it into clean data for the screen ---
@@ -216,6 +251,12 @@ async function handle(req) {
   }
   // modelText = what the browser sends back as this tutor turn next time (without the bulky parts)
   const { grammarFocus, options, ...essentials } = parsed;
+  // exercise.answer is a private hint-safety reference. Do not expose it to the browser or
+  // send it back in conversation history.
+  if (essentials.exercise && typeof essentials.exercise === 'object') {
+    essentials.exercise = { ...essentials.exercise };
+    delete essentials.exercise.answer;
+  }
   return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo() });
 
   // the picked words for the browser to keep: id + type + the word as shown on the summary screen (phrases have no grammar score)

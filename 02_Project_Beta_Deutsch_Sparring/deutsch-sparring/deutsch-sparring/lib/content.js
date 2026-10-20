@@ -31,6 +31,22 @@ function parseLevels(text) {
   return found.length ? LEVELS.filter((l) => found.includes(l)) : LEVELS;
 }
 
+// Compact curriculum context for the setup, tutor and coach. The markdown lesson remains
+// the source of truth; these fields only make its goal and situation easy to route.
+function sectionSummary(text, heading) {
+  return section(text, heading)
+    .split('\n')
+    .map((line) => line.replace(/^\s*(?:[-*]|\d+\.)\s*/, '').replace(/[*_`]/g, '').trim())
+    .filter((line) => line && !line.startsWith('|'))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function topicsForLevel(items, level) {
+  return items.filter((item) => !item.levels?.length || item.levels.includes(level));
+}
+
 // Every .md file in /content (except the template) becomes a topic. Vocabulary lesson files
 // (Typ: Wortschatz) are no longer topics: vocabulary now comes from vocab/words.json (lib/words.js).
 export function listLessons() {
@@ -48,15 +64,27 @@ export function listLessons() {
       const title = ((text.match(/^#\s+(.+)$/m) || [])[1] || file.replace(/\.md$/, '')).trim();
       const typeWord = (meta(text, 'Typ').match(/\w+/) || ['Gemischt'])[0];
       const type = ['Grammatik', 'Wortschatz', 'Gemischt'].includes(typeWord) ? typeWord : 'Gemischt';
+      const id = file.replace(/\.md$/, '');
+      const unitMatch = id.match(/^lektion-(a1|a2|b1)-(\d{2})-/i);
+      const objective = sectionSummary(text, 'Lernziel');
+      const situation = sectionSummary(text, 'Situation');
+      const rule = sectionSummary(text, 'Regel');
+      const communicativeTask = sectionSummary(text, 'Offene kommunikative Aufgabe')
+        || sectionSummary(text, 'Kommunikative Transferaufgabe');
       return {
-        id: file.replace(/\.md$/, ''),
+        id,
         title,
         // short name for chips and the panel: the part of the title before " – " or "?"
         short: title.split(/\s+[–-]\s+/)[0].replace(/\?$/, '').trim(),
         type,
         levels: parseLevels(text),
-        // title, theme, type – plus only the long, specific words of the rule (e.g. "Wechselpräpositionen")
-        keywords: `${title} ${meta(text, 'Thema')} ${meta(text, 'Typ')} ${meta(text, 'Stichwörter')} ${(section(text, 'Regel').match(/[A-Za-zÄÖÜäöüß]{11,}/g) || []).join(' ')}`.toLowerCase(),
+        unit: unitMatch ? Number(unitMatch[2]) : null,
+        objective,
+        situation,
+        rule,
+        communicativeTask,
+        // Include the learner goal and situation so free-text wishes and coach gaps find the right unit.
+        keywords: `${title} ${meta(text, 'Thema')} ${meta(text, 'Typ')} ${meta(text, 'Stichwörter')} ${objective} ${situation} ${(rule.match(/[A-Za-zÄÖÜäöüß]{8,}/g) || []).join(' ')}`.toLowerCase(),
       };
     })
     .filter((l) => l.type !== 'Wortschatz');
