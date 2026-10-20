@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node scripts/run-checks.mjs",
     "check:curriculum": "node scripts/check-curriculum.mjs",
     "check:word-tasks": "node scripts/check-word-tasks.mjs",
     "check": "npm run check:curriculum && npm run check:word-tasks",

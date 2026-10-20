@@ -1,17 +1,27 @@
 import { allTopics } from '../../../lib/topics';
-import { generate } from '../../../lib/gemini';
+import { generate, errorDetail, coachModelSettings } from '../../../lib/gemini';
 import { parseModelJson, salvageMessage } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
 import { requireUser, sameOrigin } from '../../../lib/auth';
 import { homeData } from '../../../lib/home-data';
 import { todayKey } from '../../../lib/goals';
 import { COACH_SCHEMA, buildCoachPrompt, coachContext, GREETING_TURN, pickToday } from '../../../lib/coach-prompt';
-import { normalizeCoach, turnsForModel } from '../../../lib/coach';
+import { normalizeCoach, turnsForModel, withPlanNote, startsPlanChanges } from '../../../lib/coach';
 import { mockCoach } from '../../../lib/coach-mock';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 const DEADLINE_MS = 55_000; // stay below maxDuration so we can still answer with JSON
+
+const DATA_TIMEOUT_MS = 8_000; // loading the goals and numbers from the database
+
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error('timeout'), { code: 'data_timeout' })), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 const MAX_BYTES_ACCOUNT = 30_000; // logged in: only the chat turns come from the browser
 const MAX_BYTES_LOCAL = 400_000; // accounts off: plus the browser's goals, word scores and answer log (like /api/stats)
@@ -28,7 +38,7 @@ export async function POST(req) {
     return await handle(req);
   } catch (e) {
     console.error('coach route crashed:', e?.message);
-    return fail('The coach is not available right now.', 500, 'server', `crash: ${e?.message}`);
+    return fail('The coach is not available right now.', 500, 'server', 'crash');
   }
 }
 
@@ -71,24 +81,33 @@ async function handle(req) {
   const topics = allTopics().map(({ keywords, ...t }) => t);
   let home;
   try {
-    home = await homeData(user, body);
+    home = await withTimeout(homeData(user, body), DATA_TIMEOUT_MS);
   } catch (e) {
     console.error('coach: numbers unavailable:', e?.message);
-    return fail('The coach is not available right now.', 502, 'model', `numbers: ${e?.message}`);
+    return fail('The coach could not load your numbers right now.', 503, 'data', e?.code === 'data_timeout' ? 'data: timeout' : 'data: not available');
   }
 
   // --- get the answer (demo script or Gemini) ---
   let raw_answer;
+  let aiError = null; // set when the answer was cut off: we still try to rescue the message
   try {
     raw_answer = process.env.MOCK === '1'
       ? mockCoach({ text: lastUser, kind: greeting ? 'greeting' : 'chat', name, home, topics, today })
       : await askGemini();
   } catch (e) {
-    console.error('Coach failed:', e.status, e.message);
-    if (e.status === 429) return fail('The free AI quota is used up for now. Try again in a few minutes.', 429, 'quota');
-    if (e.status === 504) return fail('The coach took too long.', 504, 'timeout');
-    if (e.status === 'config') return fail(e.message, 500, 'config');
-    return fail('The coach is not available right now.', 502, 'model', `AI ${e.status}: ${e.message}`);
+    console.error('Coach failed:', e.status, e.reason || '');
+    if (e.partial) {
+      aiError = e;
+      raw_answer = e.partial; // cut off after both tries: use what there is (below)
+    } else if (e.status === 429) {
+      return fail('The free AI quota is used up for now. Try again in a few minutes.', 429, 'quota');
+    } else if (e.status === 504) {
+      return fail('The coach took too long.', 504, 'timeout');
+    } else if (e.status === 'config') {
+      return fail(e.message, 500, 'config');
+    } else {
+      return fail('The coach is not available right now.', 502, 'model', errorDetail(e));
+    }
   }
 
   async function askGemini() {
@@ -105,16 +124,17 @@ async function handle(req) {
     if (greeting) push('user', GREETING_TURN);
     while (contents.length && contents.at(-1).role !== 'user') contents.pop();
     const system = buildCoachPrompt({ name, context: coachContext({ home, topics, today }) });
-    return generate({ system, contents, schema: COACH_SCHEMA, deadline });
+    return generate({ system, contents, schema: COACH_SCHEMA, deadline, ...coachModelSettings() });
   }
 
   // --- turn it into clean data for the screen ---
   const parsed = typeof raw_answer === 'string' ? parseModelJson(raw_answer) : raw_answer;
   const coach = normalizeCoach(parsed, { topics, goals: home.goals, today });
   if (coach) return Response.json({ coach });
-  // invalid JSON: show at least the text
-  console.warn('Coach answer was not valid JSON:', String(raw_answer).slice(0, 300));
+  // invalid or cut-off JSON: show at least the message (and say if a plan proposal got lost)
+  console.warn('Coach answer was not valid JSON, length', String(raw_answer).length);
   const text = salvageMessage(raw_answer);
-  if (!text) return fail('The coach is not available right now.', 502, 'model', `unreadable answer (${String(raw_answer).length} chars)`);
-  return Response.json({ coach: { message: text.slice(0, 1200), suggestedSession: null, planChanges: null, quickReplies: [] } });
+  if (!text) return fail('The coach is not available right now.', 502, 'model', aiError ? errorDetail(aiError) : 'AI: unreadable answer');
+  const message = text.slice(0, 1200);
+  return Response.json({ coach: { message: startsPlanChanges(raw_answer) ? withPlanNote(message) : message, suggestedSession: null, planChanges: null, quickReplies: [] } });
 }

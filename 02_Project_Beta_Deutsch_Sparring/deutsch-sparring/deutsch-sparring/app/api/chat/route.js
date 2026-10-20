@@ -184,14 +184,21 @@ Keep the same target word, grammar point, level and question number, but create 
       }
     }
   } catch (e) {
-    console.error('Tutor failed:', e.status, e.message);
-    if (e.status === 429) {
+    console.error('Tutor failed:', e.status, e.reason || '');
+    if (e.partial) {
+      text = e.partial; // cut off after both tries: the message is rescued below
+    } else if (e.status === 429) {
       return fail('Das kostenlose KI-Kontingent ist gerade erschöpft. Bitte versuche es in ein paar Minuten nochmal.', 429, 'quota');
+    } else if (e.status === 504) {
+      return fail('Der Tutor hat zu lange gebraucht. Bitte versuche es nochmal.', 504, 'timeout');
+    } else if (e.status === 'novelty') {
+      return fail('Der Tutor konnte gerade keine neue Aufgabe formulieren. Bitte versuche es nochmal.', 502, 'novelty');
+    } else if (e.status === 'config') {
+      // a wrong key or model name (from Gemini) or a missing key (from askGemini)
+      return fail(e.httpStatus ? 'Der KI-Schlüssel oder der Modellname auf dem Server ist falsch.' : e.message, 500, 'config');
+    } else {
+      return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
     }
-    if (e.status === 504) return fail('Der Tutor hat zu lange gebraucht. Bitte versuche es nochmal.', 504, 'timeout');
-    if (e.status === 'config') return fail(e.message, 500, 'config');
-    if (e.status === 'novelty') return fail('Der Tutor konnte gerade keine neue Aufgabe formulieren. Bitte versuche es nochmal.', 502, 'novelty');
-    return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
   }
 
   function draftNeedsRegeneration(candidate) {

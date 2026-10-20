@@ -152,10 +152,10 @@ ${guessed ? `The app guessed this topic from ${name}'s wish. If ${name} clearly 
 ` : ''}${topic ? '' : `CHOOSING A TOPIC
 No topic is chosen yet. Read what ${name} wants and pick the best topic id from the catalog (only topics for level ${settings.level} unless ${name} names another one). Then set session.topicId and topicName, fill grammarFocus and start question 1 right away (one short welcome sentence in message). If it is unclear, ask one short question and put up to 6 topic names in options. If ${name} wants something outside the catalog (e.g. "Im Café bestellen"), use topicId "free" and make clear exercises on that theme for the level.
 
-`}TOPIC CATALOG (id – title – type – levels – learning objective)
+`}${topic && !guessed ? '' : `TOPIC CATALOG (id – title – type – levels – learning objective)
 ${catalog.map((t) => `- ${t.id} – ${t.title} – ${t.type} – ${t.levels.join(', ')}${t.objective ? ` – ${t.objective}` : ''}`).join('\n')}
 
-${asked.length ? `ALREADY ASKED IN THIS SESSION (exclusion list: do not repeat or lightly paraphrase any prompt, scenario, main verb or sentence frame; recycle the target in a genuinely new context)
+`}${asked.length ? `ALREADY ASKED IN THIS SESSION (exclusion list: do not repeat or lightly paraphrase any prompt, scenario, main verb or sentence frame; recycle the target in a genuinely new context)
 ${asked.map((a) => `- ${a}`).join('\n')}
 
 ` : ''}RECENT MISTAKES (for "repeat my mistakes")

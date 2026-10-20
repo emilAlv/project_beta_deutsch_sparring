@@ -1,9 +1,10 @@
 // The instructions and the answer format of the coach on the Home page (Task 10). The coach plans the
 // student's practice; it is not the tutor (the tutor is in lib/prompt.js and speaks German).
 // The numbers (progress, strengths, gaps) are worked out by the app and only passed on here.
-import { milestoneStates, goalState, dayNum } from './goals.js';
+import { milestoneStates, goalState, dayNum, MAX_MILESTONES } from './goals.js';
 import { curriculumCoachText } from './curriculum.js';
 import { LEVELS, DIFFICULTIES, QUESTION_STEPS, GRAMMAR_POINTS } from './session-settings.js';
+import { MAX_CHANGES } from './coach.js';
 
 const str = (description, extra = {}) => ({ type: 'STRING', description, ...extra });
 const nullableStr = (description) => str(description, { nullable: true });
@@ -163,7 +164,7 @@ RULES
   or when a goal is clearly behind and you suggest a fix. Otherwise null. Always for ONE goal: goalId copied exactly from GOALS.
   Changes: "add" a milestone (title, date, target), "move" an open milestone to a new date (milestoneId, date), or "remove" an open
   milestone (milestoneId). Dates are YYYY-MM-DD, from today up to the goal's end date, never outside. Never touch milestones marked
-  done or reached. At most 12 milestones per goal and at most 6 changes. Say in the message what you would change and why.
+  done or reached. At most ${MAX_MILESTONES} milestones per goal and at most ${MAX_CHANGES} changes (a removal and an addition each count as one). Say in the message what you would change and why.
   Never say the change is done: the student confirms it with a button ("Apply" or "Keep my plan").
 - Milestone titles (max 8 words) name CONTENT that can be checked, never a percentage of readiness. Good:
   "Furniture: all 45 words learnt", "A2 words: 300 learnt", "Genitiv nach wegen: 80 % right", "Perfekt mit sein solid",
