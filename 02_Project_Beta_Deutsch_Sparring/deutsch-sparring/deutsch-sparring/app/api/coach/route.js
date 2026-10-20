@@ -1,8 +1,9 @@
 import { allTopics } from '../../../lib/topics';
-import { generate, errorDetail, coachModelSettings } from '../../../lib/gemini';
+import { generate, coachModelSettings } from '../../../lib/gemini';
 import { parseModelJson, salvageMessage } from '../../../lib/reply';
 import { checkClassCode, overDailyLimit } from '../../../lib/guard';
-import { requireUser, sameOrigin } from '../../../lib/auth';
+import { requireUser } from '../../../lib/auth';
+import { fail, reasonCode, replyShape, readJsonBody } from '../../../lib/route-guard';
 import { homeData } from '../../../lib/home-data';
 import { todayKey } from '../../../lib/goals';
 import { COACH_SCHEMA, buildCoachPrompt, coachContext, GREETING_TURN, pickToday } from '../../../lib/coach-prompt';
@@ -26,19 +27,13 @@ function withTimeout(promise, ms) {
 const MAX_BYTES_ACCOUNT = 30_000; // logged in: only the chat turns come from the browser
 const MAX_BYTES_LOCAL = 400_000; // accounts off: plus the browser's goals, word scores and answer log (like /api/stats)
 const MAX_TURNS = 10;
-const MAX_STUDENT_CHARS = 500;
-
-// every error is JSON { error, code }; the page shows its own text for the code
-// detail: a short technical reason shown small under the error, so a problem can be reported (never secrets)
-const fail = (error, status, code, detail) => Response.json({ error, code, ...(detail ? { detail: cleanDetail(detail) } : {}) }, { status });
-const cleanDetail = (d) => String(d).replace(/[a-z]+:\/\/\S+/gi, '[url]').replace(/key=\S+/gi, 'key=[…]').slice(0, 140);
 
 export async function POST(req) {
   try {
     return await handle(req);
   } catch (e) {
     console.error('coach route crashed:', e?.message);
-    return fail('The coach is not available right now.', 500, 'server', 'crash');
+    return fail('server', 500, reasonCode(e));
   }
 }
 
@@ -47,32 +42,21 @@ async function handle(req) {
   // with accounts: only for logged-in students
   const { user, response } = await requireUser(req);
   if (response) return response;
-  if (!sameOrigin(req)) return fail('Not allowed.', 403, 'origin');
 
-  const max = user ? MAX_BYTES_ACCOUNT : MAX_BYTES_LOCAL;
-  if (Number(req.headers.get('content-length')) > max) return fail('Request too big.', 413, 'too_big');
-  const raw = await req.text();
-  if (raw.length > max) return fail('Request too big.', 413, 'too_big');
-  let body;
-  try {
-    body = JSON.parse(raw);
-  } catch {
-    body = null;
-  }
-  if (!body || typeof body !== 'object' || Array.isArray(body)) return fail('Invalid request.', 400, 'bad_body');
+  const { body, response: bad } = await readJsonBody(req, user ? MAX_BYTES_ACCOUNT : MAX_BYTES_LOCAL);
+  if (bad) return bad;
 
   // the class code was checked once at sign-up when accounts are on
-  if (!user && !checkClassCode(body.classCode)) return fail('Wrong class code.', 401, 'bad_code');
+  if (!user && !checkClassCode(body.classCode)) return fail('bad_code', 401);
 
   // --- the conversation: the last few turns; the last one must be from the student (or the coach starts) ---
   const greeting = body.kind === 'greeting';
-  const turns = turnsForModel(Array.isArray(body.messages) ? body.messages.slice(-MAX_TURNS) : [], MAX_TURNS)
-    .map((m) => ({ role: m.role, text: m.text.slice(0, MAX_STUDENT_CHARS) }));
-  if (!greeting && turns.at(-1)?.role !== 'user') return fail('No message.', 400, 'no_message');
+  const turns = turnsForModel(Array.isArray(body.messages) ? body.messages.slice(-MAX_TURNS) : [], MAX_TURNS);
+  if (!greeting && turns.at(-1)?.role !== 'user') return fail('no_message', 400);
   const lastUser = greeting ? '' : turns.at(-1).text;
 
   if (overDailyLimit(req, body.clientId, user?.id)) {
-    return fail('Daily limit reached. Come back tomorrow.', 429, 'limit');
+    return fail('limit', 429);
   }
 
   // --- what the coach knows: goals, numbers (worked out by the app), today ---
@@ -83,8 +67,8 @@ async function handle(req) {
   try {
     home = await withTimeout(homeData(user, body), DATA_TIMEOUT_MS);
   } catch (e) {
-    console.error('coach: numbers unavailable:', e?.message);
-    return fail('The coach could not load your numbers right now.', 503, 'data', e?.code === 'data_timeout' ? 'data: timeout' : 'data: not available');
+    console.error('coach: numbers unavailable:', e?.message); // full text stays in the server log
+    return fail('data', 503, e?.code === 'data_timeout' ? 'timeout' : 'db');
   }
 
   // --- get the answer (demo script or Gemini) ---
@@ -100,13 +84,13 @@ async function handle(req) {
       aiError = e;
       raw_answer = e.partial; // cut off after both tries: use what there is (below)
     } else if (e.status === 429) {
-      return fail('The free AI quota is used up for now. Try again in a few minutes.', 429, 'quota');
+      return fail('quota', 429);
     } else if (e.status === 504) {
-      return fail('The coach took too long.', 504, 'timeout');
+      return fail('timeout', 504, 'timeout');
     } else if (e.status === 'config') {
-      return fail(e.message, 500, 'config');
+      return fail('config', 500);
     } else {
-      return fail('The coach is not available right now.', 502, 'model', errorDetail(e));
+      return fail('model', 502, reasonCode(e));
     }
   }
 
@@ -132,9 +116,9 @@ async function handle(req) {
   const coach = normalizeCoach(parsed, { topics, goals: home.goals, today });
   if (coach) return Response.json({ coach });
   // invalid or cut-off JSON: show at least the message (and say if a plan proposal got lost)
-  console.warn('Coach answer was not valid JSON, length', String(raw_answer).length);
+  console.warn('Coach answer was not valid JSON:', replyShape(raw_answer));
   const text = salvageMessage(raw_answer);
-  if (!text) return fail('The coach is not available right now.', 502, 'model', aiError ? errorDetail(aiError) : 'AI: unreadable answer');
+  if (!text) return fail('model', 502, aiError ? reasonCode(aiError) : 'ai-unreadable');
   const message = text.slice(0, 1200);
   return Response.json({ coach: { message: startsPlanChanges(raw_answer) ? withPlanNote(message) : message, suggestedSession: null, planChanges: null, quickReplies: [] } });
 }

@@ -79,8 +79,12 @@ survives a reload. Home shows (`components/Home.js`):
   to add / move / remove for one goal), shown as a short list with *Apply* / *Keep my plan*. Nothing is changed
   until the student taps *Apply*; the app then checks the goal id and that every date lies inside the goal's time
   frame (`applyPlan` in `lib/coach.js`) and saves through the normal goals storage. Quick-reply chips sit under the
-  last message. The route `/api/coach` has the same guards as `/api/chat` (login when accounts are on, class code when
-  off, the daily limit – every coach call counts –, validation, size limits, every error as JSON). The model gets a
+  last message. The routes `/api/coach` and `/api/chat` share one guard (`lib/route-guard.js`: same-origin check, body size limit –
+  150 KB for chat, 30 KB / 400 KB for the coach –, JSON parsing, every error as JSON `{ code, detail? }`), plus login when
+  accounts are on, class code when off and the daily limit (every coach call counts). The browser only gets a fixed
+  error code and a short reason (`db`, `ai-403`, `timeout`, `crash`); the full message stays in the server log, and
+  logs never contain the AI's reply (only its length). Earlier coach turns that carried a plan are sent with a short
+  summary of that plan; the tutor prompt puts everything from the browser in a fenced «student data» block. The model gets a
   compact context only: goals with milestones, the numbers and strengths/gaps worked out by the app, today's date, the
   last few chat turns (`lib/coach-prompt.js`, `COACH_SCHEMA`). Everything it answers is cleaned again
   (`normalizeCoach` in `lib/coach.js`: unknown topic ids, goal ids or out-of-range dates are dropped). With `MOCK=1`

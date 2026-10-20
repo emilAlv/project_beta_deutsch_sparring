@@ -16,6 +16,7 @@ import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
 import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
 import { progress, cleanScores } from '../../../lib/progress';
+import { fail, reasonCode, replyShape, readJsonBody, MAX_BYTES_CHAT } from '../../../lib/route-guard';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -26,14 +27,13 @@ const MAX_CHARS = 1500;
 const MAX_MODEL_CHARS = 4000; // the tutor's own (JSON) turns are longer
 
 const MAX_WORD_IDS = 60;
-const fail = (error, status, code) => Response.json({ error, code }, { status });
 
 export async function POST(req) {
   try {
     return await handle(req);
   } catch (e) {
-    console.error('chat route crashed:', e);
-    return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 500);
+    console.error('chat route crashed:', e); // the full text stays in the server log; the browser gets a short code
+    return fail('server', 500, reasonCode(e));
   }
 }
 
@@ -42,20 +42,16 @@ async function handle(req) {
   // with accounts: only for logged-in students (their name = their username)
   const { user, response } = await requireUser(req);
   if (response) return response;
-  let body;
-  try {
-    body = await req.json();
-  } catch {
-    return fail('Ungültige Anfrage.', 400);
-  }
+  const { body, response: bad } = await readJsonBody(req, MAX_BYTES_CHAT);
+  if (bad) return bad;
   const { classCode, messages } = body || {};
   const name = user ? user.username : body?.name;
 
   // the class code was checked once at sign-up when accounts are on
-  if (!user && !checkClassCode(classCode)) return fail('Falscher Klassen-Code.', 401, 'bad_code');
-  if (!Array.isArray(messages) || messages.length === 0) return fail('Keine Nachricht.', 400);
+  if (!user && !checkClassCode(classCode)) return fail('bad_code', 401);
+  if (!Array.isArray(messages) || messages.length === 0) return fail('no_message', 400);
   if (overDailyLimit(req, body.clientId, user?.id)) {
-    return fail('Tageslimit erreicht. Morgen geht es weiter – bis dann! 👋', 429, 'limit');
+    return fail('limit', 429);
   }
 
   // --- what the browser says about the current state (all values checked) ---
@@ -188,16 +184,17 @@ Keep the same target word, grammar point, level and question number, but create 
     if (e.partial) {
       text = e.partial; // cut off after both tries: the message is rescued below
     } else if (e.status === 429) {
-      return fail('Das kostenlose KI-Kontingent ist gerade erschöpft. Bitte versuche es in ein paar Minuten nochmal.', 429, 'quota');
+      return fail('quota', 429);
     } else if (e.status === 504) {
-      return fail('Der Tutor hat zu lange gebraucht. Bitte versuche es nochmal.', 504, 'timeout');
+      return fail('timeout', 504, 'timeout');
     } else if (e.status === 'novelty') {
-      return fail('Der Tutor konnte gerade keine neue Aufgabe formulieren. Bitte versuche es nochmal.', 502, 'novelty');
+      return fail('novelty', 502);
     } else if (e.status === 'config') {
-      // a wrong key or model name (from Gemini) or a missing key (from askGemini)
-      return fail(e.httpStatus ? 'Der KI-Schlüssel oder der Modellname auf dem Server ist falsch.' : e.message, 500, 'config');
+      return fail('config', 500); // a wrong key or model name (from Gemini) or a missing key (from askGemini)
+    } else if (e.status === 'no_message') {
+      return fail('no_message', 400);
     } else {
-      return fail('Der Tutor ist gerade nicht erreichbar. Bitte versuche es nochmal.', 502, 'model');
+      return fail('model', 502, reasonCode(e));
     }
   }
 
@@ -213,7 +210,7 @@ Keep the same target word, grammar point, level and question number, but create 
   }
 
   async function askGemini(extraInstruction = '') {
-    if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY fehlt auf dem Server.'), { status: 'config' });
+    if (!process.env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY is missing on the server.'), { status: 'config' });
 
     // Gemini wants user and model turns to alternate: two student messages in a row (after an
     // error or a cancelled request) are merged into one turn.
@@ -228,7 +225,7 @@ Keep the same target word, grammar point, level and question number, but create 
     }
     while (recent.length && recent[0].role !== 'user') recent.shift();
     while (recent.length && recent[recent.length - 1].role !== 'user') recent.pop();
-    if (!recent.length) throw Object.assign(new Error('Keine Nachricht vom Lernenden.'), { status: 400 });
+    if (!recent.length) throw Object.assign(new Error('No student message.'), { status: 'no_message' });
 
     const system = buildSystemPrompt({
       name: String(name || 'du').slice(0, 40),
@@ -253,7 +250,7 @@ Keep the same target word, grammar point, level and question number, but create 
   const reply = replyToVariant(normalizeReply(parsed, ctx), settings.variant);
   if (!reply) {
     // invalid JSON: the browser shows the text as a normal message and keeps the panel as it is
-    console.warn('Tutor answer was not valid JSON:', String(text).slice(0, 300));
+    console.warn('Tutor answer was not valid JSON:', replyShape(text)); // never the text itself (a student's words may be in it)
     return Response.json({ reply: null, text: toVariant(salvageMessage(text) || String(text).slice(0, 2000), settings.variant), words: wordInfo() });
   }
   // modelText = what the browser sends back as this tutor turn next time (without the bulky parts)
