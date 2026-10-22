@@ -852,10 +852,10 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .part-next { font-size: 13px; }
 .part-next.late { color: var(--amber); }
 .zoom { display: flex; flex-direction: column; gap: 14px; }
-.zoom-crumbs { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.zoom-crumbs { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 0; padding: 0; list-style: none; align-items: center; line-height: 1.4; font-size: 13px; color: var(--muted); }
 .zoom-crumbs li + li::before { content: '›'; margin-right: 8px; }
 .zoom-crumbs li:last-child { color: var(--ink); font-weight: 600; }
-.zoom-crumbs .text-button { font-size: 13px; }
+.zoom-crumbs .text-button { font-size: 13px; line-height: 1.4; padding: 0; }
 .zoom-title { font-family: var(--serif); font-size: 22px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .zoom-title:focus, .sr-only:focus { outline: none; }
 .zoom-goals { margin-top: 6px !important; display: flex; flex-direction: column; gap: 18px; margin: 0; padding: 0; list-style: none; }
@@ -908,6 +908,10 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .ms-detail { display: flex; flex-direction: column; gap: 10px; }
 .missing-words { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .missing-words li { padding: 3px 10px; border-radius: 999px; background: var(--surface-2); font-size: 13px; }
+.missing-words li:has(.missing-more) { padding: 0; background: none; }
+.missing-more { all: unset; box-sizing: border-box; cursor: pointer; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--brand); font-size: 13px; font-weight: 600; }
+.missing-more:hover { background: var(--surface-2); }
+.missing-more:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 .recent-dots { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .rd { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 13px; font-weight: 700; }
 .rd.right { background: var(--brand); color: var(--surface); }
