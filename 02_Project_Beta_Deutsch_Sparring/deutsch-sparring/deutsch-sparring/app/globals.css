@@ -858,6 +858,20 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .zoom-seg-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--brand); }
 .zoom-seg.late .zoom-seg-bar { box-shadow: 0 0 0 2px var(--amber-line); }
 .zoom-today { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); }
+.gantt { display: flex; flex-direction: column; }
+.gantt-row { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: center; }
+.gantt-part { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: center; cursor: pointer; padding: 6px 4px; border-radius: var(--radius-sm); }
+.gantt-part:hover { background: var(--surface-2); }
+.gantt-part:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.gantt-label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gantt-label .detail { font-size: 11px; }
+.gantt-track { position: relative; height: 16px; }
+.gantt-scale .gantt-track { height: 16px; }
+.gantt-month { position: absolute; top: 0; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+.gantt-grid { position: absolute; top: -6px; bottom: -6px; width: 1px; background: var(--line); }
+.gantt-bar { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: var(--track); overflow: hidden; }
+.gantt-part.late .gantt-bar { box-shadow: inset 0 0 0 2px var(--amber-line); }
+.gantt-tick { position: absolute; top: 4px; bottom: 4px; width: 2px; margin-left: -1px; background: var(--surface); opacity: .8; }
 .zoom-key { display: flex; align-items: center; gap: 8px; }
 .zoom-today-key { width: 2px; height: 14px; background: var(--ink); }
 .ms-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
@@ -890,6 +904,6 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .tick-form fieldset { border: 0; margin: 0; padding: 0; }
 .tick-points { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
 @media (max-width: 720px) {
-  .zoom-segments { flex-direction: column; }
+  .gantt-row, .gantt-part { grid-template-columns: 110px 1fr; }
   .zoom-seg { flex-grow: 0 !important; flex-basis: auto !important; }
 }

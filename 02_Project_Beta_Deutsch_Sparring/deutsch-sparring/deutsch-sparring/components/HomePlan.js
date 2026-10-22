@@ -13,6 +13,62 @@ import {
   milestoneView, partView, overviewRows, SOON_DAYS, RECENT_SHOWN,
 } from '../lib/home-plan';
 
+// ---------- the overview as a Gantt chart ----------
+// One row per part on the goal's calendar: the bar runs from when the part starts to its last milestone, so parts that
+// run at the same time overlap. The fill shows reached milestones, small ticks the milestone dates, one line "Today".
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dn = (s) => Math.round(Date.parse(`${s}T00:00:00Z`) / 86_400_000);
+const inBar = (p, day) => ((dn(day) - dn(p.start)) / Math.max(1, dn(p.end) - dn(p.start))) * 100; // a milestone tick inside its bar
+
+function Gantt({ row, today, onOpen }) {
+  const from = dn(row.start);
+  const span = Math.max(1, dn(row.end) - from);
+  const pos = (day) => Math.max(0, Math.min(100, ((dn(day) - from) / span) * 100));
+  const months = [];
+  const d = new Date(`${row.start}T00:00:00Z`);
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + 1);
+  while (d.toISOString().slice(0, 10) < row.end) {
+    months.push({ day: d.toISOString().slice(0, 10), label: MONTHS[d.getUTCMonth()] });
+    d.setUTCMonth(d.getUTCMonth() + 1);
+  }
+  const barStyle = (p) => ({ left: `${pos(p.start)}%`, width: `${Math.max(1.5, pos(p.end) - pos(p.start))}%` });
+  const at = (day) => ({ left: `${pos(day)}%` });
+  const showToday = today >= row.start && today <= row.end;
+  return (
+    <div className="gantt">
+      <div className="gantt-row gantt-scale" aria-hidden="true">
+        <span />
+        <span className="gantt-track">
+          {months.map((m) => <span key={m.day} className="gantt-month" style={at(m.day)}>{m.label}</span>)}
+        </span>
+      </div>
+      {row.parts.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          className={`gantt-row gantt-part${p.late > 0 ? ' late' : ''}`}
+          onClick={() => onOpen(p.id)}
+          aria-label={`${t('zoomOpenPart', { part: p.title })}. ${t('zoomSegment', { part: p.title, n: p.reached, total: p.total, planned: p.planned })}. ${fmtDay(p.start)} – ${fmtDay(p.end)}`}
+        >
+          <span className="gantt-label">
+            <span className="zoom-seg-name">{p.title}</span>
+            <span className="detail">{t('goalPartSteps', { n: p.reached, total: p.total })}</span>
+          </span>
+          <span className="gantt-track" aria-hidden="true">
+            {months.map((m) => <span key={m.day} className="gantt-grid" style={at(m.day)} />)}
+            <span className="gantt-bar" style={barStyle(p)}>
+              <span className="zoom-seg-fill" style={{ width: `${(p.reached / p.total) * 100}%` }} />
+              {p.dates.map((day, i) => <span key={i} className="gantt-tick" style={{ left: `${inBar(p, day)}%` }} />)}
+            </span>
+            {showToday && <span className="zoom-today" style={at(today)} />}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ---------- small text helpers ----------
 const half = (n) => String(Math.round(n * 2) / 2);
 
@@ -289,25 +345,7 @@ export function ZoomPlan({ goals, data, today, zoom, onZoom, onPractise, onTick 
                     <span className="goal-name small">{row.goal.title}</span>
                     <span className="detail">{st.ended ? t('goalEnded') : st.weeksLeft === 1 ? t('goalWeekOne') : t('goalWeeks', { n: st.weeksLeft })}</span>
                   </div>
-                  <div className="zoom-segments">
-                    {row.parts.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className={`zoom-seg${p.late > 0 ? ' late' : ''}`}
-                        style={{ flexGrow: p.total, flexBasis: 0 }}
-                        onClick={() => onZoom({ level: 'part', goalId: row.goal.id, partId: p.id })}
-                        aria-label={`${t('zoomOpenPart', { part: p.title })}. ${t('zoomSegment', { part: p.title, n: p.reached, total: p.total, planned: p.planned })}`}
-                      >
-                        <span className="zoom-seg-name">{p.title}</span>
-                        <span className="zoom-seg-bar" aria-hidden="true">
-                          <span className="zoom-seg-fill" style={{ width: `${(p.reached / p.total) * 100}%` }} />
-                          <span className="zoom-today" style={{ left: `${(p.planned / p.total) * 100}%` }} />
-                        </span>
-                        <span className="detail">{t('goalPartSteps', { n: p.reached, total: p.total })}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <Gantt row={row} today={today} onOpen={(partId) => onZoom({ level: 'part', goalId: row.goal.id, partId })} />
                 </li>
               );
             })}

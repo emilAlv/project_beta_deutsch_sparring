@@ -6,7 +6,7 @@
 //   part       the milestones of one part, with dates
 //   milestone  one milestone: the missing words, the last 20 answers on the topic, "Practise this"
 // The level, goal, part and milestone are kept in the browser (cleanZoom checks them against the real goals after a reload).
-import { dayNum } from './goals.js';
+import { dayNum, dayOf } from './goals.js';
 import { allMilestones, studentTickable, PLAN_VERSION } from './plan.js';
 import { milestoneTitle, partTitle, sessionForMilestone } from './plan-templates.js';
 import { CURRICULUM } from './curriculum.js';
@@ -58,19 +58,30 @@ export function partView(goal, partId, plan, today) {
 }
 
 // ---------- level 1: the overview ----------
-// One row per plan goal; every part is a segment as wide as its milestones are many. `reached` fills it; `planned` is the
-// "Today" marker inside the segment: how many milestones should be reached by today.
+// One row per plan goal; every part is one Gantt bar on the goal's calendar (start → end, parts may overlap). `reached`
+// fills the bar; `planned` is how many milestones should be reached by today (for screen readers).
 export function overviewRows(goals, plans, today) {
   return (goals || []).filter(isPlanGoal).map((goal) => {
     const plan = plans?.[goal.id] || null;
+    const goalStart = dayNum(goal.startDate);
+    const goalEnd = Math.max(goalStart + 1, dayNum(goal.endDate));
     const parts = goal.subPlans.filter((p) => p.include !== false).map((part) => {
       const live = part.milestones.filter((m) => m.status !== 'skipped');
       const info = plan?.parts?.[part.id];
       const reached = info?.reached ?? live.filter((m) => m.reachedAt).length;
       const planned = live.filter((m) => m.date && dayNum(m.date) <= dayNum(today)).length;
-      return { id: part.id, title: partTitle(part), kind: part.kind, total: live.length, reached, planned, late: info?.overdue || 0, behindDays: info?.behindDays || 0 };
+      // Gantt bar: from when the part's work starts to its last milestone. The start is the first milestone's date minus
+      // the usual gap between its milestones (the time the first one needs), never before the goal starts.
+      const days = live.map((m) => m.date).filter(Boolean).map(dayNum).sort((a, b) => a - b);
+      const gap = days.length > 1 ? (days.at(-1) - days[0]) / (days.length - 1) : 7;
+      const from = days.length ? Math.max(goalStart, Math.round(days[0] - gap)) : goalStart;
+      const to = days.length ? Math.max(from + 1, days.at(-1)) : goalEnd;
+      return {
+        id: part.id, title: partTitle(part), kind: part.kind, total: live.length, reached, planned, late: info?.overdue || 0, behindDays: info?.behindDays || 0,
+        start: dayOf(from), end: dayOf(to), dates: days.map(dayOf),
+      };
     }).filter((p) => p.total > 0);
-    return { goal, plan, status: plan?.status || 'ontrack', parts };
+    return { goal, plan, status: plan?.status || 'ontrack', parts, start: goal.startDate, end: goal.endDate };
   });
 }
 
