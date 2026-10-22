@@ -8,17 +8,17 @@
 //   goals    clean goals (lib/goals.js)
 //
 // Goal progress (percent):
-//   vocabulary  how far the goal's words are on their way to a 10 (average of (V − 1) / 9)
+//   vocabulary  how far the goal's words are on their way to a 10 (average of (Meaning − 1) / 9)
 //   grammar     share of right answers on the goal's rules (all rules if none are named) in the last 30 days,
 //               counted fully once there are 20 answers
 //   exam        the average of the two
 import { getWords, getWord } from './words.js';
-import { matchesFilter, vScore, gScore } from './scores.js';
+import { matchesFilter, mScore, aScore, pScore, gScore, hasScore, isLearnt, recordFromCompact, LEARNT_FROM as LEARNT_SCORE } from './scores.js';
 import { cleanRule } from './rules.js';
 import { CURRICULUM_LEVELS } from './curriculum.js';
 
 export const WINDOW_DAYS = 30;
-export const LEARNT_FROM = 8; // a word counts as "learnt" with a V score of 8–10
+export const LEARNT_FROM = LEARNT_SCORE; // "learnt" = Meaning 8–10 and, for a noun, Article 8–10 (lib/scores.js isLearnt)
 export const GRAMMAR_FULL_AT = 20; // answers needed before the accuracy counts fully
 export const STRONG_FROM = 75; // % right: a strength from here, a gap below
 export const SHOWN = 5; // rows per column
@@ -89,15 +89,14 @@ export function answersFromLog(log, now = Date.now()) {
     }));
 }
 
-// The browser's compact scores { id: [v, g] } → records
+// The browser's compact scores { id: [m, g, a, p] } → records (m = Meaning, g = Sentence, a = Article, p = Plural; null = none).
+// The old form { id: [v, g] } still works: v used to be article + word, so it is read as Meaning AND Article.
 export function scoresFromCompact(raw) {
   const out = {};
   if (!raw || typeof raw !== 'object') return out;
   for (const id of Object.keys(raw).slice(0, 8000)) {
-    const [v, g] = Array.isArray(raw[id]) ? raw[id] : [];
-    if (!getWord(id) || !Number.isFinite(Number(v))) continue;
-    out[id] = { v: { s: Number(v) } };
-    if (Number.isFinite(Number(g))) out[id].g = { s: Number(g) };
+    const rec = getWord(id) ? recordFromCompact(raw[id]) : null;
+    if (rec) out[id] = rec;
   }
   return out;
 }
@@ -109,7 +108,7 @@ const goalLevels = (goal) => (goal.type === 'exam' ? CURRICULUM_LEVELS.slice(0, 
 function vocabProgress(goal, scores) {
   const words = getWords().filter((w) => matchesFilter(w, { level: goalLevels(goal), section: goal.scope.section, list: goal.scope.list }));
   if (!words.length) return 0;
-  const sum = words.reduce((s, w) => s + (Math.min(10, vScore(scores[w.id])) - 1) / 9, 0);
+  const sum = words.reduce((s, w) => s + (Math.min(10, mScore(scores[w.id])) - 1) / 9, 0);
   return Math.round((sum / words.length) * 100);
 }
 
@@ -137,7 +136,7 @@ const listGoal = (goals, section, list) => (goals.find((g) => g.type !== 'gramma
 // ---------- everything for the Home page ----------
 export function computeHome({ goals, scores, agg }) {
   const words = getWords();
-  const learnt = words.filter((w) => vScore(scores[w.id]) >= LEARNT_FROM && scores[w.id]).length;
+  const learnt = words.filter((w) => isLearnt(scores[w.id], w.type === 'noun')).length;
   const answered = agg.total - agg.skipped;
 
   // word lists: right answers per list, plus the average V and G score of the practised words in it
@@ -151,11 +150,18 @@ export function computeHome({ goals, scores, agg }) {
       lists.set(topic, l);
     }
   }
+  // average of one score over the practised words of a list (Article and Plural: nouns only; null = none practised)
   const avg = (topic, f) => {
     const rec = words.filter((w) => scores[w.id] && w.topics.includes(topic));
-    const vals = rec.map((w) => f(scores[w.id])).filter((x) => x != null);
+    const vals = rec.map((w) => f(scores[w.id], w)).filter((x) => x != null);
     return vals.length ? Math.round((vals.reduce((s, x) => s + x, 0) / vals.length) * 10) / 10 : null;
   };
+  const kindAvg = (topic) => ({
+    m: avg(topic, (r) => (hasScore(r, 'v') ? mScore(r) : null)),
+    a: avg(topic, (r, w) => (w.type === 'noun' && hasScore(r, 'a') ? aScore(r) : null)),
+    p: avg(topic, (r, w) => (w.type === 'noun' && hasScore(r, 'p') ? pScore(r) : null)),
+    g: avg(topic, (r) => (hasScore(r, 'g') ? gScore(r) : null)),
+  });
 
   const items = [
     ...agg.rules.map((r) => ({ kind: 'rule', label: r.rule, n: r.n, pct: pct(r.ok, r.n), goalId: ruleGoal(goals, r.rule)?.id || null })),
@@ -163,7 +169,7 @@ export function computeHome({ goals, scores, agg }) {
       const [section, list] = l.topic.split(SEP);
       return {
         kind: 'list', label: l.topic, n: l.n, pct: pct(l.ok, l.n), goalId: listGoal(goals, section, list)?.id || null,
-        v: avg(l.topic, vScore), g: avg(l.topic, (r) => (r.g ? gScore(r) : null)),
+        scores: kindAvg(l.topic), // { m: Meaning, a: Article, p: Plural, g: Sentence } averages (null = none yet)
       };
     }),
   ];
@@ -183,22 +189,32 @@ export function computeHome({ goals, scores, agg }) {
 // Where the student stands with the words, per level and per list – so the coach can plan with real content
 // ("Home & living › Furniture: 12 of 45 learnt") instead of percentages.
 //   byLevel: { A1: { total, practised, learnt } … }
-//   byList:  [{ topic, total, practised, learnt, levels: { A1: n … } }] in the order of the word list
+//   byList:  [{ topic, total, practised, learnt, levels: { A1: n … }, avg: { m, a, p } }] in the order of the word list
+//            avg = average Meaning / Article / Plural of the practised words (a, p: nouns only; null = none) – the coach
+//            uses it to say which PART is weak (e.g. articles)
 function vocabProgress2(words, scores) {
   const byLevel = {};
   const lists = new Map();
   for (const w of words) {
     const rec = scores[w.id];
     const practised = rec ? 1 : 0;
-    const learnt = rec && vScore(rec) >= LEARNT_FROM ? 1 : 0;
+    const learnt = isLearnt(rec, w.type === 'noun') ? 1 : 0;
     const lv = (byLevel[w.level] ||= { total: 0, practised: 0, learnt: 0 });
     lv.total += 1; lv.practised += practised; lv.learnt += learnt;
     for (const topic of w.topics || []) {
-      const l = lists.get(topic) || { topic, total: 0, practised: 0, learnt: 0, levels: {} };
+      const l = lists.get(topic) || { topic, total: 0, practised: 0, learnt: 0, levels: {}, sum: { m: 0, a: 0, p: 0 }, n: { m: 0, a: 0, p: 0 } };
       l.total += 1; l.practised += practised; l.learnt += learnt;
       l.levels[w.level] = (l.levels[w.level] || 0) + 1;
+      const add = (k, has, val) => { if (rec && has) { l.sum[k] += val; l.n[k] += 1; } };
+      add('m', hasScore(rec, 'v'), mScore(rec));
+      add('a', w.type === 'noun' && hasScore(rec, 'a'), aScore(rec));
+      add('p', w.type === 'noun' && hasScore(rec, 'p'), pScore(rec));
       lists.set(topic, l);
     }
   }
-  return { byLevel, byList: [...lists.values()] };
+  const avgOf = (l, k) => (l.n[k] ? Math.round((l.sum[k] / l.n[k]) * 10) / 10 : null);
+  return {
+    byLevel,
+    byList: [...lists.values()].map(({ sum, n, ...l }) => ({ ...l, avg: { m: avgOf({ sum, n }, 'm'), a: avgOf({ sum, n }, 'a'), p: avgOf({ sum, n }, 'p') } })),
+  };
 }

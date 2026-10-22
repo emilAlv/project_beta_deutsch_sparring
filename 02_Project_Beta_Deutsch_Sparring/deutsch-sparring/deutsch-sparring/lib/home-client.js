@@ -6,6 +6,7 @@ import {
   usesServer, loadGoalsLocal, saveGoalLocal, deleteGoalLocal, loadScores, loadAnswerLog, loadRuleLog, progressSaved, markReachedLocal,
 } from './storage';
 import { postWithCode } from './progress-client';
+import { compactOf } from './scores';
 import { todayKey } from './goals';
 import { tickExam } from './home-plan';
 
@@ -13,7 +14,7 @@ import { tickExam } from './home-plan';
 // server works out the numbers (nothing is stored there). The coach gets the same copy.
 export function localNumbers() {
   const scores = {};
-  for (const [id, rec] of Object.entries(loadScores())) scores[id] = [rec?.v?.s ?? 1, rec?.g?.s ?? null];
+  for (const [id, rec] of Object.entries(loadScores())) scores[id] = compactOf(rec); // [Meaning, Sentence, Article, Plural]
   return { goals: loadGoalsLocal(), scores, log: loadAnswerLog(), rulelog: loadRuleLog(), today: todayKey() };
 }
 

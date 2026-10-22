@@ -10,7 +10,7 @@ student's own browser either way.
 the setup screen: *Grammar* or *Vocabulary + grammar*, the topic (grammar lesson, or word
 section + list with word counts), level (A1/A2/B1), difficulty (Easy/Medium/Hard), questions
 (10–50), word source (Goethe list / From the course / Both), flashcard direction, grammar with
-each word (article & plural, Akkusativ, Dativ, Genitiv, adjective endings, Perfekt, verb + case)
+each word (Akkusativ, Dativ, Genitiv, adjective endings, Perfekt, verb + case)
 and *Swiss or German Hochdeutsch* (see below). The screen opens with
 the last session's choices. **These settings stay fixed until the session ends**: asking for
 «harder», «20 questions» or another topic in the chat gets a short «end the session to change
@@ -31,20 +31,30 @@ this». Hint, rule, skip and stop still work in the chat (and as chips above the
 - **Vocabulary topics = flashcards** from the word list (`vocab/words.json`, see `vocab/README.md`).
   The topics are the word list's sections and lists (e.g. *Home & living › Furniture & objects*);
   tap a section to practise all of it or pick one list. English is the reference language:
-  English → German (answer with the article), German → English, or mixed. With grammar points
-  chosen on the setup screen, a grammar task with the same word follows each card. The card always
-  comes first and always checks the article (a German → English noun card shows the noun without
-  article: you give article + meaning; *Article & plural* also asks for the plural). The grammar task
+  English → German, German → English, or mixed. **What a noun card asks follows the difficulty:**
+  *Easy* – only the German word (a missing or wrong article does not make it wrong; the feedback shows the
+  right article and the plural as information); *Medium* – article + noun (`die Lampe`); *Hard* – article +
+  noun + plural (`die Lampe, die Lampen`). A German → English noun card on Medium / Hard shows the noun without
+  its article: you give article + meaning (`die – lamp`); on Easy only the meaning. Verbs, adjectives and
+  phrases: just the word on every level. With grammar points chosen on the setup screen, a grammar task with
+  the same word follows each card. The grammar task
   depends on the word: **nouns** – a sentence in Akkusativ, Dativ or Genitiv with the word's adjective
   (e.g. *wegen des alten Schranks*); **verbs** – the Perfekt (*Ich bin abgebogen*) and a sentence with the
   case the verb needs; **adjectives** – fill in the ending; **phrases** and other words – card only.
   The tutor names the point the same way every time in `feedback.rule` (*Genitiv nach wegen*,
   *Dativ nach in (Wo?)*, *Perfekt mit sein* … list in `lib/grammar.js`), so the stats can group it.
-  A wrong word or article is reported as *Artikel* / *Wortschatz* (costs the V score); a wrong case,
-  ending or Perfekt as *Kasus* / *Adjektivendung* / *Verbform* / *Präposition* (costs the G score only).
+  A wrong word or article is reported as *Artikel* / *Wortschatz* (costs the Meaning / Article score); a wrong case,
+  ending or Perfekt as *Kasus* / *Adjektivendung* / *Verbform* / *Präposition* (costs the Sentence score only).
+  For a flashcard the tutor also says which PART was right in `feedback.parts` (`{ meaning, article, plural }`),
+  so the app scores each part on its own and the feedback card can show *Meaning ✓ · Article ✗ (die)*.
   The browser sends the chosen points as `settings.grammar`; the server checks them (`lib/grammar.js`).
-- **Word scores:** the app keeps two scores per word from 1 to 10 – *V* (the word itself) and *G*
-  (the word in grammar) – in the browser (`wort_scores`). A session only gets the words it needs
+- **Word scores:** the app keeps up to four scores per word from 1 to 10 – *Meaning* (the word itself),
+  *Article* and *Plural* (nouns only) and *Sentence* (the word in grammar) – in the browser (`wort_scores`) or,
+  with an account, in the database. A flashcard only changes the scores its difficulty tests; a word counts as
+  *learnt* with Meaning ≥ 8 and, for a noun, Article ≥ 8 (the plural is tracked, not required). Scores from
+  before this change had one score "V" for article + word: it is copied into Article once (browser and database
+  migration step 5). The picker looks at the scores that matter for the session's difficulty. Full rules:
+  `docs/revamp-tasks.md` › Word scores. A session only gets the words it needs
   (1 per question; with sentences 1 per 2 questions; plus 3 spare), chosen from the chosen
   section/list and level: words that are due and weak first (lowest score first), about 30 % new
   words, 1–2 words with a 10 as a check. A word comes back after 1 / 3 / 7 / 21 days (score 1–3 /
@@ -68,13 +78,13 @@ survives a reload. Home shows (`components/Home.js`):
   the plan and the tiles stay hidden until there is a goal or a first session. Exam milestones (mock exams, Schreiben/Sprechen) are
   ticked on the milestone view, with optional points (`PATCH /api/goals`; without accounts in the browser). `/api/stats` adds `nextUp`,
   `sessions`, `missing` and `recent`. Old-style goals keep their old bar and timeline until they are converted. Checks: `scripts/check-home-plan.mjs`.
-- **Four tiles** for the last 30 days: sessions, questions answered (+ % right), words learnt (V score
-  8–10 of all words) and the streak.
+- **Four tiles** for the last 30 days: sessions, questions answered (+ % right), words learnt (Meaning 8–10 and,
+  for nouns, Article 8–10) and the streak.
 - **Goals** (type exam / vocabulary / grammar, level, start and end date, optionally the word section / list
   or the grammar rules it covers): create, edit, delete. Every new goal gets a default plan of four evenly
   spaced milestones (25 / 50 / 75 / 100 %) that can be changed in the form. The progress % of a goal is
   calculated by the app, never by the AI (`lib/home-stats.js`): *vocabulary* = how far the goal's words are
-  on their way to a 10 (average V score), *grammar* = share of right answers on the goal's rules in the last
+  on their way to a 10 (average Meaning score), *grammar* = share of right answers on the goal's rules in the last
   30 days (counted fully from 20 answers), *exam* = the average of the two. "A little behind" = the progress is
   more than 10 points behind the share of the time that has passed.
 - **Plan timeline** (plain HTML/CSS, no chart package): one line per goal, month ticks, milestone dots
@@ -314,7 +324,7 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
 ### The database: numbered steps, and how to add a column
 
 `lib/schema.mjs` holds `MIGRATIONS`, a numbered list of steps (step 1 = first tables, 2 = extra columns on
-`answers`, 3 = `goals.plan`, 4 = the `usage` table for the limits …). The table `schema_version` remembers the last step that was done. When the app
+`answers`, 3 = `goals.plan`, 4 = the `usage` table for the limits, 5 = the Article and Plural scores on `word_scores` …). The table `schema_version` remembers the last step that was done. When the app
 starts it asks ONE question ("which step is the database at?") and only if it is behind does it run the missing
 steps – each step in one transaction together with the note "step N done", so a step is either completely done
 or not at all. A brand-new database runs all steps; the existing live database (no `schema_version` yet) runs

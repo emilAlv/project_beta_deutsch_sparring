@@ -46,30 +46,53 @@ Figma is on the Starter plan with a small request limit: **read only the frame y
 - **Open:** database. Task 7 needs Emilio's OK for Vercel's free Postgres (Neon) and its one package.
 
 ## Word scores (used by Tasks 2, 3, 8, 9)
-Every student has **two scores per word, from 1 to 10**:
-- **V – vocabulary:** the word itself. Nouns: article + noun in the Nominativ (*der Schrank*). Verbs: the infinitive. Adjectives and phrases: the word or phrase.
-- **G – word + grammar:** the word used in its grammar: nouns in Akkusativ / Dativ / Genitiv with adjective endings and the plural; verbs with Perfekt and their case; adjectives with endings. Phrases have no G score.
+Every student has **up to four scores per word, from 1 to 10** (changed after the first version, which had V and G only):
+- **Meaning (m):** the word itself – what it means, or the German word. Verbs: the infinitive. Adjectives and phrases: the word or phrase. (In the code and in the database this is still called `v` / the column `v`.)
+- **Article (a):** nouns only – der / die / das.
+- **Plural (p):** nouns only. It is tracked, but it is **not needed for "learnt"** (the plural may later become its own grammar section).
+- **Sentence (g):** the word used in its grammar: nouns in Akkusativ / Dativ / Genitiv with adjective endings and the plural; verbs with Perfekt and their case; adjectives with endings. Phrases have no Sentence score. (Earlier called G.)
 
-A word never practised is "new" and counts as score 1. So 4 right answers in a row take a new word 1 → 3 → 5 → 7 → **10**.
+A word never practised is "new" and counts as score 1. So 4 right answers in a row take a new score 1 → 3 → 5 → 7 → **10**.
 
-| What happens | V score | G score |
-|---|---|---|
-| Flashcard right | +2 | – |
-| Flashcard wrong (wrong word or wrong article) | −3 | – |
-| Grammar task right | +1 (the word was used correctly) | +2 |
-| Grammar task wrong, mistake in the grammar (case, ending, Perfekt …) | unchanged | −3 |
-| Grammar task wrong, mistake in the word or its article | −3 | −3 |
-| Skipped | −1 | −1 (if it was a grammar task) |
-| Right, but after a hint or on "Leicht" (multiple choice) | +1 | +1 |
+### What a flashcard asks, by difficulty
+| | Noun, English → German | Noun, German → English | Verb, adjective, phrase … |
+|---|---|---|---|
+| **Easy** | only the German word; a missing or wrong article is **not** a mistake (the card shows the right article and the plural as information) | the meaning only (the noun is shown with its article) | just the word |
+| **Medium** | article + noun (`die Lampe`); wrong or missing article = wrong card | the noun is shown without article; the student gives article + meaning (`die – lamp`) | just the word |
+| **Hard** | article + noun + plural (`die Lampe, die Lampen`); wrong or missing plural = wrong card (a noun without a plural: article + noun) | as Medium (the plural is never asked in this direction) | just the word |
 
-- **10 needs 4 right answers in a row.** Each score has its own streak (right answers in a row). Without a streak of 4 the score stops at 9; the 4th right answer in a row sets it to 10. A mistake or skip resets that streak to 0. Answers after a hint or on "Leicht" do not count toward the streak.
-- Scores never go below 1 or above 10.
-- In "Vocabulary + grammar" sessions the article is checked every time (flashcard first), so V is always tested; grammar comes on top.
-- Which mistake is which: the tutor already returns `feedback.errorType` (`Artikel`, `Wortschatz` = the word; `Kasus`, `Adjektivendung`, `Verbform`, `Präposition`, … = the grammar).
-- **When a word comes back** (spaced repetition): the better the score, the longer the gap. Score 1–3 → due the next day, 4–6 → after 3 days, 7–9 → after 7 days, 10 → after 21 days. A 10 that is due and answered right stays 10. Answered wrong, it drops to 7 and has to earn the 10 again.
-- **How a session's words are chosen:** words in the chosen level and section / list. First words that are due, lowest score first. Then new words. Then 1–2 words with 10 as a check. Roughly 60 % due or weak, 30 % new, 10 % checks. Fewer words exist → use what there is.
+Hints: Medium "mit Artikel", Hard "mit Artikel und Plural", Easy none about the article. The old "Article & plural" chip on the setup screen is gone (an old saved setup that still has it loads normally, the chip is ignored).
+
+### Which score changes
+A flashcard only changes the scores it **tested** on its level. Each tested part is judged on its own: a part that was right goes up, a part that was wrong goes down, a part the tutor did not judge (e.g. the article when the word itself was wrong) stays.
+
+| What happens | m Meaning | a Article | p Plural | g Sentence |
+|---|---|---|---|---|
+| Flashcard part right | +2 | +2 | +2 | – |
+| Flashcard part wrong (wrong word → m; wrong article → a; wrong plural → p) | −3 | −3 | −3 | – |
+| Medium, noun right but article wrong | **+2** (the word was right) | −3 | – | – |
+| Hard, only the plural wrong | +2 | +2 | −3 | – |
+| Easy noun card right | +2 | untouched | untouched | – |
+| Grammar task right (noun) | +1 | +1 | – | +2 |
+| Grammar task right (verb, adjective) | +1 | – | – | +2 |
+| Grammar task wrong, grammar mistake (case, ending, Perfekt …) | unchanged | unchanged | – | −3 |
+| Grammar task wrong, the **article** (errorType Artikel) | unchanged | −3 | – | −3 |
+| Grammar task wrong, the **word** (errorType Wortschatz) | −3 | unchanged | – | −3 |
+| Skipped | −1 | −1 (if tested) | −1 (if tested) | −1 (if it was a grammar task) |
+| Right, but after a hint or on "Leicht" (multiple choice) | +1 | +1 | +1 | +1 |
+
+- **10 needs 4 right answers in a row.** Each score has its own streak. Without a streak of 4 a score stops at 9; the 4th right answer in a row sets it to 10. A mistake or skip resets that streak to 0. Answers after a hint or on "Leicht" do not count toward the streak.
+- Scores never go below 1 or above 10. A 10 answered wrong (not skipped) drops to 7.
+- In "Vocabulary + grammar" sessions the flashcard comes first (it tests what its level says), then the sentence task adds the Sentence score; the article of a noun is part of the sentence, so a noun's sentence task also tests Article.
+- **How the app knows which part was wrong:** the tutor's feedback has a small `parts` object for flashcards, `{ meaning, article, plural }` with true / false (null = not asked or not judged). The app keeps only the parts the card tested (`exercise.checks`, worked out by the app: `testedChecks` in `lib/scores.js`). If the tutor leaves `parts` out, the app falls back to `errorType` (`Artikel` = article wrong, noun right) and `rule` ("Plural" = only the plural wrong); any other mistake means the word was wrong. On the server the tested parts are worked out again from the word and the difficulty, not trusted from the browser.
+- **Learnt** (Home tile, milestones, goals): **Meaning ≥ 8 and, for a noun, Article ≥ 8.** Plural does not count. Verbs, adjectives and phrases need Meaning only.
+- **When a word comes back** (spaced repetition): the better the score, the longer the gap. Score 1–3 → due the next day, 4–6 → after 3 days, 7–9 → after 7 days, 10 → after 21 days. Every score has its own due date. A 10 that is due and answered right stays 10. Answered wrong, it drops to 7 and has to earn the 10 again.
+- **How a session's words are chosen:** words in the chosen level and section / list. First words that are due, lowest score first. Then new words. Then 1–2 words with 10 as a check. Roughly 60 % due or weak, 30 % new, 10 % checks. Fewer words exist → use what there is. **"Weak" and "due" follow the session's difficulty:** Easy looks at Meaning, Medium at the weaker of Meaning and Article (nouns), Hard at the weakest of Meaning, Article and Plural (nouns with a plural). A score the word does not have yet counts as 1 and as due, so a noun you only practised on Easy comes back on Hard. The Sentence score counts too, once the word has one.
 - **How many words:** only as many as the session needs. Vocabulary only: 1 word per question. Vocabulary + grammar: 1 word per 2 questions (flashcard + grammar task). Plus 3 spare words for skips. A 20-question session with grammar = 13 words.
-- One place in the code (`lib/scores.js`) does all of this, so the rules can be changed later in one file. Until accounts exist (Task 7) the scores are kept in the browser; Task 8 moves them to the database.
+- **Where scores are shown:** Home word lists show the averages side by side ("Ø Meaning 7 · Article 4 · Plural 2 · Sentence 5"), the feedback card after a flashcard shows "Meaning ✓ · Article ✗ (die)".
+- **Old scores:** today's V meant "article + word", so the first time the new version runs it is **copied into the Article score** too (browser: once per browser and account; database: migration step 5; compact copy `{ id: [v, g] }`: read as m = a = v). The Plural score starts empty. Nothing is lost.
+- **Formats:** record `{ v, g, a, p, last }` (each `{ s, k, due }`); compact copy for Home `{ id: [m, g, a, p] }` (null = none); database `word_scores` columns `v g a p` (+ `_streak`, `_due`).
+- One place in the code (`lib/scores.js`) does all of this, so the rules can be changed later in one file. Without an account the scores are kept in the browser; with an account they are in the database (Task 8).
 
 ## Common rules (every task prompt points here)
 - Read `CLAUDE.md` (repo root) first and follow it: plain-English explanations for Emilio, ask before any new package, database or login, never print or commit keys or passwords.

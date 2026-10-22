@@ -532,11 +532,13 @@ export default function Home() {
 
   // Word scores: the APP updates them (lib/scores.js), never the model. Called once per answer.
   // record = the answer's details, saved with it in the account (lib/storage.js)
-  function scoreAnswer(session, exercise, { correct = false, errorType = null, skipped = false } = {}, record = null) {
+  function scoreAnswer(session, exercise, { correct = false, errorType = null, skipped = false, parts = null } = {}, record = null) {
     const type = session.words?.find((w) => w.id === exercise?.wordId)?.type;
     recordWordAnswer(exercise?.wordId || '', {
       task: exercise?.task || 'flashcard',
       correct, errorType, skipped,
+      // which parts the question tests (Meaning, Article, Plural) and which of them were right: each is scored on its own
+      checks: exercise?.checks, parts, direction: exercise?.direction || '', rule: record?.rule || '',
       hinted: Boolean(exercise?.hinted) || session.settings?.difficulty === 'easy', // a hint, or "Leicht" (multiple choice)
       hasG: type !== 'phrase',
     }, record && { ...record, sessionId: session.id, topicId: session.settings?.topicId || session.topicId || null, kind: session.settings?.kind || null, difficulty: session.settings?.difficulty || null });
@@ -762,7 +764,7 @@ export default function Home() {
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
       feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
       // word scores: updated by the app from the tutor's verdict (correct, errorType), a hint and "Leicht"
-      scoreAnswer(s, s.exercise, { correct: feedback.correct, errorType: feedback.errorType }, {
+      scoreAnswer(s, s.exercise, { correct: feedback.correct, errorType: feedback.errorType, parts: feedback.parts || null }, {
         n: s.answers.length + 1, question: s.exercise?.line || '', studentAnswer: feedback.studentAnswer, corrected: feedback.corrected, rule: feedback.rule,
       });
       s.answers = [...s.answers, { ...feedback, n: s.answers.length + 1, skipped: false, line: s.exercise?.line || '', question: s.exercise?.line || '', qType: s.exercise?.type || null, wordId: s.exercise?.wordId || '', task: s.exercise?.task || null }];

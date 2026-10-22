@@ -1,5 +1,5 @@
 import { cleanRule, topicForRule } from './rules';
-import { applyAnswer } from './scores';
+import { applyAnswer, migrateRecords } from './scores';
 import { addToRuleLog } from './grammar-stats';
 import { applyReached } from './plan-progress';
 import { PLAN_VERSION, cleanPlanGoal } from './plan';
@@ -23,12 +23,13 @@ const KEYS = {
   coach: 'wort_coach', // [message, …] – the last 30 coach messages (lib/coach.js); with an account they live on the server
   coachTry: 'wort_coachtry', // { day } – the day the coach was last asked to greet by itself (at most one automatic call a day)
   zoom: 'wort_zoom', // { level, goalId, partId, milestoneId } – how far the Home plan is zoomed in (lib/home-plan.js cleanZoom)
-  scores: 'wort_scores', // { [wordId]: { v, g, last } } – the word scores (lib/scores.js); with an account they live on the server
+  scores: 'wort_scores', // { [wordId]: { v (Meaning), g, a (Article), p (Plural), last } } – the word scores (lib/scores.js); with an account they live on the server
+  scoresV2: 'wort_scores_v2', // '1' once the old scores (v = article + word) were copied into the Article score (lib/scores.js migrateRecords)
 };
 
 // With accounts, the conversation and the session history are kept per username, so two
 // students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
-const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'goals', 'alog', 'rulelog', 'coach', 'coachTry', 'zoom']);
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'scoresV2', 'goals', 'alog', 'rulelog', 'coach', 'coachTry', 'zoom']);
 let account = '';
 const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
 
@@ -93,7 +94,11 @@ const laterStreak = (a, b) => {
 // and scores were handed over, once per account and browser).
 export function initProgress() {
   const oldHistory = readLocal('history');
-  const oldScores = readLocal('scores');
+  let oldScores = readLocal('scores');
+  // browser scores from before Meaning / Article / Plural: v is copied into the Article score first (once)
+  try {
+    if (!localStorage.getItem(KEYS.scoresV2) && !localStorage.getItem(`${KEYS.scoresV2}@${account}`)) oldScores = migrateRecords(oldScores);
+  } catch {}
   const flag = `wort_imported@${account}`;
   server = true;
   copy.history = { sessions: [], streak: { count: 0, lastDay: null } };
@@ -262,7 +267,21 @@ export function recentMistakes(currentAnswers, sessions) {
 }
 
 // ---------- word scores (the rules are in lib/scores.js; this is the only place that stores them) ----------
-export const loadScores = () => read('scores', {});
+// Records from before Meaning / Article / Plural (only v and g) get their Article score from v, ONCE per browser (and
+// account); the mark is kept in its own key so a record made later, without an Article score yet, is never changed.
+export const loadScores = () => {
+  const all = read('scores', {});
+  if (onServer('scores')) return all; // the database was migrated by lib/schema.mjs
+  try {
+    if (localStorage.getItem(storageKey('scoresV2'))) return all;
+    const next = migrateRecords(all);
+    localStorage.setItem(storageKey('scores'), JSON.stringify(next));
+    localStorage.setItem(storageKey('scoresV2'), '1');
+    return next;
+  } catch {
+    return all;
+  }
+};
 
 // One answer about one word → the stored record is updated. Returns the new record.
 // With an account the SERVER saves the answer and works out the score (extra = the answer's details:
@@ -272,7 +291,7 @@ export function recordWordAnswer(wordId, answer, extra = null, now = Date.now())
     if (extra?.sessionId) {
       queuePost('/api/progress/answer', {
         ...extra, wordId: wordId || '', task: answer.task, correct: answer.correct, skipped: answer.skipped,
-        errorType: answer.errorType, hinted: answer.hinted, hasG: answer.hasG,
+        errorType: answer.errorType, hinted: answer.hinted, hasG: answer.hasG, direction: answer.direction || '', checks: answer.checks, parts: answer.parts,
         topicId: extra.topicId || '', kind: extra.kind || '', difficulty: extra.difficulty || '',
       });
     }

@@ -2,7 +2,7 @@ import { getLesson, getKnownGrammar, guessTopic, topicsForLevel, FREE_TOPIC } fr
 import { allTopics } from '../../../lib/topics';
 import { curriculumEntry, curriculumLesson } from '../../../lib/curriculum';
 import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEADER } from '../../../lib/words';
-import { pickWords, wordsNeeded } from '../../../lib/scores';
+import { pickWords, wordsNeeded, testedChecks } from '../../../lib/scores';
 import { GRAMMAR_POINTS, cleanGrammar, wantsSentenceTasks } from '../../../lib/grammar';
 import { buildSystemPrompt } from '../../../lib/prompt';
 import { generate } from '../../../lib/gemini';
@@ -154,6 +154,7 @@ async function handle(req) {
         sources: sourcesFor(['goethe', 'kurs'].includes(body.source) ? body.source : 'both'),
         ...filter,
         count: wordsNeeded(session.total, settings.sentences),
+        difficulty: settings.difficulty, // which scores make a word "weak": Easy Meaning, Medium + Article, Hard + Plural
         now: Date.now(),
       };
       words = pickWords(query);
@@ -161,7 +162,12 @@ async function handle(req) {
       if (!words.length) words = pickWords({ ...query, level: undefined });
     }
   }
-  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), openTask: session.openTask, focus: body.grammarFocus };
+  // the parts the open question tests (Easy: the word · Medium: + article · Hard: + plural), so feedback.parts has exactly those
+  const wordById = new Map(words.map((w) => [w.id, w]));
+  const openChecks = session.openTask
+    ? testedChecks({ task: session.openTask, word: wordById.get(session.openWordId) || getWord(session.openWordId), difficulty: settings.difficulty, direction: session.openDirection || 'en-de' })
+    : null;
+  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), wordById, openTask: session.openTask, openChecks, focus: body.grammarFocus };
 
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;

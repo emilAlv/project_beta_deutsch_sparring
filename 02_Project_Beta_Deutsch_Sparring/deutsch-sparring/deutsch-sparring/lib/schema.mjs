@@ -165,7 +165,25 @@ export const MIGRATIONS = [
   )`,
     ],
   },
-  // next step: { version: 5, name: '…', statements: ['ALTER TABLE … ADD COLUMN IF NOT EXISTS …'] },
+  {
+    version: 5,
+    name: 'word_scores: article and plural scores (with backfill)',
+    statements: [
+  // Word scores per part: v = Meaning (the old column, unchanged), a = Article (nouns), p = Plural (nouns).
+  // Same three columns as v: the score, the streak (right answers in a row) and when it is due again.
+  // Safe to run again on the live database.
+  'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS a smallint',
+  'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS a_streak int',
+  'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS a_due timestamptz',
+  'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS p smallint',
+  'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS p_streak int',
+  'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS p_due timestamptz',
+  // The old v meant "article + word", so it becomes the starting Article score too. Only rows that have no Article
+  // score yet, so running it again changes nothing (and never touches a score the student has earned since). Plural starts empty.
+  'UPDATE word_scores SET a = v, a_streak = v_streak, a_due = v_due WHERE a IS NULL AND v IS NOT NULL',
+    ],
+  },
+  // next step: { version: 6, name: '…', statements: ['ALTER TABLE … ADD COLUMN IF NOT EXISTS …'] },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

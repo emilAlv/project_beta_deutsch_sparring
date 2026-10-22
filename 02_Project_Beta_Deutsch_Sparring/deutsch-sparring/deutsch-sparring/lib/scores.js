@@ -2,13 +2,18 @@
 // docs/revamp-tasks.md). Pure functions: no React, no browser, no files – so the same code can
 // run in the browser now and on the server later (Task 8 keeps the scores in a database).
 //
-// Every student has two scores per word, from 1 to 10:
-//   V = the word itself (article + noun, the infinitive, the phrase)
-//   G = the word used in grammar (cases + adjective endings, Perfekt, verb + case)
+// Every student has up to four scores per word, from 1 to 10:
+//   m = Meaning  (the word itself: what it means / the German word; verbs: the infinitive; phrases: the phrase)
+//   a = Article  (nouns only: der / die / das)
+//   p = Plural   (nouns only: tracked, but NOT needed for "learnt")
+//   g = Sentence (the word used in grammar: cases + adjective endings, Perfekt, verb + case)
 // A word that was never practised is "new" and counts as score 1.
 //
-// A word's record:  { v: { s, k, due }, g: { s, k, due }, last }
+// A word's record:  { v: { s, k, due }, a: {…}, p: {…}, g: { s, k, due }, last }
+//   v = the MEANING score (the key keeps its old name "v"; it is also the database column `v`)
 //   s = score 1–10 · k = right answers in a row (the streak) · due = when it comes back (ms) · last = last practised (ms)
+// Old records (from before Meaning / Article / Plural) only have v and g. "v" used to mean article + word, so it is
+// copied into a once (migrateRecord). Plural starts empty.
 
 // ---------- the numbers (change the rules here, nowhere else) ----------
 export const SCORE_MIN = 1;
@@ -16,18 +21,23 @@ export const SCORE_MAX = 10;
 export const SCORE_NEW = 1; // a word never practised
 export const TEN_NEEDS_STREAK = 4; // right answers in a row needed for a 10
 export const CAP_WITHOUT_STREAK = 9; // without that streak a score stops here
+export const LEARNT_FROM = 8; // "learnt" = Meaning >= 8 and, for a noun, Article >= 8
 
-// score table (points added or taken away)
-export const FLASHCARD_RIGHT = { v: +2 };
-export const FLASHCARD_WRONG = { v: -3 };
-export const GRAMMAR_RIGHT = { v: +1, g: +2 };
-export const GRAMMAR_WRONG_WORD = { v: -3, g: -3 }; // mistake in the word or its article
-export const GRAMMAR_WRONG_GRAMMAR = { g: -3 }; // mistake in case, ending, Perfekt … (V unchanged)
-export const SKIPPED = { v: -1, g: -1 }; // G only if it was a grammar task
-export const HINT_RIGHT = { v: +1, g: +1 }; // right, but after a hint or on "Leicht"
+// score table (points added or taken away). v = Meaning, a = Article, p = Plural, g = Sentence.
+// A flashcard only changes the scores it TESTED on its level (see testedChecks); the same numbers apply to each.
+export const FLASHCARD_RIGHT = { v: +2, a: +2, p: +2 };
+export const FLASHCARD_WRONG = { v: -3, a: -3, p: -3 };
+export const GRAMMAR_RIGHT = { v: +1, a: +1, g: +2 }; // the word (and its article) was used correctly in the sentence
+export const GRAMMAR_WRONG_WORD = { v: -3, a: -3, g: -3 }; // mistake in the word (v) or its article (a); g in both cases
+export const GRAMMAR_WRONG_GRAMMAR = { g: -3 }; // mistake in case, ending, Perfekt … (the word scores stay)
+export const SKIPPED = { v: -1, a: -1, p: -1, g: -1 }; // a / p only if tested; g only if it was a grammar task
+export const HINT_RIGHT = { v: +1, a: +1, p: +1, g: +1 }; // right, but after a hint or on "Leicht"
+const BIG_DROP = -3; // a drop this big (a wrong answer, not a skip) sends a 10 down to 7
 
 // feedback.errorType values (German, as the tutor writes them) that mean "the word itself was wrong"
-export const WORD_ERRORS = ['Artikel', 'Wortschatz', 'article', 'vocab']; // …also as the app stores them (lib/reply.js)
+export const ARTICLE_ERRORS = ['Artikel', 'article'];
+export const MEANING_ERRORS = ['Wortschatz', 'vocab']; // …also as the app stores them (lib/reply.js)
+export const WORD_ERRORS = [...ARTICLE_ERRORS, ...MEANING_ERRORS];
 
 // when a word comes back: [highest score of the band, days]
 export const DUE_DAYS = [[3, 1], [6, 3], [9, 7], [10, 21]];
@@ -44,22 +54,102 @@ export const SPARE_WORDS = 3; // extra words for skips
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
+// ---------- what a question tests, by level (Easy / Medium / Hard) ----------
+// Parts: 'meaning' (score v) · 'article' (a, nouns only) · 'plural' (p, nouns only).
+//   Easy    English → German: only the German word. German → English: only the meaning. The article and the
+//           plural are shown as information, a mistake there is NOT a mistake.
+//   Medium  + the article of a noun (a wrong article = a wrong card)
+//   Hard    + the plural of a noun, English → German only (a wrong plural = a wrong card)
+// Verbs, adjectives, phrases and the like: just the word, on every level.
+// A sentence task (task 'grammar') tests the meaning, and the article of a noun (it stands in the sentence).
+export const PARTS = ['meaning', 'article', 'plural'];
+export const PART_KIND = { meaning: 'v', article: 'a', plural: 'p' };
+export const KINDS = ['v', 'a', 'p', 'g'];
+export const asksArticle = (difficulty) => difficulty === 'medium' || difficulty === 'hard';
+export const asksPlural = (difficulty) => difficulty === 'hard';
+
+// → the parts one question tests. word = { type, plural } (the word-list entry; unknown word → meaning only)
+export function testedChecks({ task = 'flashcard', word = null, difficulty = 'medium', direction = 'en-de' } = {}) {
+  const out = ['meaning'];
+  if (word?.type !== 'noun') return out;
+  if (task === 'grammar') return [...out, 'article'];
+  if (asksArticle(difficulty)) out.push('article');
+  if (asksPlural(difficulty) && direction !== 'de-en' && word.plural) out.push('plural');
+  return out;
+}
+
+// whatever comes from outside → a list of known parts (always with 'meaning')
+export function cleanChecks(checks) {
+  return ['meaning', ...PARTS.filter((p) => p !== 'meaning' && Array.isArray(checks) && checks.includes(p))];
+}
+
 // ---------- reading a record ----------
 const kindOf = (rec, kind) => {
   const x = rec && rec[kind];
   return x && Number.isFinite(x.s) ? { s: clamp(Math.round(x.s), SCORE_MIN, SCORE_MAX), k: Math.max(0, Math.floor(x.k) || 0), due: Number.isFinite(x.due) ? x.due : null } : null;
 };
 
-export const isNew = (rec) => !kindOf(rec, 'v') && !kindOf(rec, 'g');
-export const vScore = (rec) => kindOf(rec, 'v')?.s ?? SCORE_NEW;
-export const gScore = (rec) => kindOf(rec, 'g')?.s ?? SCORE_NEW;
+export const isNew = (rec) => !KINDS.some((k) => kindOf(rec, k));
+export const mScore = (rec) => kindOf(rec, 'v')?.s ?? SCORE_NEW; // Meaning
+export const vScore = mScore; // the old name
+export const aScore = (rec) => kindOf(rec, 'a')?.s ?? SCORE_NEW; // Article
+export const pScore = (rec) => kindOf(rec, 'p')?.s ?? SCORE_NEW; // Plural
+export const gScore = (rec) => kindOf(rec, 'g')?.s ?? SCORE_NEW; // Sentence
+export const hasScore = (rec, kind) => Boolean(kindOf(rec, kind));
 
-// how well the word is known overall: the weaker of the scores that exist
+// how well the word is known overall: the weakest of the scores that exist
 export function wordScore(rec) {
-  const v = kindOf(rec, 'v');
-  const g = kindOf(rec, 'g');
-  if (!v && !g) return SCORE_NEW;
-  return Math.min(v ? v.s : SCORE_MAX, g ? g.s : SCORE_MAX);
+  const have = KINDS.map((k) => kindOf(rec, k)).filter(Boolean);
+  return have.length ? Math.min(...have.map((x) => x.s)) : SCORE_NEW;
+}
+
+// "Learnt": Meaning >= 8 and, for a noun, Article >= 8. Plural is tracked but not required (it may become its own
+// grammar section later). noun: is the word a noun? Unknown (undefined) → a record that has an Article score counts as a noun.
+export function isLearnt(rec, noun) {
+  if (!rec || !kindOf(rec, 'v') || mScore(rec) < LEARNT_FROM) return false;
+  const needsArticle = noun === undefined ? hasScore(rec, 'a') : Boolean(noun);
+  return !needsArticle || aScore(rec) >= LEARNT_FROM;
+}
+
+// The scores that matter when a session is on this level: Easy m · Medium m + a · Hard m + a + p
+// (a and p for nouns only; p only for a noun that has a plural).
+export function levelKinds(word, difficulty = 'easy') {
+  const noun = word?.type === 'noun';
+  const out = ['v'];
+  if (noun && asksArticle(difficulty)) out.push('a');
+  if (noun && asksPlural(difficulty) && word.plural) out.push('p');
+  return out;
+}
+
+// ---------- reading old data ----------
+// An old record has v (= article + word) and g. Copy v into a (once); p stays empty.
+export function migrateRecord(rec) {
+  if (!rec || typeof rec !== 'object' || rec.a || !kindOf(rec, 'v')) return rec;
+  return { ...rec, a: { ...kindOf(rec, 'v') } };
+}
+export function migrateRecords(all) {
+  const out = {};
+  for (const [id, rec] of Object.entries(all && typeof all === 'object' ? all : {})) out[id] = migrateRecord(rec);
+  return out;
+}
+
+// The compact form the browser sends for the numbers on Home: { id: [m, g, a, p] } (null = none).
+// The old form was { id: [v, g] } – then v is copied into a (v used to be article + word).
+export function compactOf(rec) {
+  const s = (k) => kindOf(rec, k)?.s ?? null;
+  return [s('v') ?? SCORE_NEW, s('g'), s('a'), s('p')];
+}
+export function recordFromCompact(arr) {
+  const [m, g, a, p] = Array.isArray(arr) ? arr : [];
+  const num = (x) => (x != null && x !== '' && Number.isFinite(Number(x)) ? clamp(Math.round(Number(x)), SCORE_MIN, SCORE_MAX) : null);
+  if (num(m) == null) return null;
+  const rec = { v: { s: num(m) } };
+  if (num(g) != null) rec.g = { s: num(g) };
+  const old = arr.length < 3; // [v, g]: the old form
+  const aa = old ? num(m) : num(a);
+  if (aa != null) rec.a = { s: aa };
+  if (num(p) != null) rec.p = { s: num(p) };
+  return rec;
 }
 
 // days until a word with this score comes back
@@ -72,7 +162,7 @@ export const dueAt = (score, now) => now + dueDays(score) * DAY_MS;
 
 // the earliest due date of the word's existing scores (null = never practised)
 export function wordDue(rec) {
-  const dues = ['v', 'g'].map((k) => kindOf(rec, k)?.due).filter((d) => d != null);
+  const dues = KINDS.map((k) => kindOf(rec, k)?.due).filter((d) => d != null);
   return dues.length ? Math.min(...dues) : null;
 }
 
@@ -82,7 +172,7 @@ export const isDue = (rec, now) => {
 };
 
 // ---------- updating a score ----------
-// One step for one score (V or G).
+// One step for one score (v, a, p or g).
 //   delta  points to add (negative = taken away)
 //   streak 'up' (counts as right in a row) | 'reset' | 'keep' (hint answers)
 function step(cur, { delta, streak, now }) {
@@ -91,7 +181,7 @@ function step(cur, { delta, streak, now }) {
   let s = before.s + delta;
   if (delta < 0) {
     // a 10 answered wrong drops to 7 (a skip only costs its point)
-    if (before.s >= SCORE_MAX && delta <= FLASHCARD_WRONG.v) s = DUE_TEN_WRONG_TO;
+    if (before.s >= SCORE_MAX && delta <= BIG_DROP) s = DUE_TEN_WRONG_TO;
   } else if (before.s >= SCORE_MAX) {
     s = SCORE_MAX; // a 10 answered right stays 10
   } else {
@@ -104,46 +194,73 @@ function step(cur, { delta, streak, now }) {
   return { s, k, due: dueAt(s, now) };
 }
 
+// Which parts of a flashcard were right? → { meaning, article, plural } with true | false | null (null = not known, not touched)
+//   parts     what the tutor reported (feedback.parts) – may be missing or incomplete
+//   fallback  { correct, errorType, rule } – used when the tutor gave no parts: errorType Artikel = the article was
+//             wrong (the noun was right), rule "Plural" = only the plural was wrong, any other mistake = the word.
+export function resolveParts(parts, { correct = false, errorType = null, rule = '' } = {}) {
+  if (correct) return { meaning: true, article: true, plural: true };
+  const b = (x) => (x === true || x === false ? x : null);
+  const raw = parts && typeof parts === 'object' ? { meaning: b(parts.meaning), article: b(parts.article), plural: b(parts.plural) } : null;
+  if (raw && (raw.meaning === false || raw.article === false || raw.plural === false)) {
+    // the part that is wrong is named; an unnamed meaning of a card with only an article / plural mistake was right
+    return { ...raw, meaning: raw.meaning ?? true };
+  }
+  if (ARTICLE_ERRORS.includes(errorType)) return { meaning: true, article: false, plural: null };
+  if (rule === 'Plural') return { meaning: true, article: true, plural: false };
+  return { meaning: false, article: null, plural: null };
+}
+
 // What the app does with ONE answer.
 //   rec     the word's record so far (or undefined)
-//   answer  { task: 'flashcard' | 'grammar', correct, errorType (German tutor value or null),
-//             hinted (hint used or "Leicht"), skipped, hasG (false for phrases) }
+//   answer  { task: 'flashcard' | 'grammar', correct, errorType (German tutor value or null), rule,
+//             hinted (hint used or "Leicht"), skipped, hasG (false for phrases),
+//             checks (the parts this question tests, testedChecks – default: meaning only),
+//             parts (feedback.parts of a flashcard: which part was right / wrong) }
 // Returns the new record. The model never decides a score.
+//
+// Flashcard: every TESTED part is scored on its own. A part that was right goes up (+2, +1 after a hint), a part
+// that was wrong goes down (−3); a part the answer says nothing about stays. So a wrong article on Medium takes
+// the Article score down and still lifts Meaning (the word itself was right).
 export function applyAnswer(rec, answer, now = Date.now()) {
   const { correct = false, errorType = null, hinted = false, skipped = false } = answer;
+  const checks = cleanChecks(answer.checks);
+  const has = (kind) => checks.some((p) => PART_KIND[p] === kind);
   const grammar = answer.task === 'grammar' && answer.hasG !== false;
-  let v = null; // { delta, streak } for V
-  let g = null; // … for G
+  const plan = {}; // kind → { delta, streak }
+  const up = (kind, table) => { plan[kind] = hinted ? { delta: HINT_RIGHT[kind], streak: 'keep' } : { delta: table[kind], streak: 'up' }; };
+  const down = (kind, table) => { plan[kind] = { delta: table[kind], streak: 'reset' }; };
 
   if (skipped) {
-    v = { delta: SKIPPED.v, streak: 'reset' };
-    if (grammar) g = { delta: SKIPPED.g, streak: 'reset' };
-  } else if (correct && hinted) {
-    v = { delta: HINT_RIGHT.v, streak: 'keep' };
-    if (grammar) g = { delta: HINT_RIGHT.g, streak: 'keep' };
-  } else if (correct) {
-    if (grammar) {
-      v = { delta: GRAMMAR_RIGHT.v, streak: 'up' };
-      g = { delta: GRAMMAR_RIGHT.g, streak: 'up' };
-    } else {
-      v = { delta: FLASHCARD_RIGHT.v, streak: 'up' };
-    }
-  } else if (grammar) {
-    if (WORD_ERRORS.includes(errorType)) {
-      v = { delta: GRAMMAR_WRONG_WORD.v, streak: 'reset' };
-      g = { delta: GRAMMAR_WRONG_WORD.g, streak: 'reset' };
-    } else {
-      g = { delta: GRAMMAR_WRONG_GRAMMAR.g, streak: 'reset' };
+    for (const k of ['v', 'a', 'p']) if (k === 'v' || has(k)) down(k, SKIPPED);
+    if (grammar) down('g', SKIPPED);
+  } else if (answer.task === 'grammar') {
+    if (correct) {
+      for (const k of ['v', 'a']) if (k === 'v' || has(k)) up(k, GRAMMAR_RIGHT);
+      if (grammar) up('g', GRAMMAR_RIGHT);
+    } else if (ARTICLE_ERRORS.includes(errorType) && has('a')) {
+      down('a', GRAMMAR_WRONG_WORD);
+      if (grammar) down('g', GRAMMAR_WRONG_WORD);
+    } else if (WORD_ERRORS.includes(errorType)) {
+      down('v', GRAMMAR_WRONG_WORD);
+      if (grammar) down('g', GRAMMAR_WRONG_WORD);
+    } else if (grammar) {
+      down('g', GRAMMAR_WRONG_GRAMMAR);
     }
   } else {
-    v = { delta: FLASHCARD_WRONG.v, streak: 'reset' };
+    const parts = resolveParts(answer.parts, answer);
+    for (const part of checks) {
+      const kind = PART_KIND[part];
+      if (parts[part] === true) up(kind, FLASHCARD_RIGHT);
+      else if (parts[part] === false) down(kind, FLASHCARD_WRONG);
+    }
   }
 
   const out = { ...(rec || {}), last: now };
-  if (v) out.v = step(kindOf(rec, 'v'), { ...v, now });
-  else if (kindOf(rec, 'v')) out.v = kindOf(rec, 'v');
-  if (g) out.g = step(kindOf(rec, 'g'), { ...g, now });
-  else if (kindOf(rec, 'g')) out.g = kindOf(rec, 'g');
+  for (const kind of KINDS) {
+    if (plan[kind]) out[kind] = step(kindOf(rec, kind), { ...plan[kind], now });
+    else if (kindOf(rec, kind)) out[kind] = kindOf(rec, kind);
+  }
   return out;
 }
 
@@ -177,25 +294,40 @@ export function matchesFilter(word, { level, sources, section, list } = {}) {
 }
 
 // Chooses the words of a session, in the order they should be used.
-//   words   the word list (objects with id, level, sources, topics …)
-//   scores  { [wordId]: record } – missing = new
-//   count   how many words (see wordsNeeded); fewer exist → what there is
+//   words       the word list (objects with id, type, plural, level, sources, topics …)
+//   scores      { [wordId]: record } – missing = new
+//   count       how many words (see wordsNeeded); fewer exist → what there is
+//   difficulty  'easy' | 'medium' | 'hard' (default easy): which scores count for "weak" and "due"
+//               Easy: Meaning · Medium: the weaker of Meaning and Article · Hard: Meaning, Article and Plural
+//               (Article / Plural only for nouns). A score the word does not have yet counts as 1 and as due.
+//               The Sentence score counts too, once the word has one.
 // Order: due & weak first (lowest score first), then the checks (1–2 words with a 10), then new words.
 // Mix: about 60 % due or weak, 30 % new, 10 % checks. If a group runs out, the others fill up:
 // first more new words, then words not yet due (lowest score first), then more tens.
-export function pickWords({ words, scores = {}, level, sources, section, list, count, now = Date.now() }) {
+export function pickWords({ words, scores = {}, level, sources, section, list, count, difficulty = 'easy', now = Date.now() }) {
   const pool = (words || []).filter((w) => matchesFilter(w, { level, sources, section, list }));
   const n = Math.min(Math.max(0, Math.floor(Number(count) || 0)), pool.length);
   if (!n) return [];
 
   const rec = (w) => scores[w.id];
-  const byScore = (a, b) => wordScore(rec(a)) - wordScore(rec(b)) || (wordDue(rec(a)) ?? 0) - (wordDue(rec(b)) ?? 0) || a.id.localeCompare(b.id);
+  // the scores of this word that matter at this level (+ Sentence if it has one)
+  const kindsOf = (w) => [...levelKinds(w, difficulty), ...(kindOf(rec(w), 'g') ? ['g'] : [])];
+  const score = (w) => Math.min(...kindsOf(w).map((k) => kindOf(rec(w), k)?.s ?? SCORE_NEW));
+  // when it comes back: a score it still lacks is due now; otherwise the earliest due date of the scores that matter
+  const dueOf = (w) => {
+    const ks = kindsOf(w);
+    if (ks.some((k) => !kindOf(rec(w), k))) return 0;
+    return Math.min(...ks.map((k) => kindOf(rec(w), k).due ?? 0));
+  };
+  const due = (w) => dueOf(w) <= now;
+  const byScore = (a, b) => score(a) - score(b) || dueOf(a) - dueOf(b) || a.id.localeCompare(b.id);
   const fresh = pool.filter((w) => isNew(rec(w)));
-  const tens = pool.filter((w) => !isNew(rec(w)) && wordScore(rec(w)) >= SCORE_MAX)
-    .sort((a, b) => Number(isDue(rec(b), now)) - Number(isDue(rec(a), now)) || (wordDue(rec(a)) ?? 0) - (wordDue(rec(b)) ?? 0) || a.id.localeCompare(b.id));
-  const learning = pool.filter((w) => !isNew(rec(w)) && wordScore(rec(w)) < SCORE_MAX);
-  const dueWeak = learning.filter((w) => isDue(rec(w), now)).sort(byScore);
-  const notDue = learning.filter((w) => !isDue(rec(w), now)).sort(byScore);
+  const isTenW = (w) => !isNew(rec(w)) && score(w) >= SCORE_MAX;
+  const tens = pool.filter(isTenW)
+    .sort((a, b) => Number(due(b)) - Number(due(a)) || dueOf(a) - dueOf(b) || a.id.localeCompare(b.id));
+  const learning = pool.filter((w) => !isNew(rec(w)) && score(w) < SCORE_MAX);
+  const dueWeak = learning.filter(due).sort(byScore);
+  const notDue = learning.filter((w) => !due(w)).sort(byScore);
   const nChecks = n >= CHECKS_FROM_COUNT ? clamp(Math.round(n * SHARE_CHECKS), CHECKS_MIN, CHECKS_MAX) : 0;
   const nNew = Math.round(n * SHARE_NEW);
 
@@ -208,8 +340,7 @@ export function pickWords({ words, scores = {}, level, sources, section, list, c
 
   // final order: due & weak (incl. weak fillers), checks, new
   const all = [...takeDue, ...takeChecks, ...takeNew, ...extra];
-  const isTenW = (w) => !isNew(rec(w)) && wordScore(rec(w)) >= SCORE_MAX;
-  const first = all.filter((w) => !isNew(rec(w)) && !isTenW(w)).sort((a, b) => Number(isDue(rec(b), now)) - Number(isDue(rec(a), now)) || byScore(a, b));
+  const first = all.filter((w) => !isNew(rec(w)) && !isTenW(w)).sort((a, b) => Number(due(b)) - Number(due(a)) || byScore(a, b));
   const checks = all.filter(isTenW);
   const news = all.filter((w) => isNew(rec(w)));
   return [...first, ...checks, ...news];

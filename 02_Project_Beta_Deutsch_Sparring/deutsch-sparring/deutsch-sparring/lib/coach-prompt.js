@@ -142,7 +142,7 @@ export function coachContext({ home, topics, today }) {
   lines.push(...(rules.length ? rules.map((r) => `- ${r.label} | ${r.pct} % | ${r.n}`) : ['(none yet)']));
   const v = home.vocab;
   if (v) {
-    lines.push('', 'VOCABULARY BY LEVEL (level | learnt = V score 8–10 | practised | words in the list):');
+    lines.push('', 'VOCABULARY BY LEVEL (level | learnt = Meaning score 8–10 and, for nouns, Article score 8–10 | practised | words in the list):');
     for (const lv of ['A1', 'A2', 'B1']) {
       const x = v.byLevel[lv];
       if (x) lines.push(`- ${lv} | ${x.learnt} learnt | ${x.practised} practised | ${x.total} words`);
@@ -150,7 +150,11 @@ export function coachContext({ home, topics, today }) {
     lines.push('', 'WORD LISTS (section › list | learnt / words | practised | words per level):');
     for (const l of v.byList) {
       const per = ['A1', 'A2', 'B1'].filter((lv) => l.levels[lv]).map((lv) => `${lv} ${l.levels[lv]}`).join(', ');
-      lines.push(`- ${l.topic} | ${l.learnt}/${l.total} | ${l.practised} | ${per}`);
+      // the weak PART, when one stands out: articles (or the plural) clearly behind the meaning
+      const a = l.avg || {};
+      const weak = a.m != null && a.a != null && a.a <= a.m - 2 ? `articles weak (Meaning ${a.m}, Article ${a.a})`
+        : a.m != null && a.p != null && a.p <= a.m - 2 ? `plurals weak (Meaning ${a.m}, Plural ${a.p})` : '';
+      lines.push(`- ${l.topic} | ${l.learnt}/${l.total} | ${l.practised} | ${per}${weak ? ` | ${weak}` : ''}`);
     }
   }
 
@@ -198,7 +202,7 @@ ALWAYS TALK ABOUT CONTENT, NEVER ABOUT ABSTRACT PERCENTAGES
   (see CURRICULUM). E.g. "Pass the Goethe B1 exam" = A1 + A2 words solid, B1 words, A1 + A2 grammar solid, B1 grammar, plus
   exam practice. Lower levels first: a B1 student with gaps in A2 grammar fixes those first.
 - Realistic pace: with 20–30 minutes a day, about 30–50 new words a week, or one grammar point every 1–2 weeks. A word
-  counts as learnt with a V score of 8–10 (4 right answers in a row get it to 10).
+  counts as learnt with a Meaning score of 8–10 and, for a noun, an Article score of 8–10 (4 right answers in a row get a score to 10; the plural is practised but not needed). If a word list says "articles weak", suggest a Medium or Hard session there, because only those levels practise the article.
 
 HOW A GOOD GERMAN TEACHER PLANS (follow these rules when you recommend or change anything)
 - Order: A1, then A2, then B1. Close lower-level gaps first. Grammar follows the prerequisite order of the CURRICULUM; B1 words may start

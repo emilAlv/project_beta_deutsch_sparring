@@ -55,7 +55,8 @@ eq('adjective hoch',D.withEnding('hoch', 'es'), 'hohes');
 // ---- grammar settings ----
 eq('cleanGrammar keeps known points in order', G.cleanGrammar(['dativ', 'x', 'perfekt', 'dativ']), ['dativ', 'perfekt']);
 eq('cleanGrammar: not a list → null', G.cleanGrammar('dativ'), null);
-check('article & plural alone: no sentence tasks', G.wantsSentenceTasks(['article-plural']) === false);
+eq('the old "article-plural" chip is gone (an old saved list still loads, the chip is ignored)', G.cleanGrammar(['article-plural', 'dativ']), ['dativ']);
+check('no grammar point chosen: no sentence tasks', G.wantsSentenceTasks([]) === false && G.wantsSentenceTasks(G.cleanGrammar(['article-plural'])) === false);
 check('Dativ: sentence tasks', G.wantsSentenceTasks(['dativ']) === true);
 
 // ---- every task of every word accepts its own solution ----

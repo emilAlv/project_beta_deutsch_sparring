@@ -265,6 +265,8 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 @media (max-width: 720px) { .feedback-why li { grid-template-columns: 1fr; gap: 0; } }
 .feedback-explain { font-size: 13px; line-height: 1.55; color: var(--ink); }
 .feedback-explain strong { font-weight: 600; }
+.feedback-parts { font-size: 13px; line-height: 1.5; color: var(--ink); margin: 0; }
+.feedback-parts .part.bad { font-weight: 600; }
 
 .summary-card { display: flex; flex-direction: column; gap: 6px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
 .summary-score { margin-top: 4px; }

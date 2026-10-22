@@ -143,8 +143,8 @@ const T1 = Date.parse('2026-10-01');
 const hash = (s) => [...s].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7) % 100;
 const scores = {};
 for (const w of words) {
-  if (w.level === 'A1' && hash(w.id) < 85) scores[w.id] = { v: { s: 9, k: 3, due: T1 }, last: T1 };
-  if (w.level === 'A2' && hash(w.id) < 60) scores[w.id] = { v: { s: 8, k: 2, due: T1 }, last: T1 };
+  if (w.level === 'A1' && hash(w.id) < 85) scores[w.id] = { v: { s: 9, k: 3, due: T1 }, a: { s: 9, k: 3, due: T1 }, last: T1 };
+  if (w.level === 'A2' && hash(w.id) < 60) scores[w.id] = { v: { s: 8, k: 2, due: T1 }, a: { s: 8, k: 2, due: T1 }, last: T1 };
 }
 const grammarStats = {};
 for (const e of C.curriculumByLevel('A1')) grammarStats[e.id] = { n: 30, points: 27, pct: 90, recent: Array.from({ length: 30 }, (_, i) => [i % 10 !== 0, false, T1 + i * DAY]) };
@@ -378,7 +378,7 @@ const freshWord = PT.previewPlan({ template: 'wordtopic', level: 'A1', endDate: 
 const vpart = freshWord.subPlans[0];
 const wm1 = vpart.milestones[0];
 const ids1 = PT.chunkWords(vpart, words).get(wm1.id);
-const learntScores = (n, from = ids1) => Object.fromEntries(from.slice(0, n).map((id) => [id, { v: { s: 8, k: 2, due: NOW0 + 3 * DAY }, last: NOW0 }]));
+const learntScores = (n, from = ids1) => Object.fromEntries(from.slice(0, n).map((id) => [id, { v: { s: 8, k: 2, due: NOW0 + 3 * DAY }, a: { s: 8, k: 2, due: NOW0 + 3 * DAY }, last: NOW0 }]));
 const need90 = Math.ceil(0.9 * ids1.length);
 
 // ---- words: reached at 90 % learnt ----
@@ -406,7 +406,7 @@ eq('latching: all words learnt → plain "reached", no refresh', run([latched], 
 
 // ---- "needs a refresh" (words): more than 20 % due or below 8 ----
 const dueN = Math.floor(0.2 * ids1.length);
-const dueScores = (n) => Object.fromEntries(ids1.map((id, i) => [id, { v: { s: 9, k: 3, due: i < n ? NOW0 - DAY : NOW0 + 9 * DAY }, last: NOW0 }]));
+const dueScores = (n) => Object.fromEntries(ids1.map((id, i) => [id, { v: { s: 9, k: 3, due: i < n ? NOW0 - DAY : NOW0 + 9 * DAY }, a: { s: 9, k: 3, due: i < n ? NOW0 - DAY : NOW0 + 9 * DAY }, last: NOW0 }]));
 eq(`refresh: ${dueN} of ${ids1.length} due (20 %) is still fine`, run([latched], { scores: dueScores(dueN) }).plans[latched.id].milestones[wm1.id].state, 'reached');
 ms = run([latched], { scores: dueScores(dueN + 1) }).plans[latched.id].milestones[wm1.id];
 eq(`refresh: ${dueN + 1} due (more than 20 %) → needs a refresh, tick stays`, [ms.state, ms.refresh?.due, ms.reachedAt], ['refresh', dueN + 1, '2026-11-10']);
@@ -475,7 +475,7 @@ eq('lessons: 9 answers → open; 10 answers at 50 % → open', [lm(lessonStats(l
 eq('lessons: only one of the lessons done → open, "1 of N"', [lm(lessonStats(lids.slice(0, 1), 10, 90)).state, lm(lessonStats(lids.slice(0, 1), 10, 90)).have, lm({}).need], ['open', 1, lids.length]);
 const examM = PL.allMilestones(openGoal).find(({ m }) => m.criterion.kind === 'exam' && m.criterion.part === 'mock').m;
 const allGood = {
-  scores: Object.fromEntries(words.map((w) => [w.id, { v: { s: 10, k: 4, due: NOW0 + 99 * DAY }, last: NOW0 }])),
+  scores: Object.fromEntries(words.map((w) => [w.id, { v: { s: 10, k: 4, due: NOW0 + 99 * DAY }, a: { s: 10, k: 4, due: NOW0 + 99 * DAY }, last: NOW0 }])),
   grammarStats: Object.fromEntries([...C.CURRICULUM.map((e) => e.id), ...Object.keys(PT.LESSONS)].map((id) => [id, stats(rows(40, 40))])),
 };
 let big = run([openGoal], allGood);

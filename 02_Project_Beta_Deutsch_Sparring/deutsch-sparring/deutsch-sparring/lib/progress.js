@@ -6,7 +6,7 @@
 // is cleaned and size-limited first (the clean* functions below).
 import { databaseUrl } from './schema.mjs';
 import { sql, ensureSchema } from './db';
-import { applyAnswer } from './scores';
+import { applyAnswer, cleanChecks, testedChecks } from './scores';
 import { getWord } from './words';
 import { cleanRule, topicForRule } from './rules';
 import { isCurriculumId } from './curriculum';
@@ -83,7 +83,8 @@ export function cleanSession(raw) {
   };
 }
 
-// → { sessionId, n, task, wordId, question, studentAnswer, corrected, rule, errorType, correct, skipped, hinted, difficulty, topicId, hasG } or null
+// → { sessionId, n, task, wordId, question, studentAnswer, corrected, rule, errorType, correct, skipped, hinted, difficulty, topicId, hasG,
+//     direction, checks, parts } or null  (direction / checks / parts only feed the word score, they are not stored with the answer)
 export function cleanAnswer(raw) {
   const sessionId = cleanId(raw?.sessionId);
   const n = int(raw?.n, 0, 99);
@@ -104,8 +105,27 @@ export function cleanAnswer(raw) {
     skipped: raw.skipped === true,
     hinted: raw.hinted === true,
     difficulty: ['easy', 'medium', 'hard'].includes(raw.difficulty) ? raw.difficulty : null,
+    direction: ['en-de', 'de-en'].includes(raw.direction) ? raw.direction : null,
+    checks: cleanChecks(raw.checks),
+    parts: cleanParts(raw.parts),
     topicId: topicOf(raw, cleanRule(text(raw.rule, 200))),
   };
+}
+
+// feedback.parts of a flashcard → { meaning, article, plural } with true | false | null (or null = nothing given)
+function cleanParts(raw) {
+  if (!isObj(raw)) return null;
+  const b = (x) => (x === true || x === false ? x : null);
+  return { meaning: b(raw.meaning), article: b(raw.article), plural: b(raw.plural) };
+}
+
+// What applyAnswer needs for one saved answer. The parts a question tests are worked out HERE from the word and the
+// difficulty (the browser's own list is only used when the word or difficulty is unknown).
+export function scoreInputOf(a) {
+  const word = a.wordId ? getWord(a.wordId) : null;
+  const task = a.task || 'flashcard';
+  const checks = word && a.difficulty ? testedChecks({ task, word, difficulty: a.difficulty, direction: a.direction || 'en-de' }) : a.checks;
+  return { task, correct: a.correct, errorType: a.errorType, rule: a.rule, skipped: a.skipped, hinted: a.hinted, hasG: a.hasG, checks, parts: a.parts };
 }
 
 // the grammar topic of an answer (lib/rules.js topicForRule); a lesson id from the browser must be a real lesson
@@ -117,7 +137,7 @@ function topicOf(raw, rule) {
   return t;
 }
 
-// word scores: only known word ids, only numbers → { [wordId]: { v:{s,k,due}, g:{s,k,due}, last } }
+// word scores: only known word ids, only numbers → { [wordId]: { v:{s,k,due}, a:{…}, p:{…}, g:{…}, last } } (v = Meaning)
 export function cleanScores(raw) {
   const out = {};
   if (!isObj(raw)) return out;
@@ -125,11 +145,11 @@ export function cleanScores(raw) {
   for (const id of Object.keys(raw).slice(0, MAX_SCORE_ROWS)) {
     if (!getWord(id) || !isObj(raw[id])) continue;
     const rec = {};
-    for (const kind of ['v', 'g']) {
+    for (const kind of ['v', 'g', 'a', 'p']) {
       const x = raw[id][kind];
       if (x && num(x.s) != null) rec[kind] = { s: num(x.s), k: num(x.k) ?? 0, due: num(x.due) };
     }
-    if (!rec.v && !rec.g) continue;
+    if (!rec.v && !rec.g && !rec.a && !rec.p) continue;
     if (num(raw[id].last) != null) rec.last = num(raw[id].last);
     out[id] = rec;
   }
@@ -176,20 +196,24 @@ function rowToRec(r) {
   const rec = {};
   if (r.v != null) rec.v = { s: Number(r.v), k: Number(r.v_streak) || 0, due: ms(r.v_due) };
   if (r.g != null) rec.g = { s: Number(r.g), k: Number(r.g_streak) || 0, due: ms(r.g_due) };
+  if (r.a != null) rec.a = { s: Number(r.a), k: Number(r.a_streak) || 0, due: ms(r.a_due) };
+  if (r.p != null) rec.p = { s: Number(r.p), k: Number(r.p_streak) || 0, due: ms(r.p_due) };
   if (r.last_practised) rec.last = ms(r.last_practised);
   return rec;
 }
 
-const SCORE_COLUMNS = 'user_id, word_id, v, v_streak, v_due, g, g_streak, g_due, last_practised';
+const SCORE_COLUMNS = 'user_id, word_id, v, v_streak, v_due, g, g_streak, g_due, a, a_streak, a_due, p, p_streak, p_due, last_practised';
 const scoreParams = (userId, wordId, rec) => [
   userId, wordId,
   rec.v?.s ?? null, rec.v?.k ?? null, iso(rec.v?.due),
   rec.g?.s ?? null, rec.g?.k ?? null, iso(rec.g?.due),
+  rec.a?.s ?? null, rec.a?.k ?? null, iso(rec.a?.due),
+  rec.p?.s ?? null, rec.p?.k ?? null, iso(rec.p?.due),
   iso(rec.last),
 ];
 
 // One statement: save the answer (only if the word's score row is still as we read it: $16 = that row as text, $17 = word id)
-// and, if the answer was saved, the new score ($18–$24, same order as scoreParams after user and word).
+// and, if the answer was saved, the new score ($18–$30, same order as scoreParams after user and word).
 export const SAVE_ANSWER_AND_SCORE = `WITH ins AS (
     INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped, hinted, difficulty, topic_id)
     SELECT $1::text, $2::uuid, $3::int, $4::text, $5::text, $6::text, $7::text, $8::text, $9::text, $10::text, $11::boolean, $12::boolean, $13::boolean, $14::text, $15::text
@@ -198,10 +222,13 @@ export const SAVE_ANSWER_AND_SCORE = `WITH ins AS (
     ON CONFLICT DO NOTHING RETURNING id
   ), up AS (
     INSERT INTO word_scores (${SCORE_COLUMNS})
-    SELECT $2::uuid, $17::text, $18::smallint, $19::int, $20::timestamptz, $21::smallint, $22::int, $23::timestamptz, $24::timestamptz
+    SELECT $2::uuid, $17::text, $18::smallint, $19::int, $20::timestamptz, $21::smallint, $22::int, $23::timestamptz,
+           $24::smallint, $25::int, $26::timestamptz, $27::smallint, $28::int, $29::timestamptz, $30::timestamptz
     WHERE $17::text IS NOT NULL AND EXISTS (SELECT 1 FROM ins)
     ON CONFLICT (user_id, word_id) DO UPDATE SET v = EXCLUDED.v, v_streak = EXCLUDED.v_streak, v_due = EXCLUDED.v_due,
-      g = EXCLUDED.g, g_streak = EXCLUDED.g_streak, g_due = EXCLUDED.g_due, last_practised = EXCLUDED.last_practised
+      g = EXCLUDED.g, g_streak = EXCLUDED.g_streak, g_due = EXCLUDED.g_due,
+      a = EXCLUDED.a, a_streak = EXCLUDED.a_streak, a_due = EXCLUDED.a_due,
+      p = EXCLUDED.p, p_streak = EXCLUDED.p_streak, p_due = EXCLUDED.p_due, last_practised = EXCLUDED.last_practised
     RETURNING 1
   )
   SELECT (SELECT count(*) FROM ins)::int AS inserted`;
@@ -309,7 +336,7 @@ const dbStore = {
         rec = applyAnswer(rows[0] ? rowToRec(rows[0]) : undefined, scoreInput, Date.now());
       }
       const answerParams = [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped, a.hinted, a.difficulty, a.topicId];
-      const scoreValues = rec ? scoreParams(userId, a.wordId, rec).slice(2) : [null, null, null, null, null, null, null];
+      const scoreValues = rec ? scoreParams(userId, a.wordId, rec).slice(2) : Array(13).fill(null);
       const results = await sql().transaction((t) => [
         t.query('INSERT INTO sessions (id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [a.sessionId, userId]),
         t.query(`SELECT pg_advisory_xact_lock(hashtextextended($1::text || ':' || COALESCE($2::text, ''), 0))`, [userId, a.wordId]),
@@ -422,8 +449,9 @@ const dbStore = {
       const params = [];
       const values = chunk.map(([id, rec], j) => {
         params.push(...scoreParams(userId, id, rec));
-        const p = j * 9;
-        return `($${p + 1}, $${p + 2}, $${p + 3}, $${p + 4}, $${p + 5}::timestamptz, $${p + 6}, $${p + 7}, $${p + 8}::timestamptz, $${p + 9}::timestamptz)`;
+        const p = j * 15;
+        const T = new Set([5, 8, 11, 14, 15]); // the timestamp columns
+        return `(${Array.from({ length: 15 }, (_, i) => `$${p + i + 1}${T.has(i + 1) ? '::timestamptz' : ''}`).join(', ')})`;
       });
       queries.push([`INSERT INTO word_scores (${SCORE_COLUMNS}) VALUES ${values.join(', ')} ON CONFLICT DO NOTHING`, params]);
     }

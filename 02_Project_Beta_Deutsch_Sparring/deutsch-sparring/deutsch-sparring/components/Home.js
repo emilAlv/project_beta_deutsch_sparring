@@ -110,6 +110,10 @@ const SKIP_KEY = 'wort_upgrade_skip';
 const skippedToday = (today) => { try { return localStorage.getItem(SKIP_KEY) === today; } catch { return false; } };
 const skipToday = (today) => { try { localStorage.setItem(SKIP_KEY, today); } catch {} };
 
+// "Meaning 7 · Article 4 · Plural 2 · Sentence 5": the average word scores of a list (only those practised)
+const scoresText = (sc) => (sc ? [['m', 'scoreMeaning'], ['a', 'scoreArticle'], ['p', 'scorePlural'], ['g', 'scoreSentence']]
+  .filter(([k]) => sc[k] != null).map(([k, label]) => `${t(label)} ${sc[k]}`).join(' · ') : '');
+
 function SgColumn({ kind, items, goals, empty, onGo, onAdd }) {
   const goalName = (id) => goals.find((g) => g.id === id)?.title;
   const hasPlan = goals.some(isPlanGoal);
@@ -127,7 +131,7 @@ function SgColumn({ kind, items, goals, empty, onGo, onAdd }) {
             <div className="sg-bar"><span style={{ width: `${x.pct}%` }} /></div>
             <p className="detail">
               {t('sgAnswers', { n: x.n })}
-              {x.kind === 'list' && x.v != null && ` · ${x.g != null ? t('sgAvg', { v: x.v, g: x.g }) : t('sgAvgV', { v: x.v })}`}
+              {x.kind === 'list' && scoresText(x.scores) && ` · ${t('sgAvgLabel', { scores: scoresText(x.scores) })}`}
               {!hasPlan && ` · ${goalName(x.goalId) ? t('sgGoal', { goal: goalName(x.goalId) }) : t('sgNoGoal')}`}
             </p>
             {hasPlan && (() => {

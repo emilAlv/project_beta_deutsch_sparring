@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t, LOCALE, dirKey } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
+import { partsView } from '../lib/card-parts';
 import Rich, { Marked } from './Rich';
 import { ArrowUp, Check, Pencil, Refresh, Square } from './icons';
 
@@ -149,6 +150,21 @@ function NextLine({ ex }) {
   );
 }
 
+// flashcards: which part was right, e.g. "Meaning ✓ · Article ✗ (die)" (only the parts this card tested)
+function PartsLine({ f }) {
+  const view = partsView(f);
+  if (!view.length) return null;
+  return (
+    <p className="feedback-parts" aria-label={view.map((x) => `${t(`partsOf_${x.part}`)} ${x.ok ? '✓' : '✗'}`).join(', ')}>
+      {view.map((x, i) => (
+        <span key={x.part} className={`part ${x.ok ? 'ok' : 'bad'}`}>
+          {i > 0 && ' · '}{t(`partsOf_${x.part}`)} {x.ok ? '✓' : '✗'}{x.fix ? ` (${x.fix})` : ''}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 function FeedbackCard({ f }) {
   const d = compareAnswer(f.studentAnswer, f.corrected, f.changedWords);
   // right = green; anything the tutor marked as not correct = amber "Not quite" with the fixed word highlighted
@@ -158,6 +174,7 @@ function FeedbackCard({ f }) {
       <div className="feedback-card is-right">
         <p className="caps feedback-label"><Check size={15} strokeWidth={2.4} /> {label}</p>
         <p className="feedback-sentence">{f.corrected}</p>
+        <PartsLine f={f} />
         {f.explanation && <p className="feedback-explain"><Rich text={f.explanation} /></p>}
       </div>
     );
@@ -176,6 +193,7 @@ function FeedbackCard({ f }) {
         <dt>{t('feedbackRight')}</dt>
         <dd className="feedback-sentence"><Marked segments={d.corrected} as="strong" className="fixed" /></dd>
       </dl>
+      <PartsLine f={f} />
       {steps.length > 0 && (
         <ol className="feedback-why">
           {steps.map(([k, v]) => (

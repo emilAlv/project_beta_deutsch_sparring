@@ -1,5 +1,5 @@
 import { progressRoute, bad, overCap } from '../../../../lib/progress-api';
-import { progress, cleanAnswer } from '../../../../lib/progress';
+import { progress, cleanAnswer, scoreInputOf } from '../../../../lib/progress';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,13 +9,6 @@ export const POST = (req) => progressRoute(req, { write: true }, async ({ user, 
   if (!a) return bad();
   const capped = await overCap(user, 'answer');
   if (capped) return capped;
-  const { saved, rec } = await progress().addAnswer(user.id, a, {
-    task: a.task || 'flashcard',
-    correct: a.correct,
-    errorType: a.errorType,
-    skipped: a.skipped,
-    hinted: a.hinted,
-    hasG: a.hasG,
-  });
+  const { saved, rec } = await progress().addAnswer(user.id, a, scoreInputOf(a));
   return { ok: true, saved, word: rec };
 });
