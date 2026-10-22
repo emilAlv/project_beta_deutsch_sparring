@@ -54,13 +54,25 @@ Each entry receives a stable ID, e.g. `EC-001`, and includes as much of this str
 - **Received:** 2026-10-22
 - **From Emilio (original observation):** "practica gramatical A1: wann/seit wann / wie lange - seit-vor-von .. bis - am -um- im. ZB; Hast du ANgie getroffen?"
 - **Topic:** A1 grammar practice and communicative time questions; simple interaction about meetings, activities and duration
-- **CEFR:** A1 as guided practice, with A2 consolidation for longer narratives and more complex tenses
+- **CEFR:** split into **A1 core** (asking simple time questions and giving predictable answers) and **A2 consolidation** (flexible choice of prepositions, dative forms and comparing ongoing vs completed past situations); occasional B1 extension `bevor` is deferred.
 - **What it teaches (can-do):** I can ask **when** something happened, **since when** an ongoing situation has existed, **how long** something lasts or has lasted, and state a time, date, period or range.
 - **Existing coverage / avoid duplication:**
   - `lib/curriculum.js` topic `g-a1-zeit-ort` already teaches `am/um/im`, but does **not explicitly contrast** `wann / seit wann / wie lange`, `seit / vor` and `von … bis`.
   - `content/lektion-a1-07-zeit-termine.md` includes `am/um/von … bis`, but not systematic `seit wann` and `wie lange` practice.
   - `g-a1-perfekt` and `content/lektion-a2-01-perfekt.md` support the supplied example `Hast du Angie getroffen?` (Perfekt). At A1, keep the Perfekt sentence as a high-frequency model rather than requiring learners to master a complete tense paradigm during this activity.
 - **Recommended integration destination:** enrich `g-a1-zeit-ort` and `content/lektion-a1-07-zeit-termine.md` with this precise contrast; refer to existing Perfekt material, **do not add another duplicate time topic**.
+
+#### Explicit A1/A2 split (updated after Emilio's feedback and classroom-photo review)
+
+**A1 teaching focus:** `wann / seit wann / wie lange` as simple questions; `am / um / im`, `von … bis`; simple `seit Januar`, `vor zwei Tagen`, `ab Montag`, `bis Freitag` and `in zwei Wochen` as practical chunks. Keep predictable questions and short, meaningful replies. A1 can encounter `seit` with dative; do not ban it as an A2-only grammar item.
+
+**A2 teaching focus:** productive contrast `seit` (ongoing) vs `vor` (ago) vs `nach` (after) vs `in` (time until), temporal dative endings (`seit einem Jahr / seit drei Monaten / vor einer Woche`), switching between Perfekt stories and continuing present activities, and multi-turn `ab wann / bis wann / wie lange` arrangements.
+
+**Not in the core EC-001 unit:** `bevor` as a temporal subordinate conjunction or extended subordination; stage that for a later (typically B1) lesson. Exact CEFR boundaries are contextual and overlap across teaching programmes.
+
+**Corroborating images:** photo indices 21–24 and 31–32 in EC-002's 45-photo inventory. The class book presents several expressions at an early stage; later exercises can recycle them at A2 without changing the student's recorded progress for the A1 lesson.
+
+**Progression recommendation:** in `g-a1-zeit-ort` and `lektion-a1-07-zeit-termine.md` introduce high-frequency forms, then in an existing A2 conversational lesson practise choosing forms in free answers. Keep the A1 and A2 assessment targets separate.
 
 #### Core usage, not just rules
 
@@ -157,6 +169,14 @@ This complementary draft has **48 exercises with model answers** (8 question-wor
 
 During integration, **deduplicate** overlapping examples in this intake log and the new file, then extend the already existing `g-a1-zeit-ort` / `lektion-a1-07-zeit-termine.md` rather than introducing an unnecessary topic.
 
+### EC-002 – Review of 45 class photographs, split by CEFR level
+
+- **Received:** 2026-10-22
+- **From Emilio:** Uploaded `Photos-1-001.zip` and noted that parts of the material belong at A1 and others at A2.
+- **Inventory:** [classroom-photo-inventory-2026-10-22.md](classroom-photo-inventory-2026-10-22.md) records all 45 filenames, original teaching themes, A1/A2 bridge cases, suggested curriculum destinations, editorial corrections and a new example bank.
+- **Editorial decision:** do not make every photographed topic A1 or every case-related form A2. Introduce simple expressions at A1 and test flexible form/case contrasts at A2. A note about `bevor` is deferred for later study.
+- **Status:** `classified`, waiting for further class contributions, no live lesson files edited.
+
 ## Integration queue
 
 | ID | Topic | Proposed destination | Status |
@@ -165,6 +185,7 @@ During integration, **deduplicate** overlapping examples in this intake log and 
 
 ## Change log
 
+- **2026-10-22** – Revised EC-001 into explicit A1 foundation and A2 consolidation after Emilio's clarification. Logged EC-002 and linked 45-photo inventory. No merge or live curriculum modifications.
 - **2026-10-22** – EC-001 photo-inspired expansion (48 tasks with solutions and 5 open prompts) added as a separate editable draft; original intake entry preserved. No app content changed.
 
 - **2026-10-22** – EC-001 prepared from Emilio's class observation: temporal questions and expressions, meaning contrasts, original dialogue, 16 original practice prompts and communicative follow-up activities. Catalogued for future integration; existing app lesson files unchanged.
