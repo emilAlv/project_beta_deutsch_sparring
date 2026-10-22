@@ -167,6 +167,7 @@ export function replyToVariant(reply, variant) {
       corrected: t(f.corrected),
       changedWords: (f.changedWords || []).map(t),
       explanation: t(f.explanation),
+      why: f.why ? { mistake: t(f.why.mistake), rule: t(f.why.rule), here: t(f.why.here) } : f.why,
       rule: t(f.rule),
     };
   }

@@ -47,7 +47,19 @@ export const RESPONSE_SCHEMA = {
         studentAnswer: str('The student answer exactly as written.'),
         corrected: str('The full corrected sentence (same as studentAnswer when correct).'),
         changedWords: { type: 'ARRAY', items: { type: 'STRING' } },
-        explanation: str('1–2 short lines in simple German.'),
+        explanation: str('Right answer: 1 short line (a memory tip or nothing). Wrong answer: one short memory tip ("Merke: …") or an empty string – the explanation itself goes into why.'),
+        why: {
+          type: 'OBJECT',
+          nullable: true,
+          description: 'Only for a WRONG answer (null when correct): the explanation in three clear steps, simple German, one short sentence each.',
+          properties: {
+            mistake: str('What exactly is wrong, quoted: «kleines» → «kleine».'),
+            rule: str('The general rule in one sentence, with the pattern: "Nach der/die/das endet das Adjektiv im Akkusativ Singular (feminin, neutral) auf -e."'),
+            here: str('The rule applied to THIS sentence, step by step: "das Baby = neutral · Objekt von tragen = Akkusativ → das kleine Baby."'),
+          },
+          required: ['mistake', 'rule', 'here'],
+          propertyOrdering: ['mistake', 'rule', 'here'],
+        },
         rule: str('The grammar point in max 5 words, always the same wording for the same point, e.g. "Genitiv nach wegen", "Dativ nach in (Wo?)", "Perfekt mit sein". For a mistake in the word or its article: an empty string (the word is not a grammar rule).'),
         errorType: enumOf(Object.keys(ERROR_TYPE), {
           nullable: true,
@@ -55,7 +67,7 @@ export const RESPONSE_SCHEMA = {
         }),
       },
       required: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule'],
-      propertyOrdering: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule', 'errorType'],
+      propertyOrdering: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'why', 'rule', 'errorType'],
     },
     exercise: {
       type: 'OBJECT',
@@ -216,6 +228,10 @@ export function normalizeReply(raw, ctx) {
       rule: cleanRule(clip(f.rule, 80), ctx.topicId),
       errorType: ERROR_TYPE[f.errorType] || null,
     };
+    // the three-step explanation of a wrong answer (what is wrong · the rule · in this sentence); never for a right one
+    const why = !feedback.correct && f.why && typeof f.why === 'object'
+      ? { mistake: clip(f.why.mistake, 200), rule: clip(f.why.rule, 300), here: clip(f.why.here, 300) } : null;
+    feedback.why = why && (why.mistake || why.rule || why.here) ? why : null;
     if (feedback.correct) feedback.errorType = null;
     // a wrong flashcard is always a mistake in the word or its article, never "grammar" (lib/scores.js)
     else if (ctx.openTask === 'flashcard' && !WORD_ERROR_KEYS.includes(feedback.errorType)) feedback.errorType = 'vocab';
