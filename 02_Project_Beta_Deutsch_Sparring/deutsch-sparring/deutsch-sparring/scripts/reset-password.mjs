@@ -7,7 +7,7 @@
 // Needs DATABASE_URL (or POSTGRES_URL) – in the environment or in .env.local.
 import { randomInt } from 'node:crypto';
 import { neon } from '@neondatabase/serverless';
-import { SCHEMA, databaseUrl } from '../lib/schema.mjs';
+import { migrate, databaseUrl } from '../lib/schema.mjs';
 import { hashPassword } from '../lib/password.mjs';
 
 try {
@@ -30,7 +30,7 @@ const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
 const newPassword = Array.from({ length: 12 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
 
 const sql = neon(url);
-for (const statement of SCHEMA) await sql.query(statement);
+await migrate(sql);
 const { hash, salt } = await hashPassword(newPassword);
 const rows = await sql.query(
   'UPDATE users SET password_hash = $1, salt = $2 WHERE lower(username) = lower($3) RETURNING username',

@@ -66,6 +66,18 @@ const UPSERT_PLAN = `INSERT INTO goals (id, user_id, type, level, title, start_d
   RETURNING id`;
 export const UPSERT_PLAN_SQL = UPSERT_PLAN; // for scripts/check-plan.mjs
 
+// Old-style goal: the same "only if it exists already or fewer than MAX_GOALS" rule, inside the statement.
+const UPSERT_OLD_GOAL = `INSERT INTO goals (id, user_id, type, level, title, start_date, end_date, scope)
+  SELECT $1, $2::uuid, $3, $4, $5, $6::date, $7::date, $8::jsonb
+  WHERE EXISTS (SELECT 1 FROM goals WHERE user_id = $2::uuid AND id = $1)
+     OR (SELECT count(*) FROM goals WHERE user_id = $2::uuid) < $9::int
+  ON CONFLICT (user_id, id) DO UPDATE SET type = EXCLUDED.type, level = EXCLUDED.level, title = EXCLUDED.title,
+    start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date, scope = EXCLUDED.scope, plan = NULL
+  RETURNING id`;
+// deletes the old-style milestones of a goal that exists
+const DELETE_MILESTONES = `DELETE FROM milestones WHERE user_id = $1::uuid AND goal_id = $2::text
+  AND EXISTS (SELECT 1 FROM goals WHERE user_id = $1::uuid AND id = $2::text)`;
+
 // Latching (R11): set reachedAt on the named milestones, ONLY where it is still empty – one statement, so two runs at
 // the same time or the same run twice do no harm. Touches nothing else in the plan, and only a plan that has parts.
 // $1 user, $2 goal, $3 milestone ids, $4 the day.
@@ -109,38 +121,43 @@ const dbStore = {
   async save(userId, goal) {
     await ensureSchema();
     if (isPlan(goal)) {
-      const rows = await sql().query(UPSERT_PLAN, [
-        goal.id, userId, goal.template, goal.level, goal.title, goal.startDate, goal.endDate, JSON.stringify(goal), MAX_GOALS,
+      // ONE transaction: the upsert and the delete of old milestones succeed or fail together (R3)
+      const [rows] = await sql().transaction((t) => [
+        t.query(UPSERT_PLAN, [
+          goal.id, userId, goal.template, goal.level, goal.title, goal.startDate, goal.endDate, JSON.stringify(goal), MAX_GOALS,
+        ]),
+        // a converted old goal (R12): its old "% ready" milestones are deleted for good (D6); for a new goal this deletes
+        // nothing. Only when the goal exists (the upsert above was refused when there are too many goals).
+        t.query(DELETE_MILESTONES, [userId, goal.id]),
       ]);
-      // a converted old goal (R12): its old "% ready" milestones are deleted for good (D6); for a new goal this deletes nothing
-      if (rows.length) await sql().query('DELETE FROM milestones WHERE user_id = $1 AND goal_id = $2', [userId, goal.id]);
       return rows.length > 0;
     }
     // ---- old-style goal (kept only so an old goal can still be saved or tested; the goal form is gone, R12) ----
-    const count = await sql().query(
-      'SELECT count(*)::int AS n, COALESCE(bool_or(id = $2), false) AS has FROM goals WHERE user_id = $1',
-      [userId, goal.id],
-    );
-    if (!count[0]?.has && (count[0]?.n || 0) >= MAX_GOALS) return false;
-    await sql().query(
-      `INSERT INTO goals (id, user_id, type, level, title, start_date, end_date, scope)
-       VALUES ($1, $2, $3, $4, $5, $6::date, $7::date, $8::jsonb)
-       ON CONFLICT (user_id, id) DO UPDATE SET type = EXCLUDED.type, level = EXCLUDED.level, title = EXCLUDED.title,
-         start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date, scope = EXCLUDED.scope, plan = NULL`,
-      [goal.id, userId, goal.type, goal.level, goal.title, goal.startDate, goal.endDate, JSON.stringify(goal.scope)],
-    );
-    // the milestones are replaced as a whole (one statement to delete, one to insert)
-    await sql().query('DELETE FROM milestones WHERE user_id = $1 AND goal_id = $2', [userId, goal.id]);
-    if (goal.milestones.length) {
-      const params = [userId, goal.id];
-      const values = goal.milestones.map((m, i) => {
-        params.push(m.id, m.date, m.title, m.target, m.status);
-        const p = 3 + i * 5;
-        return `($1, $2, $${p}, $${p + 1}::date, $${p + 2}, $${p + 3}::int, $${p + 4})`;
-      });
-      await sql().query(`INSERT INTO milestones (user_id, goal_id, id, due_date, title, target, status) VALUES ${values.join(', ')}`, params);
-    }
-    return true;
+    // ONE transaction: goal (with the limit check inside the statement), delete old milestones, insert the new ones.
+    // If any statement fails, nothing changes – the old milestones survive.
+    const queries = (t) => {
+      const list = [
+        t.query(UPSERT_OLD_GOAL, [goal.id, userId, goal.type, goal.level, goal.title, goal.startDate, goal.endDate, JSON.stringify(goal.scope), MAX_GOALS]),
+        t.query(DELETE_MILESTONES, [userId, goal.id]),
+      ];
+      if (goal.milestones.length) {
+        const params = [userId, goal.id];
+        const values = goal.milestones.map((m, i) => {
+          params.push(m.id, m.date, m.title, m.target, m.status);
+          const p = 3 + i * 5;
+          return `($1::uuid, $2::text, $${p}::text, $${p + 1}::date, $${p + 2}::text, $${p + 3}::smallint, $${p + 4}::text)`;
+        });
+        list.push(t.query(
+          `INSERT INTO milestones (user_id, goal_id, id, due_date, title, target, status)
+           SELECT * FROM (VALUES ${values.join(', ')}) AS v(user_id, goal_id, id, due_date, title, target, status)
+           WHERE EXISTS (SELECT 1 FROM goals WHERE user_id = $1::uuid AND id = $2::text)`,
+          params,
+        ));
+      }
+      return list;
+    };
+    const [rows] = await sql().transaction(queries);
+    return rows.length > 0;
   },
   async markReached(userId, goalId, ids, day) {
     await ensureSchema();

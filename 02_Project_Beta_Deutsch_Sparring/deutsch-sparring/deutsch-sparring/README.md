@@ -294,6 +294,38 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
   top of `app/globals.css`. Desktop layout = ribbon on top, chat + right panel below; the phone
   layout is not done yet.
 
+### The database: numbered steps, and how to add a column
+
+`lib/schema.mjs` holds `MIGRATIONS`, a numbered list of steps (step 1 = first tables, 2 = extra columns on
+`answers`, 3 = `goals.plan` …). The table `schema_version` remembers the last step that was done. When the app
+starts it asks ONE question ("which step is the database at?") and only if it is behind does it run the missing
+steps – each step in one transaction together with the note "step N done", so a step is either completely done
+or not at all. A brand-new database runs all steps; the existing live database (no `schema_version` yet) runs
+them once too (they are all safe to repeat) and then is at the latest step. Run it by hand with
+`node scripts/db-migrate.mjs` (needs `DATABASE_URL`); it prints the steps it did.
+
+**How to add a column (or a table, or an index):**
+1. In `lib/schema.mjs`, add a new object at the END of `MIGRATIONS` with the next number, for example
+   `{ version: 4, name: 'answers: seconds', statements: ['ALTER TABLE answers ADD COLUMN IF NOT EXISTS seconds int'] }`.
+   A new table: `CREATE TABLE IF NOT EXISTS …`; an index: `CREATE INDEX IF NOT EXISTS …`. (The R1 "usage" table is
+   step 4 in the same way.)
+2. Never edit or delete an old step – a database that already passed it will not run it again.
+3. Use the column in the code that reads/writes it (parameterised SQL only).
+4. Run `npm test`, then `node scripts/db-migrate.mjs` once against the preview database (or just deploy: the app
+   runs the new step on first use).
+
+**Emptying old answer texts (by hand only, never automatic):** `node scripts/db-migrate.mjs --trim-old-texts`
+sets the question / student answer / corrected texts of answers older than 90 days to empty (`--days=N` for
+another age, at least 30). All numbers, the rule, topic, right/wrong flags and `created_at` stay, so the
+statistics do not change. It prints only how many answers it changed, and it cannot be undone (make a Neon
+backup/branch first if unsure). Running it again changes 0 rows.
+
+**All-or-nothing saves:** saving a goal with its milestones, replacing the coach chat, the first import of the
+browser's history, and "answer + word score" each run as ONE transaction (`sql.transaction`), so a failure in
+the middle changes nothing. The answer + score save is a single SQL statement guarded by "the score row is still
+as I read it", plus a lock per student and word, so two tabs answering the same word cannot overwrite each other
+(it reads again and retries). `scripts/check-saves.mjs` tests this with a fake database that fails on purpose.
+
 ### Grammar topics (the A1–B1 curriculum)
 
 The grammar topics students choose in Setup, the topics the coach recommends and the lessons the tutor teaches from are
