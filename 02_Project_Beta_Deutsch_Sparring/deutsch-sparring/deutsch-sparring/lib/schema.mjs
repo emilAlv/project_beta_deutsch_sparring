@@ -1,8 +1,33 @@
 import { ruleTopicPairs } from './rules.js';
 
-// The database tables. Each statement is safe to run again ("IF NOT EXISTS"), so this is the
-// whole migration: the app runs it on first use, or run `node scripts/db-migrate.mjs`.
-export const SCHEMA = [
+// ---------------------------------------------------------------------------------------------
+// The database, as a numbered list of steps (review R3). Think of it as a build-log: step 1 made the
+// first tables, step 2 added columns to "answers", and so on. The table `schema_version` remembers
+// the number of the last step that was done, so the app only asks ONE question at start-up
+// ("which step is the database at?") instead of sending every statement again.
+//
+// Rules for a step:
+//   - never change or delete an old step; add a new one at the END of MIGRATIONS (next number);
+//   - write every statement so it is safe to run again (IF NOT EXISTS, ADD COLUMN IF NOT EXISTS …);
+//   - all statements of a step run in ONE transaction together with the note "step N is done",
+//     so a step is either completely done or not at all.
+// How to add a column: see README.md ("How to add a column").
+// ---------------------------------------------------------------------------------------------
+
+// the note-book itself; it is created inside every step (harmless if it exists), so the very first
+// deploy on an empty database works, and so does the live database that has no note-book yet
+const VERSION_TABLE = `CREATE TABLE IF NOT EXISTS schema_version (
+    version int PRIMARY KEY,
+    name text NOT NULL,
+    applied_at timestamptz NOT NULL DEFAULT now()
+  )`;
+const RECORD_STEP = 'INSERT INTO schema_version (version, name) VALUES ($1::int, $2) ON CONFLICT (version) DO NOTHING';
+
+export const MIGRATIONS = [
+  {
+    version: 1,
+    name: 'first tables: users, sessions, answers, word scores, goals, milestones, coach messages',
+    statements: [
   `CREATE TABLE IF NOT EXISTS users (
     id uuid PRIMARY KEY,
     username text NOT NULL,
@@ -44,21 +69,6 @@ export const SCHEMA = [
   // the same answer sent twice (a retry) is saved once
   'CREATE UNIQUE INDEX IF NOT EXISTS answers_session_n_idx ON answers (user_id, session_id, n)',
   'CREATE INDEX IF NOT EXISTS answers_user_created_idx ON answers (user_id, created_at)',
-  // Review R8 / decision D7: was a hint used (or "Leicht"), and the difficulty ('easy' | 'medium' | 'hard').
-  // May be empty on older answers. Safe to run again on the live database.
-  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS hinted boolean',
-  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS difficulty text',
-  // Review R9: the grammar topic of every answer (a curriculum topic or a situation lesson), for the plan's progress.
-  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS topic_id text',
-  'CREATE INDEX IF NOT EXISTS answers_user_topic_idx ON answers (user_id, topic_id, created_at DESC)',
-  // Fill in the topic of OLD answers; only rows that have none yet, so running it again changes nothing. Nothing is deleted.
-  //  1. answers of a grammar session → the topic of that session
-  `UPDATE answers a SET topic_id = s.settings->>'topicId' FROM sessions s
-     WHERE a.topic_id IS NULL AND s.user_id = a.user_id AND s.id = a.session_id
-       AND s.settings->>'kind' = 'grammar' AND COALESCE(s.settings->>'topicId', '') NOT IN ('', 'free')`,
-  //  2. the rest with a grammar rule → the lowest-level topic that lists that rule (same list as topicForRule)
-  `UPDATE answers a SET topic_id = m.topic_id FROM (VALUES ${ruleTopicPairs().map(([r, t]) => `('${r.replace(/'/g, "''")}', '${t}')`).join(', ')}) AS m(rule_key, topic_id)
-     WHERE a.topic_id IS NULL AND lower(regexp_replace(btrim(a.rule), '\\s+', ' ', 'g')) = m.rule_key`,
   `CREATE TABLE IF NOT EXISTS word_scores (
     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     word_id text NOT NULL,
@@ -84,10 +94,6 @@ export const SCHEMA = [
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, id)
   )`,
-  // Review R10 (redesign §4.1, D7): the whole plan of a goal (parts and milestones) as one value, saved with one UPSERT.
-  // Empty for old-style goals (their milestones stay in the milestones table until they are converted, R12).
-  // Safe to run again on the live database.
-  'ALTER TABLE goals ADD COLUMN IF NOT EXISTS plan jsonb',
   `CREATE TABLE IF NOT EXISTS milestones (
     id text NOT NULL,
     goal_id text NOT NULL,
@@ -111,7 +117,83 @@ export const SCHEMA = [
     created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, id)
   )`,
+    ],
+  },
+  {
+    version: 2,
+    name: 'answers: hinted, difficulty, topic (with backfill of old answers)',
+    statements: [
+  // Review R8 / decision D7: was a hint used (or "Leicht"), and the difficulty ('easy' | 'medium' | 'hard').
+  // May be empty on older answers. Safe to run again on the live database.
+  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS hinted boolean',
+  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS difficulty text',
+  // Review R9: the grammar topic of every answer (a curriculum topic or a situation lesson), for the plan's progress.
+  'ALTER TABLE answers ADD COLUMN IF NOT EXISTS topic_id text',
+  'CREATE INDEX IF NOT EXISTS answers_user_topic_idx ON answers (user_id, topic_id, created_at DESC)',
+  // Fill in the topic of OLD answers; only rows that have none yet, so running it again changes nothing. Nothing is deleted.
+  //  1. answers of a grammar session → the topic of that session
+  `UPDATE answers a SET topic_id = s.settings->>'topicId' FROM sessions s
+     WHERE a.topic_id IS NULL AND s.user_id = a.user_id AND s.id = a.session_id
+       AND s.settings->>'kind' = 'grammar' AND COALESCE(s.settings->>'topicId', '') NOT IN ('', 'free')`,
+  //  2. the rest with a grammar rule → the lowest-level topic that lists that rule (same list as topicForRule)
+  `UPDATE answers a SET topic_id = m.topic_id FROM (VALUES ${ruleTopicPairs().map(([r, t]) => `('${r.replace(/'/g, "''")}', '${t}')`).join(', ')}) AS m(rule_key, topic_id)
+     WHERE a.topic_id IS NULL AND lower(regexp_replace(btrim(a.rule), '\\s+', ' ', 'g')) = m.rule_key`,
+    ],
+  },
+  {
+    version: 3,
+    name: 'goals: plan',
+    statements: [
+  // Review R10 (redesign §4.1, D7): the whole plan of a goal (parts and milestones) as one value, saved with one UPSERT.
+  // Empty for old-style goals (their milestones stay in the milestones table until they are converted, R12).
+  // Safe to run again on the live database.
+  'ALTER TABLE goals ADD COLUMN IF NOT EXISTS plan jsonb',
+    ],
+  },
+  // next step: { version: 4, name: '…', statements: ['ALTER TABLE … ADD COLUMN IF NOT EXISTS …'] },
 ];
+
+export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
+
+// every statement of every step in order (what the checks and scripts read; safe to run again)
+export const SCHEMA = [VERSION_TABLE, ...MIGRATIONS.flatMap((m) => m.statements)];
+
+// Which step is the database at? 0 = none yet (fresh database, or the live one from before R3).
+export async function currentVersion(sql) {
+  try {
+    const rows = await sql.query('SELECT COALESCE(max(version), 0)::int AS v FROM schema_version');
+    return Number(rows[0]?.v) || 0;
+  } catch (e) {
+    if (e?.code === '42P01' || /schema_version.*does not exist/i.test(String(e?.message))) return 0; // no note-book yet
+    throw e;
+  }
+}
+
+// Run the steps the database has not had yet, each in one transaction; → { from, to }.
+// `sql` is a neon() function (or anything with .query() and .transaction()).
+export async function migrate(sql, { onStep } = {}) {
+  const from = await currentVersion(sql);
+  let to = from;
+  for (const step of MIGRATIONS.filter((m) => m.version > from)) {
+    await sql.transaction((t) => [
+      t.query(VERSION_TABLE),
+      ...step.statements.map((statement) => t.query(statement)),
+      t.query(RECORD_STEP, [step.version, step.name]),
+    ]);
+    to = step.version;
+    onStep?.(step);
+  }
+  return { from, to };
+}
+
+// Done by hand only (`node scripts/db-migrate.mjs --trim-old-texts`), never by the app: empties the question and
+// answer TEXTS of answers older than $1 days. Numbers, the rule, topic, correct/skipped flags and created_at stay.
+// Safe to run again (rows that are already empty are not touched). Returns one row per changed answer.
+export const TRIM_OLD_TEXTS_SQL = `UPDATE answers SET question = NULL, student_answer = NULL, corrected = NULL
+  WHERE created_at < now() - ($1::int * interval '1 day')
+    AND (question IS NOT NULL OR student_answer IS NOT NULL OR corrected IS NOT NULL)
+  RETURNING id`;
+export const TRIM_OLD_TEXTS_DAYS = 90;
 
 // Vercel's Neon integration sets DATABASE_URL and POSTGRES_URL; either works.
 export function databaseUrl() {

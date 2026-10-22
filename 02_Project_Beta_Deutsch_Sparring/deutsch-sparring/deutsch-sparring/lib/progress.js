@@ -187,12 +187,26 @@ const scoreParams = (userId, wordId, rec) => [
   rec.g?.s ?? null, rec.g?.k ?? null, iso(rec.g?.due),
   iso(rec.last),
 ];
-const UPSERT_SCORE = `INSERT INTO word_scores (${SCORE_COLUMNS})
-  VALUES ($1, $2, $3, $4, $5::timestamptz, $6, $7, $8::timestamptz, $9::timestamptz)
-  ON CONFLICT (user_id, word_id) DO UPDATE SET v = EXCLUDED.v, v_streak = EXCLUDED.v_streak, v_due = EXCLUDED.v_due,
-    g = EXCLUDED.g, g_streak = EXCLUDED.g_streak, g_due = EXCLUDED.g_due, last_practised = EXCLUDED.last_practised`;
 
-const entryOf = (id, settings, entry) => ({ id, settings: settings || {}, ...(entry || {}) });
+// One statement: save the answer (only if the word's score row is still as we read it: $16 = that row as text, $17 = word id)
+// and, if the answer was saved, the new score ($18–$24, same order as scoreParams after user and word).
+export const SAVE_ANSWER_AND_SCORE = `WITH ins AS (
+    INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped, hinted, difficulty, topic_id)
+    SELECT $1::text, $2::uuid, $3::int, $4::text, $5::text, $6::text, $7::text, $8::text, $9::text, $10::text, $11::boolean, $12::boolean, $13::boolean, $14::text, $15::text
+    WHERE $17::text IS NULL
+       OR (SELECT w::text FROM word_scores w WHERE w.user_id = $2::uuid AND w.word_id = $17::text) IS NOT DISTINCT FROM $16::text
+    ON CONFLICT DO NOTHING RETURNING id
+  ), up AS (
+    INSERT INTO word_scores (${SCORE_COLUMNS})
+    SELECT $2::uuid, $17::text, $18::smallint, $19::int, $20::timestamptz, $21::smallint, $22::int, $23::timestamptz, $24::timestamptz
+    WHERE $17::text IS NOT NULL AND EXISTS (SELECT 1 FROM ins)
+    ON CONFLICT (user_id, word_id) DO UPDATE SET v = EXCLUDED.v, v_streak = EXCLUDED.v_streak, v_due = EXCLUDED.v_due,
+      g = EXCLUDED.g, g_streak = EXCLUDED.g_streak, g_due = EXCLUDED.g_due, last_practised = EXCLUDED.last_practised
+    RETURNING 1
+  )
+  SELECT (SELECT count(*) FROM ins)::int AS inserted`;
+
+const entryOf =(id, settings, entry) => ({ id, settings: settings || {}, ...(entry || {}) });
 
 // ---------- in memory (AUTH_MEMORY=1) ----------
 const mem = (globalThis.__wortMemoryProgress ??= new Map());
@@ -281,21 +295,32 @@ const dbStore = {
   },
   async addAnswer(userId, a, scoreInput) {
     await ensureSchema();
-    await sql().query('INSERT INTO sessions (id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [a.sessionId, userId]);
-    const inserted = await sql().query(
-      `INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped, hinted, difficulty, topic_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-       ON CONFLICT DO NOTHING RETURNING id`,
-      [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped, a.hinted, a.difficulty, a.topicId],
-    );
-    if (!inserted.length) return { saved: false, rec: null };
-    let rec = null;
-    if (a.wordId) {
-      const rows = await sql().query(`SELECT ${SCORE_COLUMNS} FROM word_scores WHERE user_id = $1 AND word_id = $2`, [userId, a.wordId]);
-      rec = applyAnswer(rows[0] ? rowToRec(rows[0]) : undefined, scoreInput, Date.now());
-      await sql().query(UPSERT_SCORE, scoreParams(userId, a.wordId, rec));
+    // The answer and the word score are saved by ONE statement inside one transaction (R3): both or neither.
+    // The score is computed here from the row we read; the statement only runs if that row is still exactly as we
+    // read it ("optimistic check"). Two tabs answering the same word at once: the transaction first takes a lock on
+    // (student, word), so one waits for the other; the second then sees the changed row, does nothing, and we read
+    // again and recompute – no answer ever overwrites another one's score.
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      let rec = null;
+      let ver = null;
+      if (a.wordId) {
+        const rows = await sql().query(`SELECT ${SCORE_COLUMNS}, w::text AS ver FROM word_scores w WHERE user_id = $1 AND word_id = $2`, [userId, a.wordId]);
+        ver = rows[0]?.ver ?? null;
+        rec = applyAnswer(rows[0] ? rowToRec(rows[0]) : undefined, scoreInput, Date.now());
+      }
+      const answerParams = [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped, a.hinted, a.difficulty, a.topicId];
+      const scoreValues = rec ? scoreParams(userId, a.wordId, rec).slice(2) : [null, null, null, null, null, null, null];
+      const results = await sql().transaction((t) => [
+        t.query('INSERT INTO sessions (id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [a.sessionId, userId]),
+        t.query(`SELECT pg_advisory_xact_lock(hashtextextended($1::text || ':' || COALESCE($2::text, ''), 0))`, [userId, a.wordId]),
+        t.query(SAVE_ANSWER_AND_SCORE, [...answerParams, ver, a.wordId, ...scoreValues]),
+      ]);
+      if (results[2][0]?.inserted > 0) return { saved: true, rec };
+      // nothing inserted: either this answer was already saved (a retry) or the score row changed under us
+      const dup = await sql().query('SELECT 1 FROM answers WHERE user_id = $1 AND session_id = $2 AND n = $3', [userId, a.sessionId, a.n]);
+      if (dup.length) return { saved: false, rec: null };
     }
-    return { saved: true, rec };
+    throw new Error('answer could not be saved (busy)');
   },
   async history(userId, tz) {
     await ensureSchema();
@@ -377,18 +402,19 @@ const dbStore = {
   },
   async importData(userId, { history, scores }) {
     if (await this.hasData(userId)) return false;
-    // mark first, so two tabs importing at once cannot both win
-    const marked = await sql().query(
+    // Everything in ONE transaction (R3): the "imported" mark and all the rows are saved together or not at all, so
+    // a failed import leaves hasData() false and the browser can simply try again. The mark comes first: it locks
+    // the user row, so two tabs importing at once run one after the other and only the first one wins.
+    const queries = [[
       `UPDATE users SET settings = settings || $2::jsonb WHERE id = $1 AND NOT (settings ? 'imported') RETURNING id`,
       [userId, JSON.stringify({ imported: true, ...(history.streak.lastDay ? { importedStreak: history.streak } : {}) })],
-    );
-    if (!marked.length) return false;
+    ]];
     for (const [i, s] of history.sessions.entries()) {
-      await sql().query(
+      queries.push([
         `INSERT INTO sessions (id, user_id, settings, total, score, started_at, ended_at)
          VALUES ($1, $2, $3::jsonb, $4::int, $5::jsonb, $6::timestamptz, $6::timestamptz) ON CONFLICT DO NOTHING`,
         [s.id, userId, JSON.stringify(s.settings), s.total, JSON.stringify(s.entry), new Date(s.entry.updatedAt - i).toISOString()],
-      );
+      ]);
     }
     const entries = Object.entries(scores);
     for (let i = 0; i < entries.length; i += 100) {
@@ -399,9 +425,10 @@ const dbStore = {
         const p = j * 9;
         return `($${p + 1}, $${p + 2}, $${p + 3}, $${p + 4}, $${p + 5}::timestamptz, $${p + 6}, $${p + 7}, $${p + 8}::timestamptz, $${p + 9}::timestamptz)`;
       });
-      await sql().query(`INSERT INTO word_scores (${SCORE_COLUMNS}) VALUES ${values.join(', ')} ON CONFLICT DO NOTHING`, params);
+      queries.push([`INSERT INTO word_scores (${SCORE_COLUMNS}) VALUES ${values.join(', ')} ON CONFLICT DO NOTHING`, params]);
     }
-    return true;
+    const results = await sql().transaction((t) => queries.map(([text, params]) => t.query(text, params)));
+    return results[0].length > 0; // false = another tab imported first (nothing was marked, the extra rows were ignored)
   },
 };
 

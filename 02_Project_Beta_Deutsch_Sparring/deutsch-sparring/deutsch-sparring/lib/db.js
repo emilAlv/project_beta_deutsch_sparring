@@ -1,16 +1,16 @@
-// The one database connection (Neon Postgres) + the tiny migration. Server only.
+// The one database connection (Neon Postgres) + the migration check. Server only.
 import { neon } from '@neondatabase/serverless';
-import { SCHEMA, databaseUrl } from './schema.mjs';
+import { migrate, databaseUrl } from './schema.mjs';
 
 let client = null;
-export const sql = () => (client ??= neon(databaseUrl()));
+// (scripts/check-saves.mjs hands in a fake connection through globalThis.__wortTestSql; only when WORT_CHECK=1)
+export const sql = () => (client ??= (process.env.WORT_CHECK === '1' && globalThis.__wortTestSql) || neon(databaseUrl()));
 
-// the tiny migration, once per server start (tried again if it failed)
+// Once per server start: ask which migration step the database is at (ONE query) and, only if it is behind, run
+// the missing steps (lib/schema.mjs). Tried again if it failed.
 let ready = null;
 export function ensureSchema() {
-  ready ??= (async () => {
-    for (const statement of SCHEMA) await sql().query(statement);
-  })().catch((e) => {
+  ready ??= migrate(sql()).catch((e) => {
     ready = null;
     throw e;
   });

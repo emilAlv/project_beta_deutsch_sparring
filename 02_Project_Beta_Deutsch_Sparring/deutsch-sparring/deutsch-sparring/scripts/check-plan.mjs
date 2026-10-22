@@ -554,7 +554,7 @@ check('/api/stats goes through homeData (GET with an account, POST without)', /h
 
 // ---- R12: converting old goals, goals through the Coach ----
 check('homeData offers the new plan for each old goal (upgrades), and saves nothing itself', /upgradesFor\(goals/.test(homeData) && /upgradeGoal\(g, ctx\)/.test(homeData) && !/save\(/.test(homeData));
-check('saving a plan deletes the old "% ready" milestone rows of that goal', /DELETE FROM milestones WHERE user_id = \$1 AND goal_id = \$2/.test(store) && store.indexOf('UPSERT_PLAN, [') < store.indexOf("DELETE FROM milestones"));
+check('saving a plan deletes the old "% ready" milestone rows of that goal (in the same transaction)', /DELETE FROM milestones WHERE user_id = \$1::uuid AND goal_id = \$2::text/.test(store) && store.indexOf('UPSERT_PLAN, [') < store.indexOf('DELETE_MILESTONES, [') && /transaction/.test(store));
 check('browser-only storage accepts new plans (cleaned like the server does)', /cleanPlanGoal\(goal\)/.test(readFileSync(new URL('../lib/storage.js', import.meta.url), 'utf8')));
 check('there is no goal form any more', !readdirSync(new URL('../components/', import.meta.url)).includes('GoalForm.js'));
 {
