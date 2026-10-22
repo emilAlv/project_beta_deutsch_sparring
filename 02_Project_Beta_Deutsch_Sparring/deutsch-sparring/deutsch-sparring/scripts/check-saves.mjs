@@ -83,7 +83,7 @@ const { migrate, MIGRATIONS, LATEST_VERSION } = await import('../lib/schema.mjs'
   check('database at step 2: only the later steps run', ran.join() === MIGRATIONS.filter((m) => m.version > 2).map((m) => m.version).join());
   check('step numbers are 1,2,3… without gaps', MIGRATIONS.every((m, i) => m.version === i + 1));
   check('every statement is safe to run again (IF NOT EXISTS / backfill only fills empty)', MIGRATIONS.flatMap((m) => m.statements)
-    .every((s) => /IF NOT EXISTS/.test(s) || /^UPDATE answers/.test(s)));
+    .every((s) => /IF NOT EXISTS/.test(s) || /^UPDATE answers/.test(s) || /^UPDATE word_scores SET a = v.* WHERE a IS NULL AND v IS NOT NULL$/.test(s)));
   // a step that fails leaves the version where it was (it ran in one transaction)
   reset();
   state.hasNotebook = true;
@@ -148,11 +148,11 @@ const { progress, cleanHistory, cleanScores, SAVE_ANSWER_AND_SCORE: SAVE_SQL } =
     if (/EXISTS \(SELECT 1 FROM sessions/.test(text)) return [{ has: state.imported || state.sessions.length > 0 || state.scores.size > 0 }];
     if (/^UPDATE users SET settings/.test(text)) { if (state.imported) return []; state.imported = true; return [{ id: U }]; }
     if (/^INSERT INTO sessions/.test(text)) { state.sessions.push(params[0]); return []; }
-    if (/^INSERT INTO word_scores/.test(text)) { state.scores.set('x', 1); return []; }
+    if (/^INSERT INTO word_scores/.test(text)) { state.scores.set('x', 1); state.importSql = { text, params }; if (process.env.SHOW_SQL) console.log(text); return []; }
     return [];
   };
   const history = { sessions: [{ id: 's1', settings: {}, total: 3, entry: { updatedAt: 1000, answered: 2, skipped: 0, done: 3 } }], streak: { count: 2, lastDay: '2026-10-20' } };
-  const scores = { w: { v: { s: 3, k: 1, due: null }, last: 5 } };
+  const scores = { w: { v: { s: 3, k: 1, due: null }, a: { s: 3, k: 1, due: null }, p: { s: 1, k: 0, due: 7 }, last: 5 } };
   failOn = (text) => /^INSERT INTO word_scores/.test(text); // fails halfway: after the mark and the sessions
   let threw = false;
   try { await progress().importData(U, { history, scores }); } catch { threw = true; }
@@ -161,6 +161,7 @@ const { progress, cleanHistory, cleanScores, SAVE_ANSWER_AND_SCORE: SAVE_SQL } =
   failOn = null;
   const done = await progress().importData(U, { history, scores });
   check('retry after the failure imports everything', done === true && state.imported && state.sessions.length === 1 && state.scores.size === 1);
+  check('import writes v, g, a, p of a word in one row: 15 values for 15 columns', state.importSql?.params.length === 15 && (state.importSql.text.match(/\$\d+/g) || []).length === 15 && state.importSql.params[8] === 3 && state.importSql.params[11] === 1, JSON.stringify(state.importSql?.params));
   check('a second import is refused (data exists)', (await progress().importData(U, { history, scores })) === false);
   void cleanHistory; void cleanScores;
 }
@@ -203,6 +204,40 @@ const { progress, cleanHistory, cleanScores, SAVE_ANSWER_AND_SCORE: SAVE_SQL } =
   const sql = (await import('../lib/progress.js')).SAVE_ANSWER_AND_SCORE;
   check('answer + score is ONE statement with a guard on the score row', /WITH ins AS/.test(sql) && /IS NOT DISTINCT FROM \$16/.test(sql) && /EXISTS \(SELECT 1 FROM ins\)/.test(sql));
   check('only $-placeholders in the statement (no pasted values)', !/'[^']*\$\{/.test(sql));
+}
+
+// ---- word scores per part (Meaning v / Article a / Plural p / Sentence g): cleaning, row, saved parameters ----
+{
+  const { cleanAnswer, scoreInputOf } = await import('../lib/progress.js');
+  const eq = (name, got, want) => check(name, JSON.stringify(got) === JSON.stringify(want), `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  const cs = cleanScores({ 'die lampe': { v: { s: 7, k: 1, due: 5 }, a: { s: 4, k: 0, due: 6 }, p: { s: 2, k: 0, due: 7 }, last: 9 }, nope: { v: { s: 1 } } });
+  eq('cleanScores keeps v, a, p and drops unknown words', cs, { 'die lampe': { v: { s: 7, k: 1, due: 5 }, a: { s: 4, k: 0, due: 6 }, p: { s: 2, k: 0, due: 7 }, last: 9 } });
+  check('cleanScores accepts a record with only an Article score', Object.keys(cleanScores({ 'die lampe': { a: { s: 3 } } })).length === 1);
+  const a = cleanAnswer({ sessionId: 's1', n: 1, wordId: 'die lampe', task: 'flashcard', difficulty: 'hard', direction: 'en-de', checks: ['article', 'junk'], parts: { meaning: true, article: 'yes', plural: false } });
+  eq('cleanAnswer: checks always hold meaning and only known parts; parts are true / false / null', [a.checks, a.parts, a.direction], [['meaning', 'article'], { meaning: true, article: null, plural: false }, 'en-de']);
+  eq('the server works out the tested parts itself (Hard noun, English → German)', scoreInputOf(a).checks, ['meaning', 'article', 'plural']);
+  eq('…and from the word, not from the browser (Easy)', scoreInputOf({ ...a, difficulty: 'easy' }).checks, ['meaning']);
+  eq('…German → English on Hard: no plural', scoreInputOf({ ...a, direction: 'de-en' }).checks, ['meaning', 'article']);
+  eq('…a sentence task: meaning + article', scoreInputOf({ ...a, task: 'grammar' }).checks, ['meaning', 'article']);
+  check('no difficulty from the browser: its own list is used', scoreInputOf({ ...a, difficulty: null, checks: ['meaning'] }).checks.join() === 'meaning');
+
+  // a saved answer: the row read from the database (with a and p) is scored, and the new row is written with all 13 score values
+  reset();
+  state.version = LATEST_VERSION; state.hasNotebook = true;
+  const T = (n) => new Date(n).toISOString();
+  const wordRow = { user_id: U, word_id: 'die lampe', v: 5, v_streak: 2, v_due: T(1e12), g: null, g_streak: null, g_due: null, a: 5, a_streak: 2, a_due: T(1e12), p: null, p_streak: null, p_due: null, last_practised: T(1e12) };
+  let params = null;
+  handler = (text, ps) => {
+    if (/FROM schema_version/.test(text)) return [{ v: state.version }];
+    if (/FROM word_scores w WHERE user_id/.test(text)) return [{ ...wordRow, ver: JSON.stringify(wordRow) }];
+    if (/^WITH ins AS/.test(text)) { params = ps; return [{ inserted: 1 }]; }
+    return [];
+  };
+  const out = await progress().addAnswer(U, { ...a, n: 9, hinted: false, correct: false, errorType: 'Wortschatz', rule: 'Plural', skipped: false, hasG: true, studentAnswer: 'die Lampe', corrected: 'die Lampe, die Lampen', question: 'the lamp', topicId: null },
+    scoreInputOf({ ...a, correct: false, errorType: 'Wortschatz', rule: 'Plural', parts: null, hinted: false, skipped: false }));
+  check('Hard, wrong plural only, row from the database: m 5 → 7, a 5 → 7, p new → 1', out.saved && out.rec.v.s === 7 && out.rec.a.s === 7 && out.rec.p.s === 1, JSON.stringify(out.rec));
+  check('the statement gets 30 values; v at $18, g at $21, a at $24, p at $27', params?.length === 30 && params[17] === 7 && params[20] === null && params[23] === 7 && params[26] === 1, JSON.stringify(params?.slice(16)));
+  check('the guard text ($16) now contains the a and p columns of the row it read', typeof params?.[15] === 'string' && params[15].includes('"a":5'));
 }
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll save checks passed.');

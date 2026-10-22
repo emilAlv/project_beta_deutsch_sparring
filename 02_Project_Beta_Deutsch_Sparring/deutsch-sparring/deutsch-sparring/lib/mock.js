@@ -18,6 +18,7 @@ import { RULES } from './grammar.js';
 import { chooseTask, findTask, infinitive } from './word-tasks.js';
 import { align, localizeWord, toVariant } from './variants.js';
 import { focusRevealsAnswer } from './reply.js';
+import { asksArticle, asksPlural as asksPluralAt } from './scores.js';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
 
@@ -188,9 +189,13 @@ function mockWord(word, variant) {
 }
 const isNoun = (w) => w.type === 'noun';
 const grammarOf = (settings) => settings.grammar || [];
-// grammar on → the article is checked on every noun card (in both directions)
-const articleChecked = (settings) => grammarOf(settings).length > 0;
-const asksPlural = (settings, w) => isNoun(w) && Boolean(w.plural) && (settings.difficulty === 'hard' || grammarOf(settings).includes('article-plural'));
+// What a noun card checks follows the difficulty (lib/scores.js): Easy = the word only, Medium = + article, Hard = + plural
+// (English → German only). Other word types: just the word.
+const articleChecked = (settings) => asksArticle(settings.difficulty);
+const asksPlural = (settings, w) => isNoun(w) && Boolean(w.plural) && asksPluralAt(settings.difficulty);
+const bareOf = (w) => (isNoun(w) ? w.noun : w.de); // the German word without its article
+// the whole card as information: "die Lampe, die Lampen"
+const fullCard = (w) => `${w.de}${isNoun(w) && w.plural ? `, ${w.plural}` : ''}`;
 const meaningOf = (w) => w.en[0].replace(/^the /, '');
 
 // Which word and which kind of question is question n? Deterministic, so the demo needs no memory:
@@ -247,7 +252,8 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
   const pick = (k) => (others.length ? others[(idx * 7 + k * 13) % others.length] : word);
   const withArticle = isNoun(word) && articleChecked(settings);
   if (dir === 'en-de') {
-    const choices = isNoun(word) ? ['der', 'die', 'das'].map((a) => `${a} ${word.noun}`) : [];
+    // Easy: choose between German words (the article is not checked on Easy)
+    const choices = [word, pick(1), pick(2)].map(bareOf).filter((x, i, all) => all.indexOf(x) === i).sort();
     const plural = asksPlural(settings, word);
     return {
       exercise: {
@@ -255,9 +261,9 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         type: 'Karteikarte',
         direction: 'en-de',
         line: word.en[0],
-        answer: isNoun(word) ? `${word.de}${plural ? `, ${word.plural}` : ''}` : word.de,
+        answer: `${word.de}${plural ? `, ${word.plural}` : ''}`,
         hint: strongHint ? `(${word.article ? `${word.article} …, ` : ''}Anfang: ${word.noun.slice(0, 3)}…)`
-          : d === 'hard' ? null : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : isNoun(word) ? (plural ? 'mit Artikel und Plural' : 'mit Artikel') : null,
+          : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : isNoun(word) ? (plural ? 'mit Artikel und Plural' : 'mit Artikel') : null,
       },
       options: d === 'easy' ? choices : [],
       word,
@@ -265,7 +271,6 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
   }
   // German → English. With grammar on, a noun comes WITHOUT its article: the student gives article and meaning.
   if (withArticle) {
-    const wrong = ['der', 'die', 'das'];
     return {
       exercise: {
         number: n,
@@ -273,9 +278,9 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         direction: 'de-en',
         line: word.noun,
         answer: `${word.article} – ${meaningOf(word)}`,
-        hint: strongHint ? `(Artikel: ${word.article}, ${meaningOf(word).slice(0, 3)}…)` : d === 'hard' ? null : d === 'easy' ? '(Wähle Artikel und Bedeutung.)' : 'mit Artikel, auf Englisch',
+        hint: strongHint ? `(Artikel: ${word.article}, ${meaningOf(word).slice(0, 3)}…)` : d === 'hard' ? 'mit Artikel' : 'mit Artikel, auf Englisch',
       },
-      options: d === 'easy' ? wrong.map((a) => `${a} – ${meaningOf(word)}`) : [],
+      options: [],
       word,
       bare: true,
     };
@@ -300,29 +305,37 @@ function checkVocab(q, answer, settings) {
   const w = q.word;
   if (q.task) return q.task.check(answer);
   const plural = asksPlural(settings, w);
-  const card = `${w.de}${plural ? `, ${w.plural}` : ''}`;
+  const articleAsked = isNoun(w) && articleChecked(settings);
+  const card = fullCard(w); // the article and the plural are always shown, as information on Easy
   const extra = isNoun(w)
     ? [w.plural ? `Plural: ${w.plural}.` : 'Nur Plural.', w.variants.length ? `Auch: ${w.variants.join(', ')}.` : ''].filter(Boolean).join(' ')
     : w.perfekt ? `Perfekt: ${w.perfekt}.` : '';
   if (q.exercise.direction === 'en-de') {
     const forms = [w.de, ...w.variants];
-    const right = forms.some((f) => has(a, f));
-    const nounOnly = forms.some((f) => has(a, f.replace(/^(der|die|das) /, '')));
+    const full = forms.some((f) => has(a, f)); // article + noun
+    const wordOk = full || forms.some((f) => has(a, f.replace(/^(der|die|das) /, ''))); // the noun, with or without a (wrong) article
+    const articleOk = !articleAsked || full;
     const pluralOk = !plural || has(a, w.plural);
-    const correct = right && pluralOk;
+    const correct = wordOk && articleOk && pluralOk;
+    // which parts were right: only the parts this level checks; a wrong word leaves the others open
+    const parts = { meaning: wordOk, article: articleAsked ? (wordOk ? articleOk : null) : null, plural: plural ? (wordOk ? pluralOk : null) : null };
+    const articleInfo = wordOk && !full && isNoun(w) && !articleAsked; // Easy: the article was missing or wrong, which does not count
     return {
       correct,
-      corrected: correct ? answer.trim() : card,
-      changedWords: correct ? [] : right ? [w.plural] : [nounOnly ? w.article : w.de],
-      explanation: correct ? extra : nounOnly && !right ? `Das Nomen stimmt, aber der Artikel ist «${w.article}». ${extra}` : right ? `Der Plural fehlt oder stimmt nicht. ${extra}` : extra,
-      rule: right && !pluralOk ? RULES.plural : null,
-      errorType: correct ? null : right ? 'Wortschatz' : nounOnly ? 'Artikel' : 'Wortschatz',
+      corrected: correct && (articleAsked || !isNoun(w)) ? answer.trim() : card,
+      changedWords: correct ? [] : !wordOk ? [w.de] : !articleOk ? [w.article] : [w.plural],
+      explanation: correct
+        ? (articleInfo ? `Der Artikel ist «${w.article}» – auf Leicht zählt er nicht. ${extra}` : extra)
+        : !wordOk ? extra : !articleOk ? `Das Nomen stimmt, aber der Artikel ist «${w.article}». ${extra}` : `Der Plural fehlt oder stimmt nicht. ${extra}`,
+      rule: wordOk && articleOk && !pluralOk ? RULES.plural : null,
+      errorType: correct ? null : wordOk && !articleOk ? 'Artikel' : 'Wortschatz',
+      parts,
     };
   }
   const meanings = w.en.map((e) => e.replace(/^the /, ''));
   const meaningOk = meanings.some((m) => a.includes(norm(m)));
   if (q.bare) {
-    // article + meaning of a noun shown without its article
+    // article + meaning of a noun shown without its article (Medium / Hard)
     const arts = a.split(' ').filter((t) => ['der', 'die', 'das'].includes(t));
     const articleOk = arts.length > 0 && arts.every((t) => t === w.article);
     const correct = meaningOk && articleOk;
@@ -333,15 +346,17 @@ function checkVocab(q, answer, settings) {
       explanation: correct ? `${w.de}: ${w.en.join(', ')}. ${extra}` : meaningOk ? `Die Bedeutung stimmt, aber der Artikel ist «${w.article}». ${extra}` : `${w.de}: ${w.en.join(', ')}. ${extra}`,
       rule: null, // the word is no grammar rule
       errorType: correct ? null : meaningOk ? 'Artikel' : 'Wortschatz',
+      parts: { meaning: meaningOk, article: meaningOk ? articleOk : null, plural: null },
     };
   }
   return {
     correct: meaningOk,
-    corrected: meaningOk ? answer.trim() : w.en.join(' / '),
+    corrected: meaningOk ? answer.trim() : isNoun(w) ? `${card} – ${w.en.join(' / ')}` : w.en.join(' / '),
     changedWords: meaningOk ? [] : [w.en[0]],
     explanation: `${w.de}: ${w.en.join(', ')}. ${extra}`,
     rule: null,
     errorType: meaningOk ? null : 'Wortschatz',
+    parts: { meaning: meaningOk, article: null, plural: null },
   };
 }
 

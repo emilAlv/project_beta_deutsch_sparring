@@ -11,9 +11,7 @@ export const QUESTION_STEPS = [10, 20, 30, 40, 50];
 export const SOURCES = ['goethe', 'kurs', 'both']; // Goethe list · From the course · Both
 export const DIRECTIONS = ['en-de', 'de-en', 'mixed'];
 export const VARIANTS = ['ch', 'de']; // Swiss Hochdeutsch (ss) · German Hochdeutsch (ß)
-export const GRAMMAR_POINTS = ['article-plural', 'akkusativ', 'dativ', 'genitiv', 'adjective-endings', 'perfekt', 'verb-case'];
-// the grammar points that need a sentence task after the flashcard (article & plural is on the card)
-const SENTENCE_POINTS = GRAMMAR_POINTS.filter((g) => g !== 'article-plural');
+export const GRAMMAR_POINTS = ['akkusativ', 'dativ', 'genitiv', 'adjective-endings', 'perfekt', 'verb-case'];
 
 // The setup form as remembered for the next time (prefill)
 export const DEFAULT_SETUP = {
@@ -26,7 +24,7 @@ export const DEFAULT_SETUP = {
   questions: 20,
   source: 'both',
   direction: 'en-de',
-  grammar: ['article-plural', 'akkusativ', 'dativ', 'adjective-endings'],
+  grammar: ['akkusativ', 'dativ', 'adjective-endings'],
   variant: 'ch',
 };
 
@@ -39,7 +37,7 @@ export function sanitizeSetup(raw, old = {}) {
   const q = Math.round(Number(p.questions));
   const grammar = Array.isArray(p.grammar)
     ? GRAMMAR_POINTS.filter((g) => p.grammar.includes(g))
-    : old.sentences === false ? ['article-plural'] : DEFAULT_SETUP.grammar;
+    : old.sentences === false ? [] : DEFAULT_SETUP.grammar;
   return {
     kind: KINDS.includes(p.kind) ? p.kind : DEFAULT_SETUP.kind,
     grammarTopic: str(p.grammarTopic),
@@ -56,7 +54,7 @@ export function sanitizeSetup(raw, old = {}) {
 }
 
 // Vocabulary + grammar: a sentence task follows each flashcard when a case / ending / Perfekt is chosen
-export const withSentences = (settings) => settings.kind === 'vocab' && (settings.grammar || []).some((g) => SENTENCE_POINTS.includes(g));
+export const withSentences = (settings) => settings.kind === 'vocab' && (settings.grammar || []).length > 0;
 
 // The three choices on the setup screen and the ribbon: Grammar · Vocabulary (flashcards only) · Vocabulary + grammar.
 // "Vocabulary" is the same word session with the sentence tasks off, so it is worked out from the settings.

@@ -20,11 +20,11 @@
 // solid) | 'open' | 'skipped'. A milestone that has `reachedAt` NEVER goes back: the tick stays, only `refresh` shows.
 import { dayNum, isDay } from './goals.js';
 import { curriculumEntry, topicThreshold } from './curriculum.js';
-import { vScore, isDue } from './scores.js';
+import { isDue, isLearnt as scoreLearnt, LEARNT_FROM as LEARNT_SCORE } from './scores.js';
 import { isReached } from './plan.js';
 
 // ---------- the numbers (redesign §2.4, D3, D4) ----------
-export const LEARNT_FROM = 8; // a word is "learnt" with V >= 8 (the same as the Home tile, lib/home-stats.js)
+export const LEARNT_FROM = LEARNT_SCORE; // "learnt" = Meaning >= 8 and, for a noun, Article >= 8 (the same as the Home tile, lib/scores.js)
 export const CHUNK_REACHED = 0.9; // D3: a word chunk is reached with 90 % of its words learnt
 export const SOLID_ANSWERS = 20; // grammar "solid": at least 20 counted answers …
 export const SOLID_DAYS = 2; // … on at least 2 different days …
@@ -83,17 +83,18 @@ export function chunkWords(subPlan, words) {
 }
 
 // ---------- words ----------
-export const isLearnt = (rec) => Boolean(rec) && vScore(rec) >= LEARNT_FROM;
+// noun: is the word a noun? (unknown → a record with an Article score counts as a noun)
+export const isLearnt = (rec, noun) => scoreLearnt(rec, noun);
 export const wordsNeeded = (size) => Math.ceil(CHUNK_REACHED * size);
 
 // → { size, have, need, met, due, weak, missingIds }  (weak = not learnt now; due = learnt-looking words that are due)
-export function wordProgress(ids, scores, now = Date.now()) {
+export function wordProgress(ids, scores, now = Date.now(), nouns = null) {
   let have = 0;
   let due = 0;
   const missingIds = [];
   for (const id of ids) {
     const rec = scores?.[id];
-    if (isLearnt(rec)) {
+    if (isLearnt(rec, nouns ? nouns.has(id) : undefined)) {
       have += 1;
       if (isDue(rec, now)) due += 1;
     } else if (missingIds.length < MISSING_SHOWN) missingIds.push(id);
@@ -141,7 +142,7 @@ export function measureMilestone(m, ctx) {
   const { scores, grammarStats, now } = ctx;
   if (c.kind === 'words') {
     const ids = ctx.membership.get(m.id) || [];
-    const w = wordProgress(ids, scores, now);
+    const w = wordProgress(ids, scores, now, ctx.nouns);
     return {
       have: w.have, need: w.need, total: w.size, unit: 'words', met: w.met, weight: Math.max(1, w.size),
       refresh: ids.length > 0 && (w.weak + w.due) > REFRESH_WORDS * ids.length ? { due: w.due, weak: w.weak } : null,
@@ -202,6 +203,7 @@ export function computePlans({ goals = [], words = [], scores = {}, grammarStats
   const day = isDay(today) ? today : new Date().toISOString().slice(0, 10);
   const now = dayNum(day) * DAY_MS + DAY_MS - 1; // words that come back today are "due"
   const last = Number(lastPractice) || lastPracticeOf(scores, grammarStats);
+  const nouns = new Set((words || []).filter((w) => w.type === 'noun').map((w) => w.id)); // the Article score counts for nouns only
   const plans = {};
   const newlyReached = {};
   for (const goal of goals) {
@@ -218,7 +220,7 @@ export function computePlans({ goals = [], words = [], scores = {}, grammarStats
       let total = 0;
       for (const m of part.milestones) {
         const skipped = m.status === 'skipped';
-        const w = measureMilestone(m, { scores, grammarStats, membership, now });
+        const w = measureMilestone(m, { scores, grammarStats, membership, now, nouns });
         let reached = isReached(m);
         let reachedAt = m.reachedAt || null;
         if (!reached && !skipped && w.met) { // latch: from now on this stays reached

@@ -118,7 +118,7 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
   // Grammar · Vocabulary (flashcards only = the word session with the sentence tasks off) · Vocabulary + grammar
   function chooseMode(m) {
     if (m === 'grammar') set({ kind: 'grammar' });
-    else if (m === 'words') set({ kind: 'vocab', grammar: ['article-plural'] });
+    else if (m === 'words') set({ kind: 'vocab', grammar: [] });
     else set({ kind: 'vocab', grammar: withSentences({ kind: 'vocab', grammar: form.grammar }) ? form.grammar : DEFAULT_SETUP.grammar });
   }
 

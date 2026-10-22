@@ -65,9 +65,21 @@ export const RESPONSE_SCHEMA = {
           nullable: true,
           description: 'null when correct. Artikel / Wortschatz = the word or its article was wrong (counts for the vocabulary score). Kasus / Adjektivendung / Verbform / Präposition / Wortstellung = a grammar mistake.',
         }),
+        parts: {
+          type: 'OBJECT',
+          nullable: true,
+          description: 'Flashcards only (null for sentence tasks and everything else): which PART of the card was right. The app scores each part on its own.',
+          properties: {
+            meaning: { type: 'BOOLEAN', description: 'The word itself / its meaning was right.' },
+            article: { type: 'BOOLEAN', nullable: true, description: 'The article was right. null when the card did not ask for it or the word was wrong.' },
+            plural: { type: 'BOOLEAN', nullable: true, description: 'The plural was right. null when the card did not ask for it or the word was wrong.' },
+          },
+          required: ['meaning'],
+          propertyOrdering: ['meaning', 'article', 'plural'],
+        },
       },
       required: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'rule'],
-      propertyOrdering: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'why', 'rule', 'errorType'],
+      propertyOrdering: ['forNumber', 'correct', 'studentAnswer', 'corrected', 'changedWords', 'explanation', 'why', 'rule', 'errorType', 'parts'],
     },
     exercise: {
       type: 'OBJECT',
@@ -122,6 +134,7 @@ export const RESPONSE_SCHEMA = {
 };
 
 import { cleanRule } from './rules.js';
+import { resolveParts, testedChecks, PARTS } from './scores.js';
 
 const ARTICLE = /^(der|die|das)\s/i;
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
@@ -207,6 +220,8 @@ export function cleanFocus(g) {
 
 // ctx: { level, difficulty (key), topicIds: Set, topicId, wordIds?: Set, openTask? } – current values sent by the browser.
 // openTask = the task of the question being answered ('flashcard' | 'grammar'), if the browser knows it.
+// openChecks = the parts that question tests (lib/scores.js testedChecks; default: meaning only) – feedback.parts has exactly these.
+// wordById = Map(word id -> word-list entry): lets a new question say which parts it tests (exercise.checks).
 // wordIds = the ids of the words picked for this session; a wordId outside this set is dropped.
 // focus = the grammar focus the browser shows now (cleaned): hidden when the new open flashcard's answer is in it.
 export function normalizeReply(raw, ctx) {
@@ -235,6 +250,13 @@ export function normalizeReply(raw, ctx) {
     if (feedback.correct) feedback.errorType = null;
     // a wrong flashcard is always a mistake in the word or its article, never "grammar" (lib/scores.js)
     else if (ctx.openTask === 'flashcard' && !WORD_ERROR_KEYS.includes(feedback.errorType)) feedback.errorType = 'vocab';
+    // a flashcard: which part was right (meaning, article, plural), only the parts this card tested. The tutor's
+    // booleans are used when they are there; else it is worked out from errorType / rule (lib/scores.js resolveParts).
+    if (ctx.openTask === 'flashcard') {
+      const all = resolveParts(f.parts, feedback);
+      const tested = Array.isArray(ctx.openChecks) && ctx.openChecks.length ? ctx.openChecks : ['meaning'];
+      feedback.parts = Object.fromEntries(PARTS.filter((p) => tested.includes(p)).map((p) => [p, all[p]]));
+    }
   }
 
   // the number is only a hint: the app counts the questions itself
@@ -263,6 +285,8 @@ export function normalizeReply(raw, ctx) {
       exercise.wordId = wordId;
       // a card is always the "flashcard" task, every other exercise type is a "grammar" task with the word
       exercise.task = type === 'flashcard' ? 'flashcard' : 'grammar';
+      // which parts answering it tests (Easy: the word, Medium: + article, Hard: + plural; lib/scores.js)
+      exercise.checks = testedChecks({ task: exercise.task, word: ctx.wordById?.get(wordId) || null, difficulty: ctx.difficulty, direction: exercise.direction });
     }
   }
 

@@ -6,6 +6,7 @@
 
 import { wantsSentenceTasks } from './grammar.js';
 import { VARIANT_RULE, cleanVariant } from './variants.js';
+import { DIFFICULTY } from './reply.js';
 
 const LEVEL_GUIDE = {
   A1: 'Use very short turns, present tense and high-frequency words. Model first, then ask for one small personal response. A short English gloss is okay for a new word.',
@@ -22,14 +23,44 @@ const DIFFICULTY_GUIDE = {
     'exercise.hint = null. Answers in full sentences; harder sentences and less frequent words.',
 };
 
+// The flashcard direction. What a NOUN card asks for depends on the difficulty (see CARD_LEVELS below):
+// Easy = only the word, Medium = article + noun, Hard = article + noun + plural. Other word types: just the word.
 const DIRECTION = {
-  'en-de': 'English → German: exercise.line = the English word (e.g. "the wardrobe"); the student types the German noun WITH article.',
-  'de-en': 'German → English: exercise.line = the German noun with article (e.g. "der Schrank"); the student types the English meaning.',
-  mixed: 'Mixed: alternate English → German and German → English from card to card.',
+  easy: {
+    'en-de': 'English → German: exercise.line = the English word (e.g. "the wardrobe"); the student types only the German word (a noun without its article is fine).',
+    'de-en': 'German → English: exercise.line = the German noun with article (e.g. "der Schrank"); the student types only the English meaning.',
+  },
+  medium: {
+    'en-de': 'English → German: exercise.line = the English word (e.g. "the wardrobe"); the student types the German noun WITH article ("der Schrank").',
+    'de-en': 'German → English: exercise.line = the German noun WITHOUT its article (e.g. "Schrank"); the student gives the article AND the meaning, e.g. "der – wardrobe".',
+  },
+  hard: {
+    'en-de': 'English → German: exercise.line = the English word (e.g. "the wardrobe"); the student types the German noun WITH article and plural ("der Schrank, die Schränke").',
+    'de-en': 'German → English: exercise.line = the German noun WITHOUT its article (e.g. "Schrank"); the student gives the article AND the meaning, e.g. "der – wardrobe" (no plural in this direction).',
+  },
+};
+const directionRule = (level, direction) => (direction === 'mixed'
+  ? `Mixed: alternate English → German and German → English from card to card. ${DIRECTION[level]['en-de']} ${DIRECTION[level]['de-en']}`
+  : DIRECTION[level][direction] || DIRECTION[level]['en-de']);
+
+// What the flashcard of a NOUN checks, by difficulty. Verbs, adjectives, phrases: just the word on every level.
+// The app scores each part on its own (Meaning, Article, Plural), so feedback.parts must say which part was wrong.
+const CARD_LEVELS = {
+  easy: [
+    '- CARD LEVEL (Leicht): a noun card asks for the WORD only. English → German: the student types the German word; the article and the plural are NOT checked. A missing or wrong article NEVER makes the card wrong (correct = true when the word is right); show the right article and the plural in feedback.corrected ("die Lampe, die Lampen") and mention a wrong article in explanation as information. German → English: the meaning only. Never write "mit Artikel" in a hint.',
+    '- feedback.parts: { meaning } only (article and plural null).',
+  ],
+  medium: [
+    '- CARD LEVEL (Mittel): a noun card asks for ARTICLE + NOUN. English → German: "die Lampe"; a wrong or missing article = wrong card, errorType "Artikel", rule "" – say that the noun itself was right. German → English: the noun is shown without article and the student gives article AND meaning ("die – lamp"); wrong or missing article = wrong card (errorType "Artikel"), a wrong meaning = errorType "Wortschatz". The plural is NOT asked; show it in feedback.corrected as information. Hint for a noun card: "mit Artikel" (no hint for other word types).',
+    '- feedback.parts: { meaning, article } (plural null). Wrong article but right noun: meaning true, article false.',
+  ],
+  hard: [
+    '- CARD LEVEL (Schwer): a noun card asks for ARTICLE + NOUN + PLURAL. English → German: "die Lampe, die Lampen" (nouns without a plural: article + noun only). A wrong or missing article = wrong card (errorType "Artikel"); a wrong or missing plural = wrong card (errorType "Wortschatz", rule "Plural"). German → English: the noun is shown without article; the student gives article AND meaning ("die – lamp"), no plural. Hint for a noun card: "mit Artikel und Plural" (German → English: "mit Artikel") – this overrides "exercise.hint = null" for noun flashcards; other word types get no hint.',
+    '- feedback.parts: { meaning, article, plural } (plural only for English → German cards with a plural). Say which part was wrong and set the others true: wrong plural only = meaning true, article true, plural false.',
+  ],
 };
 
 const POINT_NAME = {
-  'article-plural': 'article & plural',
   akkusativ: 'Akkusativ',
   dativ: 'Dativ',
   genitiv: 'Genitiv',
@@ -42,16 +73,13 @@ const POINT_NAME = {
 // Empty when no grammar point is chosen: then it is flashcards only.
 function wordGrammarRules(grammar, name) {
   if (!grammar.length) return '';
-  const g = new Set(grammar);
+  const g = new Set(grammar); // (article and plural are no grammar points: they follow the difficulty, see CARD_LEVELS)
   const sentences = wantsSentenceTasks(grammar);
   const cases = ['akkusativ', 'dativ', 'genitiv'].filter((p) => g.has(p)).map((p) => POINT_NAME[p]);
   const lines = [
     `EACH WORD WITH ITS GRAMMAR (grammar points ${name} chose: ${grammar.map((p) => POINT_NAME[p]).join(', ')})`,
-    `- The flashcard of a word ALWAYS comes first and ALWAYS checks the article of a noun. English → German: the right article is required. German → English (this replaces "with article" in the flashcard direction above): show the noun WITHOUT its article (line = "Schrank") and ${name} gives the article AND the meaning, e.g. "der – wardrobe"; a missing or wrong article = wrong, errorType "Artikel", rule = the word (e.g. "der Schrank"); a wrong meaning = errorType "Wortschatz".`,
+    `- The flashcard of a word ALWAYS comes first and follows the CARD LEVEL above (what is checked of a noun depends on the difficulty). Then the sentence task.`,
   ];
-  if (g.has('article-plural')) {
-    lines.push('- "Article & plural" is chosen: on every English → German noun card also ask for the plural, the answer is "der Schrank, die Schränke" (nouns without plural: article + noun only). A wrong or missing plural = wrong card, errorType "Wortschatz", rule "Plural". Say in the hint "mit Artikel und Plural".');
-  }
   if (sentences) {
     lines.push(
       `- After the flashcard of a noun, a verb or an adjective comes ONE grammar task (exercise.task = "grammar") with the SAME word and the same wordId. Phrases and all other word types (adverbs, conjunctions, prepositions …) get no grammar task: go on with the next word. Every flashcard and every grammar task is one question. Take the case, frame and Perfekt/case task from the chosen points; change them from word to word, never the same frame twice in a row.`,
@@ -64,7 +92,7 @@ function wordGrammarRules(grammar, name) {
       `- ADJECTIVES — CONTEXT FIRST, NO STOCK SENTENCE: make a short natural gap-fill in which the adjective genuinely fits its noun. Rotate situation, speaker, case, gender, number and definite/indefinite article, and vary the exercise form when clarity permits. Do not recycle "Ich sehe … Mann" or any other carrier sentence. The blank may ask for the adjective with its ending (writing only the ending is acceptable when unambiguous). Use rule "Adjektivendung nach der/die/das" or "Adjektivendung nach ein/eine"; wrong ending = Adjektivendung, wrong adjective = Wortschatz. Adjectives without an ending (lila, rosa, orange, online), or that never stand before a noun (egal, fit), get only a flashcard.`,
       '- HINT SAFETY: every non-null exercise has a private exercise.answer. A hint may give a case question, base form, structural cue or rule, but it must never contain exercise.answer, the completed blank or a complete valid response. If no useful non-revealing hint exists, set hint = null. Correct answer choices belong in options, not in hint.',
       '- feedback.rule of a grammar task: for noun context tasks use exactly "Nomengruppe im Akkusativ", "Nomengruppe im Dativ" or "Nomengruppe im Genitiv", regardless of the creative sentence frame. For verbs and adjectives use "Perfekt mit haben", "Perfekt mit sein", "Verb + Akkusativ", "Verb + Dativ", "Adjektivendung nach der/die/das" or "Adjektivendung nach ein/eine". For a verb with a preposition use "<Kasus> nach <Präposition>". A mistake in the word or its article: rule = "" (empty; the word is not a grammar rule).',
-      '- errorType of a wrong grammar task: Kasus (wrong case or noun ending), Adjektivendung, Verbform (Perfekt), Präposition = grammar mistakes. If the word itself or its article is wrong: Wortschatz / Artikel (these cost the vocabulary score too, so use them only when the word really is wrong).',
+      '- errorType of a wrong grammar task: Kasus (wrong case or noun ending), Adjektivendung, Verbform (Perfekt), Präposition = grammar mistakes. If the word itself or its article is wrong: Wortschatz / Artikel (these cost the Meaning / Article score too, so use them only when the word or its article really is wrong).',
     );
   }
   return `${lines.join('\n')}\n\n`;
@@ -90,6 +118,7 @@ export function buildSystemPrompt({
   name, lesson, words = null, knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
 }) {
   const grammar = settings.grammar || [];
+  const level = DIFFICULTY[settings.difficulty] || 'medium';
   const topic = catalog.find((t) => t.id === session.topicId);
   const vocab = topic && topic.type !== 'Grammatik' && topic.id !== 'free';
   const next = progress.done + 1;
@@ -108,7 +137,7 @@ CURRENT STATE (from the app – authoritative, the app counts everything)
 - Topic: ${topic ? `${topic.title} (id "${topic.id}", ${topic.type})` : 'not chosen yet'}
 ${topic?.objective ? `- Learning objective: ${topic.objective}\n` : ''}${topic?.situation ? `- Lesson situation: ${topic.situation}\n` : ''}${topic?.communicativeTask ? `- Independent task: ${topic.communicativeTask}\n` : ''}- Questions this session: ${session.total}. Done: ${progress.done} (${progress.correct} right, ${progress.answered - progress.correct} wrong, ${progress.skipped} skipped).
 - Open question: ${open}.
-${session.skippedNumber ? `- The student just SKIPPED question ${session.skippedNumber}${session.skippedLine ? ` ("${session.skippedLine}")` : ''}. The app counted it. Give its solution in one line in message, feedback = null, then ${session.skippedNumber >= session.total ? 'exercise = null (it was the last question)' : `question ${next}`}.\n` : ''}${!session.openNumber && progress.done && !session.finished && !session.skippedNumber ? `- There is no open question: give question ${next} now (after answering what the student wrote).\n` : ''}${session.finished ? '- The session is FINISHED. Answer questions about it briefly, exercise = null. If the student wants more, tell them to tap «Same settings again» or «New session».\n' : ''}${last && !session.finished ? `- This is the LAST question. After the feedback: exercise = null and a short closing message (well done + 1 tip). Do not count yourself, the app shows the score.\n` : ''}${notes.length ? `- The student just changed something in the app (see APP NOTES in the DATA block at the end). The app ALREADY applied it: confirm it in a few words. If the student's message is this command (e.g. "schwieriger"), do NOT change the setting again.\n` : ''}${vocab ? `- Flashcards: ${DIRECTION[settings.direction]}\n- Grammar per word: ${grammar.length ? grammar.map((p) => POINT_NAME[p]).join(', ') : 'none (flashcards only)'}.\n` : ''}
+${session.skippedNumber ? `- The student just SKIPPED question ${session.skippedNumber}${session.skippedLine ? ` ("${session.skippedLine}")` : ''}. The app counted it. Give its solution in one line in message, feedback = null, then ${session.skippedNumber >= session.total ? 'exercise = null (it was the last question)' : `question ${next}`}.\n` : ''}${!session.openNumber && progress.done && !session.finished && !session.skippedNumber ? `- There is no open question: give question ${next} now (after answering what the student wrote).\n` : ''}${session.finished ? '- The session is FINISHED. Answer questions about it briefly, exercise = null. If the student wants more, tell them to tap «Same settings again» or «New session».\n' : ''}${last && !session.finished ? `- This is the LAST question. After the feedback: exercise = null and a short closing message (well done + 1 tip). Do not count yourself, the app shows the score.\n` : ''}${notes.length ? `- The student just changed something in the app (see APP NOTES in the DATA block at the end). The app ALREADY applied it: confirm it in a few words. If the student's message is this command (e.g. "schwieriger"), do NOT change the setting again.\n` : ''}${vocab ? `- Flashcards: ${directionRule(level, settings.direction)}\n- Grammar per word: ${grammar.length ? grammar.map((p) => POINT_NAME[p]).join(', ') : 'none (flashcards only)'}.\n` : ''}
 HOW A SESSION WORKS
 - One question per message. When you give a new question, it is question ${next}${session.openNumber ? ` (or ${session.openNumber + 1} after the open one is answered)` : ''}; put that number in exercise.number.
 - Never reveal the answer before ${name} has replied.
@@ -132,11 +161,11 @@ GRAMMAR TOPICS
 VOCABULARY TOPICS = FLASHCARDS (reference language: English)
 - Use ONLY the words of the WORDS list at the end of this prompt (the app picked them for ${name}: they are the words that need practice most). Take them in the given order, one word per flashcard; never use a word that is not in the list. If a word was SKIPPED, simply go on with the next word. The "English" column is the meaning; "plural or Perfekt", "adjective" and "case" are the data for the extra tasks.
 - exercise.type = "Karteikarte", exercise.direction = "en-de" or "de-en". ALWAYS set exercise.wordId = the word's id, copied exactly from the list, and exercise.task = "flashcard" for a flashcard or "grammar" for a sentence task with that word. When you repeat the open question (hint, rule …) keep its wordId and task. The app updates ${name}'s word scores itself from your feedback (correct, errorType) – so set errorType carefully: Artikel / Wortschatz = the word or its article was wrong, Kasus / Adjektivendung / Verbform … = the grammar was wrong.
-- Nouns: English → German is correct only with the right article. Verbs: the infinitive (on Schwer also the Perfekt from the list). Adjectives, adverbs, phrases: the word or phrase itself (close answers for phrases are fine).
-- English → German: correct only with the right article. Accept the Swiss and the German word (der Kasten / der Schrank, die Stube / das Wohnzimmer), but write the card in the chosen variant. Wrong article = wrong (errorType Artikel) – say that the noun itself was right. On Schwer also ask for the plural ("der Schrank, die Schränke").
-- German → English: accept any fitting English meaning; ignore "the".
-- feedback.corrected = the full card: "der Schrank, die Schränke" (English → German) or the English meaning (German → English). feedback.explanation = one short line (plural, the other variant's word or a memory tip); a wrong card also gets feedback.why (see JSON FIELDS).
-- Hints: Leicht = first letters + answer choices in options; Mittel = "mit Artikel" / "auf Englisch"; Schwer = null.
+- Verbs: the infinitive (on Schwer also the Perfekt from the list). Adjectives, adverbs, phrases: the word or phrase itself (close answers for phrases are fine). Only NOUNS have an article and a plural.
+${CARD_LEVELS[level].join('\n')}
+- Accept the Swiss and the German word (der Kasten / der Schrank, die Stube / das Wohnzimmer), but write the card in the chosen variant. German → English: accept any fitting English meaning; ignore "the".
+- feedback.corrected = the full card: English → German "der Schrank, die Schränke" (a noun without plural: "der Schrank"); German → English with a bare noun "der Schrank – wardrobe", otherwise the English meaning. Show the article and the plural of a noun here on EVERY level, as information. feedback.explanation = one short line (the other variant's word or a memory tip); a wrong card also gets feedback.why (see JSON FIELDS).
+- Hints: Leicht = first letters + answer choices in options; Mittel = "mit Artikel" (noun) / "auf Englisch"; Schwer = "mit Artikel und Plural" for a noun card in English → German, otherwise null.
 - Noun drill: use it when ${name} asks for it or as the safe fallback when no natural contextual noun sentence is available; practise the article, case and adjective ending without inventing an arbitrary predicate.
 - Phrases (and other word types without grammar task): English → German, a close answer is fine (same meaning, small differences in small words); errorType Wortschatz if wrong.
 
@@ -155,6 +184,7 @@ ${vocab ? wordGrammarRules(grammar, name) : ''}JSON FIELDS
     WRONG ARTICLE (der/die/das): ALWAYS check the word's "gender rule" column in the word list (worked out by the app from the ending). If it has a rule, why.rule = that rule in simple German with one more example of the same ending (e.g. "Nomen auf -e sind meist feminin: die Lampe, die Tasche."). If it says AUSNAHME, say clearly that this word is an exception to the rule ("Nomen auf -e sind meist feminin – aber «das Auge» ist eine Ausnahme. Lerne es mit Artikel."). If the column is empty, there is no reliable rule: never invent one; why.rule = a memory help (e.g. learn it with the article and a picture, or a compound word whose last part decides: das Haus → das Hochhaus).
   rule = the grammar point in max 5 words, e.g. "Dativ nach mit" ("" when the mistake is only the word or its article). Use the same wording every time the same rule comes up.
   errorType = Kasus | Artikel | Adjektivendung | Präposition | Verbform | Wortstellung | Wortschatz | Rechtschreibung | Andere (null if correct).
+  parts = ONLY for a flashcard (null for grammar tasks): { meaning, article, plural } booleans, true = that part was right. Fill exactly the parts the CARD LEVEL checks, null for the others. When the word itself is wrong, meaning = false and article / plural = null.
 - exercise: the next question; or the open question again (same number) after a hint, a rule explanation or a settings change; null at the end or when nothing should be asked.
   answer = a private reference answer used only for validation. For a gap fill, give only the missing text; for open production, give the shortest complete natural reference response. Never put this answer in message, line or hint; on Leicht it may appear once among 2–3 plausible answer choices in options.
 - options: 0–6 short things ${name} could tap RIGHT NOW, only when they fit this moment (answer choices on Leicht, topic names while choosing a topic). Otherwise [].

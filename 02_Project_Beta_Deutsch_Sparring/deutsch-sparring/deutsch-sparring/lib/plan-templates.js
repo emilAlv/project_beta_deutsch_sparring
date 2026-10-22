@@ -21,7 +21,7 @@
 //   today         "YYYY-MM-DD"
 import { addDays, dayNum, dayOf, isDay, newGoalId, cleanGoalId, GOAL_LEVELS } from './goals.js';
 import { curriculumEntry, curriculumByLevel, planOrder, shortTitle, topicThreshold, CURRICULUM } from './curriculum.js';
-import { vScore } from './scores.js';
+import { mScore, aScore, hasScore } from './scores.js';
 import {
   LEARNT_FROM, CHUNK_REACHED, SOLID_ANSWERS, INTRODUCED_ANSWERS, lessonDone, topicMet, lastPoints, isLearnt as learnt,
   wordMatches, chunkWords, SEP,
@@ -279,6 +279,14 @@ function interleave(items, isBig) {
 
 // ---------- what is met now, what is left (the rules are in lib/plan-progress.js; the generator only asks them) ----------
 // the work of one milestone → { minutes, newWords, newTopics, reviewTopics, size, unit, met }
+// which words are nouns (the Article score counts for nouns only) – worked out once per context
+const nounCache = new WeakMap();
+function nounIds(ctx) {
+  if (!nounCache.has(ctx)) nounCache.set(ctx, new Set((ctx.words || []).filter((w) => w.type === 'noun').map((w) => w.id)));
+  return nounCache.get(ctx);
+}
+const isLearntId = (ctx, id) => learnt(ctx.scores?.[id], ctx.words ? nounIds(ctx).has(id) : undefined);
+
 function workOf(m, goal, ctx, membership) {
   const c = m.criterion;
   const below = (lv) => GOAL_LEVELS.indexOf(lv) < GOAL_LEVELS.indexOf(goal.startLevel);
@@ -289,9 +297,12 @@ function workOf(m, goal, ctx, membership) {
     let have = 0;
     for (const id of ids) {
       const rec = ctx.scores?.[id];
-      if (learnt(rec)) { have += 1; continue; }
-      if (rec) answers += Math.max(1, Math.ceil((LEARNT_FROM - vScore(rec)) / 2));
-      else answers += below(c.level) ? ANSWERS_SEEN_WORD : ANSWERS_NEW_WORD;
+      if (isLearntId(ctx, id)) { have += 1; continue; }
+      // answers still needed: the weaker of Meaning and (for a noun) Article has to reach LEARNT_FROM
+      if (rec) {
+        const noun = ctx.words ? nounIds(ctx).has(id) : hasScore(rec, 'a');
+        answers += Math.max(1, Math.ceil((LEARNT_FROM - Math.min(mScore(rec), noun ? aScore(rec) : 10)) / 2));
+      } else answers += below(c.level) ? ANSWERS_SEEN_WORD : ANSWERS_NEW_WORD;
       if (!below(c.level)) newWords += 1;
     }
     return { minutes: answers * MIN_FLASHCARD, newWords, size: ids.length, unit: 'words', learntWords: ids.length, met: ids.length > 0 && have >= CHUNK_REACHED * ids.length, ids };
@@ -546,7 +557,7 @@ function schedule(goal, parts, ctx, { minutesPerDay, startDay, focus = [], skipF
     const order = p.kind === 'vocab' ? interleave(p.milestones, (m) => m.criterion.section === BIG_SECTION) : p.milestones;
     order.forEach((m, i) => {
       m.order = i;
-      if (p.kind === 'vocab') learntAtStart += (membership.get(m.id) || []).filter((id) => learnt(ctx.scores?.[id])).length;
+      if (p.kind === 'vocab') learntAtStart += (membership.get(m.id) || []).filter((id) => isLearntId(ctx, id)).length;
       const fixed = isReached(m) || m.status === 'skipped' || m.origin !== 'template' || !p.include;
       if (fixed) return;
       const w = workOf(m, goal, ctx, membership);
