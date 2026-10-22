@@ -537,7 +537,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     out.message = right ? 'Super, das war die letzte Frage – gut gemacht!' : 'Das war die letzte Frage. Gut gemacht – schau dir rechts deine Lücken an.';
     return json();
   }
-  out.message = right ? ['Super, genau richtig!', 'Perfekt!', 'Sehr gut!'][open % 3] : 'Fast! Nur eine kleine Änderung:';
+  out.message = right ? ['Super, genau richtig!', 'Perfekt!', 'Sehr gut!'][open % 3] : 'Noch nicht ganz. So ist es richtig:';
   ask(open + 1);
   return json();
 }
