@@ -148,13 +148,24 @@ The bank is a **content draft**, not yet a live app exercise. In actual tutor in
 
 
 
+### EC-001 · Extension from the photographed class exercises
+
+The follow-up class photograph inspired a separate and more extensive **original A1 exercise bank**:
+[classroom-a1-zeitangaben-wann-seit-vor.md](classroom-a1-zeitangaben-wann-seit-vor.md).
+
+This complementary draft has **48 exercises with model answers** (8 question-word choices, 12 temporal prepositions, 10 `seit/vor` dative forms, 8 sentence corrections, 5 dialogue comprehension questions and 5 biography comprehension questions), plus 5 open speaking prompts. It contains specific assessment notes for `Seit wann?` versus `Wie lange?`, Swiss orthography, the present-tense vs completed-event contrast and acceptance of multiple natural answers. Both drafts remain in `content-source/` and do not affect the running application.
+
+During integration, **deduplicate** overlapping examples in this intake log and the new file, then extend the already existing `g-a1-zeit-ort` / `lektion-a1-07-zeit-termine.md` rather than introducing an unnecessary topic.
+
 ## Integration queue
 
 | ID | Topic | Proposed destination | Status |
 |---|---|---|---|
-| EC-001 | A1: wann / seit wann / wie lange; seit / vor / von … bis / am / um / im | `g-a1-zeit-ort`, `lektion-a1-07-zeit-termine.md`; cross-reference `g-a1-perfekt` | edited |
+| EC-001 | A1 time expressions and Dativ; 16 initial prompts + 48-task photo-inspired expansion | `g-a1-zeit-ort`, `lektion-a1-07-zeit-termine.md`; cross-reference `g-a1-perfekt` | edited, staged; deduplicate on integration |
 
 ## Change log
+
+- **2026-10-22** – EC-001 photo-inspired expansion (48 tasks with solutions and 5 open prompts) added as a separate editable draft; original intake entry preserved. No app content changed.
 
 - **2026-10-22** – EC-001 prepared from Emilio's class observation: temporal questions and expressions, meaning contrasts, original dialogue, 16 original practice prompts and communicative follow-up activities. Catalogued for future integration; existing app lesson files unchanged.
 - **2026-10-22** – New working branch created from the latest `main` and intake document initialized. Repository structure and curriculum entry points confirmed. No classroom material or production code changed yet.
