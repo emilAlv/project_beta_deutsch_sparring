@@ -150,7 +150,22 @@ export const MIGRATIONS = [
   'ALTER TABLE goals ADD COLUMN IF NOT EXISTS plan jsonb',
     ],
   },
-  // next step: { version: 4, name: '…', statements: ['ALTER TABLE … ADD COLUMN IF NOT EXISTS …'] },
+  {
+    version: 4,
+    name: 'usage: shared counters for the limits',
+    statements: [
+  // Review R1: the daily AI limit, class-code / log-in / sign-up tries and the write caps, counted in the database so
+  // every server copy on Vercel sees the same numbers. One row per day and counter; the key holds no secret and no
+  // raw network address (lib/guard.js scrambles it). Old days are deleted now and then (lib/guard.js CLEANUP_SQL).
+  `CREATE TABLE IF NOT EXISTS usage (
+    day date NOT NULL,
+    key text NOT NULL,
+    n int NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, key)
+  )`,
+    ],
+  },
+  // next step: { version: 5, name: '…', statements: ['ALTER TABLE … ADD COLUMN IF NOT EXISTS …'] },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -194,6 +209,11 @@ export const TRIM_OLD_TEXTS_SQL = `UPDATE answers SET question = NULL, student_a
     AND (question IS NOT NULL OR student_answer IS NOT NULL OR corrected IS NOT NULL)
   RETURNING id`;
 export const TRIM_OLD_TEXTS_DAYS = 90;
+
+// The limit counters (table usage, step 4) are only needed for today and the current 15-minute / hour windows:
+// rows more than two days older than $1 (today, UTC) are deleted – now and then by lib/guard.js, and by
+// scripts/db-migrate.mjs. Safe to run again.
+export const USAGE_CLEANUP_SQL = 'DELETE FROM usage WHERE day < $1::date - 2';
 
 // Vercel's Neon integration sets DATABASE_URL and POSTGRES_URL; either works.
 export function databaseUrl() {

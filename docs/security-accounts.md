@@ -79,17 +79,28 @@ different.
 
 - Wrong username and wrong password get **exactly the same message** and take the same time,
   so nobody can find out which usernames exist.
-- **Limits on tries** (like the class-code tries): 10 wrong passwords per username in
-  15 minutes, 100 per network (a whole class) in 15 minutes; 10 sign-up tries per username and
-  60 per network per hour. After that: "Too many tries, wait 15 minutes".
-- Sign-up needs the class code, checked on the server.
+- **Limits on tries**: 10 wrong passwords per username **and network** in 15 minutes, 100 per
+  network (a whole class) in 15 minutes; 10 sign-up tries per username and network and 10 per
+  network per hour (`SIGNUP_PER_HOUR`). After that: "Too many tries, wait 15 minutes".
+- Sign-up needs the class code, checked on the server. Wrong class codes count per network:
+  30 a day, shared with the chat, the coach and the code check.
+- **The class code must be long and random: at least 12 characters** (letters and digits, from a
+  password generator; it looks like `k7Qp2Lx9Vr4m`, but make your own, never copy an example). A word-like code such as `schritte5` can
+  be guessed; a 12-character random code cannot be guessed with 30 tries a day.
+- Saves per account per day are capped (1500 answers, 100 new sessions, 200 goal saves), so a
+  script cannot fill the free database.
 - The daily chat limit (`DAILY_LIMIT`) counts per account, on every device.
 - Passwords, fingerprints and secrets are never written to the logs.
 
-**Known limits (fine for a class, worth knowing):** the try counters live in the server's
-memory, like the class-code counters. Vercel sometimes runs several copies of the server or
-restarts it, so the limits are approximate. A classmate who types someone else's username wrong
-10 times can block that username for 15 minutes. There is no "forgot password" e-mail and no
+**Where the counts live:** all these counters (tries, daily limit, saves) are kept in one small
+table, `usage`, in the database: one row per day and counter, with a scrambled key (no password,
+no username or network address in plain text). Every server copy on Vercel sees the same
+numbers, and a deploy does not reset them. Rows older than two days are deleted. Without a
+database (demo mode, local tests) they live in the server's memory as before.
+
+**Known limits (fine for a class, worth knowing):** someone on the SAME network (e.g. the school
+network) who types a classmate's username wrong 10 times can block that username on that network
+for 15 minutes; from home it still works. There is no "forgot password" e-mail and no
 "change password" screen yet – you reset passwords with the script below.
 
 ## Switch accounts on in Vercel (about 10 minutes)

@@ -2,6 +2,7 @@
 // logged-in students, writes only from our own pages, small bodies only, every error as JSON
 // (never the body in a log).
 import { requireUser, sameOrigin } from './auth';
+import { overWriteCap } from './guard';
 
 // write       a change (POST / DELETE): same-origin only
 // needsBody   the request has a JSON body (a DELETE does not)
@@ -35,3 +36,10 @@ export async function progressRoute(req, { write = false, maxBytes = 20_000, nee
 }
 
 export const bad = (code = 'bad_body') => Response.json({ code }, { status: 400 });
+
+// Review R1 / S5: a cap per student per day on writes, counted in the database (lib/guard.js WRITE_CAPS:
+// 1500 answers, 100 new sessions, 1500 session updates, 200 goal saves). Far above what a real student does in a
+// day, but a script in a loop can no longer fill the database. → a 429 { code: 'limit' } answer, or null.
+export async function overCap(user, kind) {
+  return (await overWriteCap(user.id, kind)) ? Response.json({ code: 'limit' }, { status: 429 }) : null;
+}
