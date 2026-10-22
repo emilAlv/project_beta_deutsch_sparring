@@ -155,6 +155,10 @@ async function handle(req) {
         ...filter,
         count: wordsNeeded(session.total, settings.sentences),
         now: Date.now(),
+        seed: String(body.selectionSeed || '').slice(0, 40),
+        recentWordIds: (Array.isArray(body.recentWordIds) ? body.recentWordIds : [])
+          .slice(0, 120).map((id) => String(id).slice(0, 120)).filter(Boolean),
+        avoidFirstWordId: String(body.avoidFirstWordId || '').slice(0, 120),
       };
       words = pickWords(query);
       // nothing at this level in this list: use the other levels rather than an empty session

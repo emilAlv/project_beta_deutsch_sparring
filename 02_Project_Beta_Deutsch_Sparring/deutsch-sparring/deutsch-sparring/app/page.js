@@ -31,7 +31,7 @@ import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/s
 import { suggestionToSetup } from '../lib/coach';
 import { setupFromSession } from '../lib/home-plan';
 import { score, summaryOf } from '../lib/stats';
-import { mergeQuestions, recentQuestions, sessionQuestions } from '../lib/question-history';
+import { mergeQuestions, recentQuestions, recentWordHistory, sessionQuestions } from '../lib/question-history';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
   recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount,
@@ -338,6 +338,7 @@ export default function Home() {
       finished: Boolean(s.finished),
       updatedAt: Date.now(),
       questions: mergeQuestions(previous?.questions || [], sessionQuestions(s)),
+      wordIds: Array.isArray(s.wordIds) ? s.wordIds.slice(0, 60) : [],
       mistakes: s.answers.filter((a) => !a.correct && !a.skipped).slice(-5)
         .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule })),
     }));
@@ -649,6 +650,7 @@ export default function Home() {
     const st = s.settings || {};
     const sent = { topicId: s.topicId, sessionId: s.id, text };
     const lastSkipped = s.answers[s.answers.length - 1]?.skipped ? s.answers[s.answers.length - 1] : null;
+    const wordHistory = recentWordHistory(s, historyRef.current.sessions);
     const body = {
       name: profileRef.current.name,
       classCode: profileRef.current.classCode,
@@ -678,6 +680,9 @@ export default function Home() {
       },
       // vocabulary: the words picked at the start stay the same; without them the server picks, using our scores
       wordIds: s.wordIds,
+      selectionSeed: s.id,
+      recentWordIds: wordHistory.ids,
+      avoidFirstWordId: wordHistory.first,
       ...(isVocab(s) && !s.wordIds?.length ? { scores: loadScores(), source: st.source || 'both' } : {}),
       grammarFocus: s.grammarFocus || null, // so the server can hide it if it would give away the next card
       progress: score(s.answers),

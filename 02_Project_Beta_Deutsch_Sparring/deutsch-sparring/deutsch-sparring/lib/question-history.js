@@ -49,6 +49,24 @@ export function recentQuestions(session = {}, sessions = []) {
   return uniqueQuestions([...previous, ...answeredQuestions(session)]).slice(-50);
 }
 
+export function recentWordHistory(session = {}, sessions = []) {
+  const key = practiceKey(session);
+  const matching = (Array.isArray(sessions) ? sessions : [])
+    .filter((older) => older?.id !== session.id && practiceKey(older) === key)
+    .slice(0, 5);
+  const ids = [];
+  const seen = new Set();
+  for (const older of matching) {
+    for (const id of Array.isArray(older.wordIds) ? older.wordIds : []) {
+      const cleanId = String(id || '').slice(0, 120);
+      if (!cleanId || seen.has(cleanId)) continue;
+      seen.add(cleanId);
+      ids.push(cleanId);
+    }
+  }
+  return { ids: ids.slice(0, 120), first: String(matching[0]?.wordIds?.[0] || '').slice(0, 120) };
+}
+
 export function mergeQuestions(...lists) {
   return uniqueQuestions(lists.flat()).slice(-50);
 }

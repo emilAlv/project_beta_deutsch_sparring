@@ -35,11 +35,9 @@ export const DAY_MS = 86_400_000;
 export const DUE_TEN_WRONG_TO = 7; // a 10 answered wrong drops to 7
 
 // how a session's words are mixed (shares of the session's word count)
-export const SHARE_NEW = 0.3;
-export const SHARE_CHECKS = 0.1; // words with 10, asked as a check
-export const CHECKS_MIN = 1;
-export const CHECKS_MAX = 2;
-export const CHECKS_FROM_COUNT = 5; // fewer words than this: no checks
+export const SHARE_NEW = 0.25;
+export const SHARE_REINFORCE = 0.2; // scores 7-9: nearly learnt, worth consolidating
+export const REINFORCE_FROM = 7;
 export const SPARE_WORDS = 3; // extra words for skips
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
@@ -180,37 +178,81 @@ export function matchesFilter(word, { level, sources, section, list } = {}) {
 //   words   the word list (objects with id, level, sources, topics …)
 //   scores  { [wordId]: record } – missing = new
 //   count   how many words (see wordsNeeded); fewer exist → what there is
-// Order: due & weak first (lowest score first), then the checks (1–2 words with a 10), then new words.
-// Mix: about 60 % due or weak, 30 % new, 10 % checks. If a group runs out, the others fill up:
-// first more new words, then words not yet due (lowest score first), then more tens.
-export function pickWords({ words, scores = {}, level, sources, section, list, count, now = Date.now() }) {
+// Mix: mostly difficult words that are due, plus about 20 % nearly learnt words (scores 7-9)
+// and 25 % new words. A correctly answered word that is not due is not pulled straight back in
+// merely because its id sorts first. recentWordIds and seed make repeated sessions vary without
+// weakening the score/due-date priorities.
+export function pickWords({
+  words, scores = {}, level, sources, section, list, count, now = Date.now(),
+  recentWordIds = [], avoidFirstWordId = '', seed = '',
+}) {
   const pool = (words || []).filter((w) => matchesFilter(w, { level, sources, section, list }));
   const n = Math.min(Math.max(0, Math.floor(Number(count) || 0)), pool.length);
   if (!n) return [];
 
   const rec = (w) => scores[w.id];
-  const byScore = (a, b) => wordScore(rec(a)) - wordScore(rec(b)) || (wordDue(rec(a)) ?? 0) - (wordDue(rec(b)) ?? 0) || a.id.localeCompare(b.id);
-  const fresh = pool.filter((w) => isNew(rec(w)));
-  const tens = pool.filter((w) => !isNew(rec(w)) && wordScore(rec(w)) >= SCORE_MAX)
-    .sort((a, b) => Number(isDue(rec(b), now)) - Number(isDue(rec(a), now)) || (wordDue(rec(a)) ?? 0) - (wordDue(rec(b)) ?? 0) || a.id.localeCompare(b.id));
+  const recent = new Set((Array.isArray(recentWordIds) ? recentWordIds : []).map(String));
+  const rank = (id) => {
+    let h = 2166136261;
+    for (const ch of `${seed}:${id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    return h >>> 0;
+  };
+  const varied = (a, b) => Number(recent.has(a.id)) - Number(recent.has(b.id)) || rank(a.id) - rank(b.id) || a.id.localeCompare(b.id);
+  const byScore = (a, b) => wordScore(rec(a)) - wordScore(rec(b))
+    || (wordDue(rec(a)) ?? 0) - (wordDue(rec(b)) ?? 0)
+    || varied(a, b);
+  const fresh = pool.filter((w) => isNew(rec(w))).sort(varied);
   const learning = pool.filter((w) => !isNew(rec(w)) && wordScore(rec(w)) < SCORE_MAX);
   const dueWeak = learning.filter((w) => isDue(rec(w), now)).sort(byScore);
-  const notDue = learning.filter((w) => !isDue(rec(w), now)).sort(byScore);
-  const nChecks = n >= CHECKS_FROM_COUNT ? clamp(Math.round(n * SHARE_CHECKS), CHECKS_MIN, CHECKS_MAX) : 0;
-  const nNew = Math.round(n * SHARE_NEW);
+  const reinforce = learning.filter((w) => !isDue(rec(w), now) && wordScore(rec(w)) >= REINFORCE_FROM).sort((a, b) => {
+    // Closest to learnt first; least recently practised wins a tie.
+    return wordScore(rec(b)) - wordScore(rec(a)) || (rec(a)?.last ?? 0) - (rec(b)?.last ?? 0) || varied(a, b);
+  });
+  const weakNotDue = learning.filter((w) => !isDue(rec(w), now) && wordScore(rec(w)) < REINFORCE_FROM).sort(byScore);
+  const masteredDue = pool.filter((w) => !isNew(rec(w)) && wordScore(rec(w)) >= SCORE_MAX && isDue(rec(w), now)).sort(varied);
+  const masteredRest = pool.filter((w) => !isNew(rec(w)) && wordScore(rec(w)) >= SCORE_MAX && !isDue(rec(w), now)).sort(varied);
 
-  const takeDue = dueWeak.slice(0, Math.max(0, n - nChecks - nNew));
-  const takeChecks = tens.slice(0, nChecks);
-  const takeNew = fresh.slice(0, nNew);
-  const chosen = new Set([...takeDue, ...takeChecks, ...takeNew].map((w) => w.id));
-  const fill = [...fresh, ...dueWeak, ...notDue, ...tens].filter((w) => !chosen.has(w.id));
-  const extra = fill.slice(0, n - chosen.size);
+  const targetNew = fresh.length && n >= 3 ? Math.max(1, Math.round(n * SHARE_NEW)) : 0;
+  const targetReinforce = reinforce.length && n >= 5 ? Math.max(1, Math.round(n * SHARE_REINFORCE)) : 0;
+  const hard = dueWeak.slice(0, Math.max(0, n - targetNew - targetReinforce));
+  const learnt = reinforce.slice(0, targetReinforce);
+  const news = fresh.slice(0, targetNew);
+  const chosen = new Set([...hard, ...learnt, ...news].map((w) => w.id));
 
-  // final order: due & weak (incl. weak fillers), checks, new
-  const all = [...takeDue, ...takeChecks, ...takeNew, ...extra];
-  const isTenW = (w) => !isNew(rec(w)) && wordScore(rec(w)) >= SCORE_MAX;
-  const first = all.filter((w) => !isNew(rec(w)) && !isTenW(w)).sort((a, b) => Number(isDue(rec(b), now)) - Number(isDue(rec(a), now)) || byScore(a, b));
-  const checks = all.filter(isTenW);
-  const news = all.filter((w) => isNew(rec(w)));
-  return [...first, ...checks, ...news];
+  // Empty groups give their places first to genuinely due material, then new and nearly learnt
+  // material. Not-due weak/mastered words are last-resort fillers, never automatic openers.
+  const fill = [...dueWeak, ...masteredDue, ...fresh, ...reinforce, ...weakNotDue, ...masteredRest]
+    .filter((w) => !chosen.has(w.id))
+    .slice(0, n - chosen.size);
+  for (const w of fill) {
+    chosen.add(w.id);
+    if (dueWeak.includes(w) || masteredDue.includes(w)) hard.push(w);
+    else if (reinforce.includes(w)) learnt.push(w);
+    else if (fresh.includes(w)) news.push(w);
+    else learnt.push(w);
+  }
+
+  // Spread the three purposes through the session: difficult, reinforcement, difficult, new …
+  const groups = { hard: [...hard], learnt: [...learnt], news: [...news] };
+  const pattern = ['hard', 'learnt', 'hard', 'news'];
+  const out = [];
+  while (out.length < n) {
+    let moved = false;
+    for (const key of pattern) {
+      const word = groups[key].shift();
+      if (word) {
+        out.push(word);
+        moved = true;
+        if (out.length === n) break;
+      }
+    }
+    if (!moved) break;
+  }
+
+  // A repeated setup should not open on the identical word when another selected word exists.
+  if (out.length > 1 && out[0].id === avoidFirstWordId) {
+    const alternative = out.findIndex((w, i) => i > 0 && w.id !== avoidFirstWordId);
+    if (alternative > 0) [out[0], out[alternative]] = [out[alternative], out[0]];
+  }
+  return out;
 }

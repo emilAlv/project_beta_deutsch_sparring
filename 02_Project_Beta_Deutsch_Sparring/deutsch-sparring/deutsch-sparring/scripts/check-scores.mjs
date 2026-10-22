@@ -129,13 +129,13 @@ const scores = {
   [ids[4]]: { v: { s: 10, k: 4, due: T0 - DAY } }, // a 10 (check)
 };
 const picked = S.pickWords({ words, scores, section: 'Home & living', count: 13, now: T0 });
-eq('due words come first, lowest score first', picked.slice(0, 3).map((w) => w.id), [ids[2], ids[0], ids[1]]);
+eq('due words keep lowest-score-first priority inside the mixed sequence', picked.filter((w) => [ids[0], ids[1], ids[2]].includes(w.id)).map((w) => w.id), [ids[2], ids[0], ids[1]]);
 check('a word with 10 is used as a check', picked.some((w) => w.id === ids[4]));
-check('the not-yet-due word is left out while new words exist', !picked.some((w) => w.id === ids[3]));
+check('an almost-learnt word is deliberately reinforced before it is due', picked.some((w) => w.id === ids[3]));
 const newOnes = picked.filter((w) => !scores[w.id]);
 check('the rest are new words (about 30 %+)', newOnes.length >= 4, `${newOnes.length}`);
 const tensIn = picked.filter((w) => scores[w.id]?.v.s === 10).length;
-check('1-2 checks', tensIn >= 1 && tensIn <= 2);
+check('due mastered words can be checked', tensIn >= 1 && tensIn <= 2);
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll checks passed.');
 process.exit(failed ? 1 : 0);

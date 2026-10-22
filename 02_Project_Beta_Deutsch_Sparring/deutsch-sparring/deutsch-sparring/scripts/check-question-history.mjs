@@ -1,4 +1,4 @@
-import { mergeQuestions, practiceKey, recentQuestions, sessionQuestions } from '../lib/question-history.js';
+import { mergeQuestions, practiceKey, recentQuestions, recentWordHistory, sessionQuestions } from '../lib/question-history.js';
 
 let failed = 0;
 function check(name, ok) {
@@ -21,6 +21,7 @@ const previous = {
   topicId: settings.topicId,
   settings,
   questions: ['Im Büro: Gib ___ Kollegen die Mappe. (der)', 'Wen fragst du nach dem Weg?'],
+  wordIds: ['abfahren', 'ankommen'],
 };
 const current = {
   id: 'new',
@@ -38,5 +39,6 @@ check('changing only the question count keeps the same practice history', practi
 check('a different difficulty does not contaminate the exclusion list', recentQuestions({ ...current, settings: { ...settings, difficulty: 'hard' } }, [previous]).length === 1);
 check('questions are de-duplicated and bounded', mergeQuestions(Array(60).fill('Dieselbe Frage')).length === 1);
 check('sessionQuestions includes a question that is still open', sessionQuestions(current).at(-1) === current.exercise.line);
+check('matching sessions expose their recent word order', recentWordHistory(current, [previous]).first === 'abfahren');
 
 process.exit(failed ? 1 : 0);
