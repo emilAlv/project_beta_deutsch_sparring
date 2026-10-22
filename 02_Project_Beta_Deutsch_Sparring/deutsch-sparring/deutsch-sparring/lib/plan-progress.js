@@ -39,7 +39,7 @@ export const REFRESH_PCT = 70; // … 70 %
 export const BEHIND_DAYS = 7; // behind: more than a week behind the plan
 export const AHEAD_DAYS = 14; // ahead: more than two weeks ahead
 export const IDLE_DAYS = 7; // behind: 7 days without practice
-export const MISSING_SHOWN = 8; // word ids listed as "not learnt yet" per milestone
+export const MISSING_SHOWN = 100; // word ids listed as "not learnt yet" per milestone (all of them: a milestone has fewer words)
 const DAY_MS = 86_400_000;
 // work weights for `progressShare` (answers it takes, roughly like the generator's pace numbers)
 const WEIGHT = { solid: 50, introduced: 15, lesson: 10, exam: 30, other: 1 };

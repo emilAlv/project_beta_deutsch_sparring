@@ -300,6 +300,7 @@ function TickForm({ v, busy, error, onSave, onCancel }) {
 
 export function ZoomPlan({ goals, data, today, zoom, onZoom, onPractise, onTick }) {
   const headRef = useRef(null);
+  const boxRef = useRef(null);
   const first = useRef(true);
   const [ticking, setTicking] = useState(false);
   const [tickState, setTickState] = useState({ busy: false, error: '' });
@@ -313,7 +314,11 @@ export function ZoomPlan({ goals, data, today, zoom, onZoom, onPractise, onTick 
   // after a zoom change the heading gets the focus (keyboard and screen reader users stay oriented); not on the first draw
   useEffect(() => {
     if (first.current) { first.current = false; return; }
-    headRef.current?.focus();
+    // the plan box changes height (a long milestone list → the chart): keep its top in view instead of letting the page
+    // jump, then put the focus on the heading without scrolling again
+    const box = boxRef.current;
+    if (box && box.getBoundingClientRect().top < 0) box.scrollIntoView({ block: 'start' });
+    headRef.current?.focus({ preventScroll: true });
   }, [level, zoom.partId, zoom.milestoneId]);
   useEffect(() => { setTicking(false); setTickState({ busy: false, error: '' }); }, [zoom.milestoneId]);
 
@@ -328,7 +333,7 @@ export function ZoomPlan({ goals, data, today, zoom, onZoom, onPractise, onTick 
   }
 
   return (
-    <div className="zoom" onKeyDown={(e) => { if (e.key === 'Escape' && level !== 'overview' && !e.defaultPrevented) { e.preventDefault(); out(); } }}>
+    <div className="zoom" ref={boxRef} onKeyDown={(e) => { if (e.key === 'Escape' && level !== 'overview' && !e.defaultPrevented) { e.preventDefault(); out(); } }}>
       <Crumbs zoom={{ ...zoom, level }} goals={goals} pv={pv} mv={mItem} onGo={onZoom} />
       <p className="sr-only" role="status" aria-live="polite">{announce}</p>
 
@@ -405,10 +410,15 @@ export function ZoomPlan({ goals, data, today, zoom, onZoom, onPractise, onTick 
 }
 
 // what is missing in one milestone: words, or the last answers on its topic(s)
+const WORDS_FIRST = 8; // words shown first; "… and N more" opens the rest
 function MilestoneBody({ v, data }) {
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => setShowAll(false), [v.id]);
   const c = v.m.criterion;
   if (c.kind === 'words') {
-    const ids = v.missingIds || [];
+    const all = v.missingIds || [];
+    const ids = showAll ? all : all.slice(0, WORDS_FIRST);
+    const more = Math.max(0, all.length - ids.length);
     return (
       <div>
         <p className="detail">{t('mdNeedWords', { need: v.need, total: v.total, have: v.have })}</p>
@@ -417,7 +427,9 @@ function MilestoneBody({ v, data }) {
             <p className="caps">{t('mdMissing')}</p>
             <ul className="missing-words">
               {ids.map((id) => <li key={id}>{data.missing?.[id] || id}</li>)}
-              {v.total - v.have > ids.length && <li className="detail">{t('mdMissingMore')}</li>}
+              {more > 0 && (
+                <li><button type="button" className="missing-more" onClick={() => setShowAll(true)}>{t('mdMissingMore', { n: more })}</button></li>
+              )}
             </ul>
           </>
         ) : <p className="detail">{t('mdNoMissing')}</p>}
