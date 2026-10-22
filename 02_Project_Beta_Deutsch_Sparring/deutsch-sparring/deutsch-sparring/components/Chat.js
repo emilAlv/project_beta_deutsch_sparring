@@ -153,15 +153,37 @@ function FeedbackCard({ f }) {
   const d = compareAnswer(f.studentAnswer, f.corrected, f.changedWords);
   // right = green; anything the tutor marked as not correct = amber "Not quite" with the fixed word highlighted
   const label = f.correct ? t('feedbackSpotOn') : t('feedbackNotQuite');
+  if (f.correct) {
+    return (
+      <div className="feedback-card is-right">
+        <p className="caps feedback-label"><Check size={15} strokeWidth={2.4} /> {label}</p>
+        <p className="feedback-sentence">{f.corrected}</p>
+        {f.explanation && <p className="feedback-explain"><Rich text={f.explanation} /></p>}
+      </div>
+    );
+  }
+  // wrong: your answer → the correct one, then the explanation in three steps (what is wrong · the rule · in this sentence)
+  const steps = f.why ? [['whyMistake', f.why.mistake], ['whyRule', f.why.rule], ['whyHere', f.why.here]].filter(([, v]) => v) : [];
   return (
-    <div className={`feedback-card ${f.correct ? 'is-right' : 'is-wrong'}`}>
+    <div className="feedback-card is-wrong">
       <p className="caps feedback-label">
-        {f.correct ? <Check size={15} strokeWidth={2.4} /> : <Pencil size={14} strokeWidth={2.2} />} {label}
+        <Pencil size={14} strokeWidth={2.2} /> {label}
+        {f.rule && <span className="feedback-rule">{f.rule}</span>}
       </p>
-      <p className="feedback-sentence">
-        {f.correct ? f.corrected : <Marked segments={d.corrected} as="strong" className="fixed" />}
-      </p>
-      {f.explanation && <p className="feedback-explain"><Rich text={f.explanation} /></p>}
+      <dl className="feedback-compare">
+        <dt>{t('feedbackYouWrote')}</dt>
+        <dd className="feedback-yours"><Marked segments={d.answer} as="s" className="wrong" /></dd>
+        <dt>{t('feedbackRight')}</dt>
+        <dd className="feedback-sentence"><Marked segments={d.corrected} as="strong" className="fixed" /></dd>
+      </dl>
+      {steps.length > 0 && (
+        <ol className="feedback-why">
+          {steps.map(([k, v]) => (
+            <li key={k}><span className="feedback-why-label">{t(k)}</span><span><Rich text={v} /></span></li>
+          ))}
+        </ol>
+      )}
+      {f.explanation && <p className="feedback-explain">{steps.length > 0 && <strong>{t('feedbackTip')}: </strong>}<Rich text={f.explanation} /></p>}
     </div>
   );
 }

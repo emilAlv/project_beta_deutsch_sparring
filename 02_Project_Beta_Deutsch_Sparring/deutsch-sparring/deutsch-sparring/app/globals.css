@@ -253,6 +253,16 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .feedback-card.is-wrong .feedback-label, .feedback-card.is-wrong .feedback-sentence { color: var(--amber-text); }
 .feedback-card.is-wrong .fixed { padding: 0 3px; border-radius: 4px; background: rgba(214, 162, 83, 0.28); text-decoration-color: var(--amber-strike); }
 .fixed { font-weight: 700; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.feedback-rule { margin-left: auto; padding: 2px 8px; border-radius: 999px; background: var(--surface); color: var(--amber-text); font-size: 11px; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.feedback-compare { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; align-items: baseline; }
+.feedback-compare dt { font-size: 12px; color: var(--muted); }
+.feedback-compare dd { margin: 0; }
+.feedback-yours { font-size: 15px; color: var(--ink); overflow-wrap: anywhere; }
+.feedback-yours .wrong { text-decoration: line-through; text-decoration-color: var(--amber-strike); text-decoration-thickness: 2px; }
+.feedback-why { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 0; padding: 12px 0 0; list-style: none; border-top: 1px solid var(--amber-line); }
+.feedback-why li { display: grid; grid-template-columns: 130px 1fr; gap: 12px; font-size: 14px; line-height: 1.5; color: var(--ink); }
+.feedback-why-label { font-size: 12px; font-weight: 600; color: var(--amber-text); padding-top: 1px; }
+@media (max-width: 720px) { .feedback-why li { grid-template-columns: 1fr; gap: 0; } }
 .feedback-explain { font-size: 13px; line-height: 1.55; color: var(--ink); }
 .feedback-explain strong { font-weight: 600; }
 
