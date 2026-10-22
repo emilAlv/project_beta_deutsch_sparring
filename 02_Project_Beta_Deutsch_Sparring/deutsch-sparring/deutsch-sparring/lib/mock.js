@@ -533,6 +533,17 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     };
   }
   const right = out.feedback.correct;
+  // the demo's three-step explanation of a wrong answer (the real tutor writes a specific one, see lib/prompt.js)
+  if (!right && !out.feedback.why) {
+    const f = out.feedback;
+    const fixed = (f.changedWords || []).filter(Boolean).join(' ');
+    f.why = {
+      mistake: fixed ? `Hier fehlt oder stimmt nicht: «${fixed}».` : `«${f.studentAnswer}» → «${f.corrected}»`,
+      rule: f.explanation || (f.rule ? `Regel: ${f.rule}.` : 'Lerne das Wort immer mit Artikel und Plural.'),
+      here: `Richtig ist: ${f.corrected}.`,
+    };
+    f.explanation = '';
+  }
   if (open >= total) {
     out.message = right ? 'Super, das war die letzte Frage – gut gemacht!' : 'Das war die letzte Frage. Gut gemacht – schau dir rechts deine Lücken an.';
     return json();

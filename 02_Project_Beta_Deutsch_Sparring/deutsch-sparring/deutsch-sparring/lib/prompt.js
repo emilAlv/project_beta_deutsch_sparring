@@ -135,7 +135,7 @@ VOCABULARY TOPICS = FLASHCARDS (reference language: English)
 - Nouns: English → German is correct only with the right article. Verbs: the infinitive (on Schwer also the Perfekt from the list). Adjectives, adverbs, phrases: the word or phrase itself (close answers for phrases are fine).
 - English → German: correct only with the right article. Accept the Swiss and the German word (der Kasten / der Schrank, die Stube / das Wohnzimmer), but write the card in the chosen variant. Wrong article = wrong (errorType Artikel) – say that the noun itself was right. On Schwer also ask for the plural ("der Schrank, die Schränke").
 - German → English: accept any fitting English meaning; ignore "the".
-- feedback.corrected = the full card: "der Schrank, die Schränke" (English → German) or the English meaning (German → English). feedback.explanation = one short line (plural, the other variant's word or a memory tip).
+- feedback.corrected = the full card: "der Schrank, die Schränke" (English → German) or the English meaning (German → English). feedback.explanation = one short line (plural, the other variant's word or a memory tip); a wrong card also gets feedback.why (see JSON FIELDS).
 - Hints: Leicht = first letters + answer choices in options; Mittel = "mit Artikel" / "auf Englisch"; Schwer = null.
 - Noun drill: use it when ${name} asks for it or as the safe fallback when no natural contextual noun sentence is available; practise the article, case and adjective ending without inventing an arbitrary predicate.
 - Phrases (and other word types without grammar task): English → German, a close answer is fine (same meaning, small differences in small words); errorType Wortschatz if wrong.
@@ -146,7 +146,12 @@ ${vocab ? wordGrammarRules(grammar, name) : ''}JSON FIELDS
   forNumber = the open question's number. Judge communication first: correct = true when the intended meaning is clear and the practised point is right. A different natural solution is not an error.
   studentAnswer = the answer as written (see Grammar topics for gap fills). corrected = the full correct version, keeping ${name}'s meaning and own words where possible; never replace a valid alternative just to match the reference.
   changedWords = only the words required to fix a meaning-changing or target error, e.g. ["an die"] ([] if correct).
-  explanation = 1–2 short lines in simple German. Name the important distinction (meaning/target error versus minor spelling/style), and when useful invite self-correction with one focused question while still supplying corrected for the app card.
+  explanation = correct: 1 short line (a memory tip, or ""). Wrong: one short memory tip starting with "Merke:" (or ""), never a repeat of why.
+  why = ONLY when wrong (null when correct): a clear, structured explanation in three short sentences in simple German at ${name}'s level, so ${name} understands the mistake and does not repeat it:
+    mistake = exactly what is wrong, with the student's form → the right form in «»: «kleines» → «kleine» (or «die Baby» → «das Baby»).
+    rule = the general rule as a pattern, with a NEW short example, e.g. "Nach der/die/das endet das Adjektiv im Akkusativ Singular (feminin, neutral) auf -e: die alte Stadt."
+    here = the rule applied to THIS sentence step by step with "·" and "→": "das Baby = neutral · Objekt von «tragen» = Akkusativ → das kleine Baby."
+    Name the case, gender and trigger (verb, preposition, article) when they matter. For a word or article mistake: mistake = the wrong part, rule = a gender/plural pattern or a memory help (e.g. "Nomen auf -y sind oft neutral: das Handy."), here = the full card.
   rule = the grammar point in max 5 words, e.g. "Dativ nach mit" ("" when the mistake is only the word or its article). Use the same wording every time the same rule comes up.
   errorType = Kasus | Artikel | Adjektivendung | Präposition | Verbform | Wortstellung | Wortschatz | Rechtschreibung | Andere (null if correct).
 - exercise: the next question; or the open question again (same number) after a hint, a rule explanation or a settings change; null at the end or when nothing should be asked.

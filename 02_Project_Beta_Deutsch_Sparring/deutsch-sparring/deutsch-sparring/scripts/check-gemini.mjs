@@ -273,6 +273,10 @@ const n1 = R.normalizeReply({
   session: { topicId: 'lektion-01-dativ', topicName: 'Dativ', level: 'B1', difficulty: 'Schwer', finished: false },
 }, ctx);
 check('normalizeReply: message trimmed, feedback mapped', n1?.message === 'Gut!' && n1.feedback.errorType === 'case' && n1.feedback.correct === false);
+const why = { mistake: '«die» → «der»', rule: 'in + Dativ bei «Wo?»: in der Stadt.', here: 'Wo gehe ich? · Ort, keine Bewegung → in der Schule.' };
+const fb = (correct, w) => R.normalizeReply({ message: 'x', feedback: { forNumber: 1, correct, studentAnswer: 'a', corrected: 'b', changedWords: [], explanation: '', rule: '', why: w } }, ctx)?.feedback;
+check('normalizeReply: a wrong answer keeps its three-step explanation', JSON.stringify(fb(false, why)) .includes('Ort, keine Bewegung') && fb(false, why).why.mistake === '«die» → «der»');
+check('normalizeReply: a right answer never gets an explanation of a mistake; an empty one is dropped', fb(true, why).why === null && fb(false, { mistake: '', rule: '', here: '' }).why === null && fb(false, 'nonsense').why === null);
 check('normalizeReply: exercise cleaned, word task set, options unique', n1?.exercise.type === 'gapfill' && !n1.exercise.line.includes('„') && n1.exercise.wordId === 'w1' && n1.exercise.task === 'grammar' && n1.options.length === 2);
 check('normalizeReply: session values mapped', n1?.session.level === 'B1' && n1.session.difficulty === 'hard');
 check('normalizeReply: nothing usable gives null', R.normalizeReply({}, ctx) === null && R.normalizeReply(null, ctx) === null && R.normalizeReply([], ctx) === null);
