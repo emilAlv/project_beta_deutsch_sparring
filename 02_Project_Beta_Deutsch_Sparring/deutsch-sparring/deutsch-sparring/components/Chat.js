@@ -151,9 +151,8 @@ function NextLine({ ex }) {
 
 function FeedbackCard({ f }) {
   const d = compareAnswer(f.studentAnswer, f.corrected, f.changedWords);
-  const label = f.correct ? t('feedbackSpotOn')
-    : f.kind === 'flashcard' ? t('feedbackNotQuite')
-      : d.changes <= 2 ? t('feedbackPolish') : t('feedbackFix');
+  // right = green; anything the tutor marked as not correct = amber "Not quite" with the fixed word highlighted
+  const label = f.correct ? t('feedbackSpotOn') : t('feedbackNotQuite');
   return (
     <div className={`feedback-card ${f.correct ? 'is-right' : 'is-wrong'}`}>
       <p className="caps feedback-label">

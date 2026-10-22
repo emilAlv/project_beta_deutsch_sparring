@@ -5,6 +5,7 @@
 
 import { t, dirKey } from '../lib/ui-text';
 import { taskStates } from '../lib/stats';
+import { modeOf } from '../lib/session-settings';
 import { ProgressTrack } from './Chat';
 
 export default function SessionRibbon({ session, onEnd, disabled }) {
@@ -12,7 +13,7 @@ export default function SessionRibbon({ session, onEnd, disabled }) {
   if (!st) return null;
   const vocab = st.kind === 'vocab';
   const tags = [
-    t(`kind_${st.kind}`),
+    t(`kind_${modeOf(st)}`),
     st.topicLabel || session.topicName,
     st.level,
     t(`diff_${st.difficulty}`),

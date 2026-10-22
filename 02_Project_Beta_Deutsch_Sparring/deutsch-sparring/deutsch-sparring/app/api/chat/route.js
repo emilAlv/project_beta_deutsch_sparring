@@ -156,7 +156,7 @@ async function handle(req) {
       if (!words.length) words = pickWords({ ...query, level: undefined });
     }
   }
-  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), openTask: session.openTask };
+  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), openTask: session.openTask, focus: body.grammarFocus };
 
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;

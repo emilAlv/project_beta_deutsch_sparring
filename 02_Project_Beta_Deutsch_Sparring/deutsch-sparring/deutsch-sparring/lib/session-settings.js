@@ -4,7 +4,7 @@
 
 import { QUESTION_MIN, QUESTION_MAX } from './intents.js';
 
-export const KINDS = ['grammar', 'vocab']; // Grammar · Vocabulary + grammar
+export const KINDS = ['grammar', 'vocab']; // what is stored: Grammar · a word session (with or without sentences)
 export const LEVELS = ['A1', 'A2', 'B1'];
 export const DIFFICULTIES = ['easy', 'medium', 'hard'];
 export const QUESTION_STEPS = [10, 20, 30, 40, 50];
@@ -57,6 +57,11 @@ export function sanitizeSetup(raw, old = {}) {
 
 // Vocabulary + grammar: a sentence task follows each flashcard when a case / ending / Perfekt is chosen
 export const withSentences = (settings) => settings.kind === 'vocab' && (settings.grammar || []).some((g) => SENTENCE_POINTS.includes(g));
+
+// The three choices on the setup screen and the ribbon: Grammar · Vocabulary (flashcards only) · Vocabulary + grammar.
+// "Vocabulary" is the same word session with the sentence tasks off, so it is worked out from the settings.
+export const MODES = ['grammar', 'words', 'vocab'];
+export const modeOf = (settings) => (settings.kind !== 'vocab' ? 'grammar' : withSentences(settings) ? 'vocab' : 'words');
 
 // The topic id the session practises
 export function topicIdOf(setup) {

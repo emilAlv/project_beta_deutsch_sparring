@@ -161,9 +161,42 @@ export function salvageMessage(text) {
   }
 }
 
+// ---------- grammar focus must not give away the open question ----------
+// The focus card stays on screen while a question is open. If its text contains the open flashcard's answer
+// (e.g. boxes "das Baby / die Babys" while the card "the baby" is open), the example boxes are hidden; if the
+// title, rule or trap contains it too, the whole focus is hidden. The student's browser never gets the answer,
+// so this is checked here on the server.
+const SMALL_WORDS = new Set(['der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer', 'und', 'oder', 'mit', 'the']);
+const wordsOf = (v) => comparable(v).split(' ').filter((w) => w.length >= 3 && !SMALL_WORDS.has(w));
+const textOf = (...parts) => new Set(parts.flatMap(wordsOf));
+const focusIntro = (g) => textOf(g.title, g.rule, g.watchOut);
+const focusBoxes = (g) => textOf(...(g.boxes || []).flatMap((b) => [b.label, b.value, b.note]));
+const sharesWord = (set, answer) => wordsOf(answer).some((w) => set.has(w));
+export const focusRevealsAnswer = (g, answer) => Boolean(g) && (sharesWord(focusIntro(g), answer) || sharesWord(focusBoxes(g), answer));
+// → the focus without the solution: same focus, no example boxes · null (nothing safe left) · the focus itself when it was fine
+export function hideSolutionInFocus(g, answer) {
+  if (!g || !focusRevealsAnswer(g, answer)) return g;
+  if (sharesWord(focusIntro(g), answer)) return null;
+  return { ...g, boxes: [] };
+}
+
+export function cleanFocus(g) {
+  if (!g || typeof g !== 'object' || !clip(g.title, 80) || !clip(g.rule, 400)) return null;
+  return {
+    title: clip(g.title, 80),
+    rule: clip(g.rule, 400),
+    boxes: (Array.isArray(g.boxes) ? g.boxes : [])
+      .filter((b) => b && typeof b === 'object' && clip(b.label, 40))
+      .slice(0, 3)
+      .map((b) => ({ label: clip(b.label, 40), value: clip(b.value, 60), note: clip(b.note, 80) })),
+    watchOut: clip(g.watchOut, 200),
+  };
+}
+
 // ctx: { level, difficulty (key), topicIds: Set, topicId, wordIds?: Set, openTask? } – current values sent by the browser.
 // openTask = the task of the question being answered ('flashcard' | 'grammar'), if the browser knows it.
 // wordIds = the ids of the words picked for this session; a wordId outside this set is dropped.
+// focus = the grammar focus the browser shows now (cleaned): hidden when the new open flashcard's answer is in it.
 export function normalizeReply(raw, ctx) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const message = clip(raw.message, 1200);
@@ -190,6 +223,7 @@ export function normalizeReply(raw, ctx) {
 
   // the number is only a hint: the app counts the questions itself
   let exercise = null;
+  let openAnswer = ''; // private: only used to keep the grammar focus from giving it away
   const e = raw.exercise;
   if (e && typeof e === 'object' && clip(e.line, 500)) {
     const type = EXERCISE_TYPE[e.type] || 'gapfill';
@@ -206,6 +240,7 @@ export function normalizeReply(raw, ctx) {
       hint,
     };
     if (type === 'flashcard' && !exercise.direction) exercise.direction = ARTICLE.test(exercise.line) ? 'de-en' : 'en-de';
+    if (type === 'flashcard' && exercise.direction === 'en-de') openAnswer = answer;
     // vocabulary: which word, and which score the answer counts for (optional; old replies have neither)
     const wordId = clip(e.wordId, 120);
     if (wordId && ctx.wordIds?.has(wordId)) {
@@ -219,18 +254,16 @@ export function normalizeReply(raw, ctx) {
     ? [...new Set(raw.options.map((o) => clip(o, 60)).filter(Boolean))].slice(0, 6)
     : [];
 
-  let grammarFocus = null;
-  const g = raw.grammarFocus;
-  if (g && typeof g === 'object' && clip(g.title, 80) && clip(g.rule, 400)) {
-    grammarFocus = {
-      title: clip(g.title, 80),
-      rule: clip(g.rule, 400),
-      boxes: (Array.isArray(g.boxes) ? g.boxes : [])
-        .filter((b) => b && typeof b === 'object' && clip(b.label, 40))
-        .slice(0, 3)
-        .map((b) => ({ label: clip(b.label, 40), value: clip(b.value, 60), note: clip(b.note, 80) })),
-      watchOut: clip(g.watchOut, 200),
-    };
+  let grammarFocus = cleanFocus(raw.grammarFocus);
+  let focusHidden = false;
+  if (openAnswer) {
+    // a new focus, or the one already on screen (it stays visible while the new card is open)
+    const shown = grammarFocus || cleanFocus(ctx.focus);
+    const safe = hideSolutionInFocus(shown, openAnswer);
+    if (safe !== shown) {
+      focusHidden = !safe;
+      grammarFocus = safe || null;
+    }
   }
 
   const s = raw.session && typeof raw.session === 'object' ? raw.session : {};
@@ -256,6 +289,7 @@ export function normalizeReply(raw, ctx) {
     options,
     panelView: VIEWS.includes(raw.panelView) ? raw.panelView : null,
     grammarFocus,
+    ...(focusHidden ? { focusHidden: true } : {}),
     session,
   };
 }

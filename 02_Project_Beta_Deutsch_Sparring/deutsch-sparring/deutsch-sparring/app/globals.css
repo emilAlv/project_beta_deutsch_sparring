@@ -16,6 +16,7 @@
   --amber-line: #e8dabb;
   --amber-strike: #c4874a;
   --amber-seg: #d6a253;
+  --amber-text: #7a5516; /* readable text on --amber-bg */
   --mistake: #a0522d;
   --input: #ffffff;
 
@@ -248,6 +249,9 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .feedback-card { display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: var(--radius-sm); background: var(--brand-tint); }
 .feedback-label { display: flex; align-items: center; gap: 7px; color: var(--brand); }
 .feedback-sentence { font-size: 17px; line-height: 1.5; color: var(--brand); overflow-wrap: anywhere; }
+.feedback-card.is-wrong { border: 1px solid var(--amber-line); background: var(--amber-bg); }
+.feedback-card.is-wrong .feedback-label, .feedback-card.is-wrong .feedback-sentence { color: var(--amber-text); }
+.feedback-card.is-wrong .fixed { padding: 0 3px; border-radius: 4px; background: rgba(214, 162, 83, 0.28); text-decoration-color: var(--amber-strike); }
 .fixed { font-weight: 700; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 .feedback-explain { font-size: 13px; line-height: 1.55; color: var(--ink); }
 .feedback-explain strong { font-weight: 600; }
@@ -523,7 +527,7 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .setup-field .segmented button { min-height: 40px; font-size: 13px; padding: 4px 6px; }
 .setup-error { margin-top: 4px; font-size: 13px; color: var(--mistake); }
 
-.kind-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.kind-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .kind-option {
   display: flex; flex-direction: column; gap: 6px;
   padding: 16px 18px; text-align: left;

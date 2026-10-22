@@ -279,6 +279,20 @@ check('normalizeReply: nothing usable gives null', R.normalizeReply({}, ctx) ===
 const n2 = R.normalizeReply({ message: 'x', exercise: { number: 1, type: 'Karteikarte', line: 'der Tisch', wordId: 'nope' }, feedback: { forNumber: 1, correct: false, studentAnswer: 'a', corrected: 'b', explanation: '', rule: '', errorType: 'Kasus' } }, { ...ctx, openTask: 'flashcard' });
 check('normalizeReply: unknown wordId dropped, wrong flashcard = vocab, direction guessed', n2?.exercise.wordId === undefined && n2.feedback.errorType === 'vocab' && n2.exercise.direction === 'de-en');
 
+// ---------- the grammar focus never gives away the open card ----------
+const card = { number: 1, type: 'Karteikarte', direction: 'en-de', line: 'the baby – mit Artikel und Plural', answer: 'das Baby, die Babys', wordId: 'w1' };
+const leaky = { title: 'Nomen mit Artikel', rule: 'Lerne jedes Nomen mit Artikel und Plural.', boxes: [{ label: 'das', value: 'das Baby', note: 'die Babys' }, { label: 'der', value: 'der Tisch', note: 'die Tische' }], watchOut: 'Achte auf den Plural.' };
+const f1 = R.normalizeReply({ message: 'Los!', exercise: card, grammarFocus: leaky, session: { level: 'A2', difficulty: 'Mittel', finished: false } }, ctx);
+check('focus with the open card\'s answer: example boxes hidden, rule kept', f1?.grammarFocus && f1.grammarFocus.boxes.length === 0 && f1.grammarFocus.title === leaky.title && !f1.focusHidden);
+const f2 = R.normalizeReply({ message: 'Los!', exercise: card, grammarFocus: { ...leaky, rule: 'Zum Beispiel das Baby.' } }, ctx);
+check('focus with the answer in its rule: the whole focus is hidden', f2?.grammarFocus === null && f2.focusHidden === true);
+const f3 = R.normalizeReply({ message: 'Los!', exercise: card, grammarFocus: { ...leaky, boxes: [{ label: 'der', value: 'der Tisch', note: 'die Tische' }] } }, ctx);
+check('focus with a different example word stays as it is', f3?.grammarFocus.boxes.length === 1 && !f3.focusHidden);
+const f4 = R.normalizeReply({ message: 'Weiter', exercise: card }, { ...ctx, focus: leaky });
+check('focus already on screen is replaced when the next card gives it away', f4?.grammarFocus && f4.grammarFocus.boxes.length === 0);
+const f5 = R.normalizeReply({ message: 'Weiter', exercise: { ...card, type: 'Lückentext', direction: null, answer: 'dem' }, grammarFocus: leaky }, ctx);
+check('focus is only checked against flashcards', f5?.grammarFocus.boxes.length === 2);
+
 // ---------- the coach: one number for the changes, a note when the plan is lost ----------
 const prompt = CP.buildCoachPrompt({ name: 'Test', context: '(no data)' });
 check('coach prompt: the coach proposes goals and never writes names', /proposeGoal/.test(prompt) && /never write names or titles/.test(prompt) && !/"add" a milestone/.test(prompt));
