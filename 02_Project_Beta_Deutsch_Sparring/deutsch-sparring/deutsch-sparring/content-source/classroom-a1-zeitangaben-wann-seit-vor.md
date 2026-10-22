@@ -135,8 +135,8 @@ Schreibe den **ganzen Satz** in der richtigen Form.
 
 - 2022: aus Portugal in die Schweiz gezogen.
 - Von März bis September 2023: einen Deutschkurs besucht.
-- Seit Oktober 2023: in Luzern gewohnt.
-- Seit Juni 2025: in einem Hotel gearbeitet.
+- Seit Oktober 2023: wohnt sie in Luzern.
+- Seit Juni 2025: arbeitet sie in einem Hotel.
 - Nächstes Gesprächstreffen: am Donnerstag um 18 Uhr.
 
 | # | Frage | Musterantwort |
