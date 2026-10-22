@@ -7,8 +7,8 @@ import { useMemo, useState } from 'react';
 import { t, dirKey } from '../lib/ui-text';
 import { wordsNeeded } from '../lib/scores';
 import {
-  KINDS, LEVELS, DIFFICULTIES, QUESTION_STEPS, SOURCES, DIRECTIONS, VARIANTS, GRAMMAR_POINTS,
-  withSentences, sessionSettings,
+  MODES, modeOf, LEVELS, DIFFICULTIES, QUESTION_STEPS, SOURCES, DIRECTIONS, VARIANTS, GRAMMAR_POINTS,
+  withSentences, sessionSettings, DEFAULT_SETUP,
 } from '../lib/session-settings';
 import { Check } from './icons';
 
@@ -84,6 +84,7 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
   const [form, setForm] = useState(initial);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const vocab = form.kind === 'vocab';
+  const mode = modeOf(form);
 
   const grammarTopics = useMemo(() => topics.filter((x) => isGrammarTopic(x) && (x.levels || []).includes(form.level)), [topics, form.level]);
   const curriculumTopics = grammarTopics.filter((x) => x.curriculum);
@@ -105,7 +106,7 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
   const topicLabel = !topic ? '' : vocab && list ? `${section.short} › ${list.short}` : topic.short;
 
   const summary = [
-    t(`kind_${form.kind}`),
+    t(`kind_${mode}`),
     topicLabel || t('setupChooseTopic'),
     form.level,
     t(`diff_${form.difficulty}`),
@@ -114,8 +115,17 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
     t(`variantShort_${form.variant}`),
   ].filter(Boolean).join(' · ');
 
+  // Grammar · Vocabulary (flashcards only = the word session with the sentence tasks off) · Vocabulary + grammar
+  function chooseMode(m) {
+    if (m === 'grammar') set({ kind: 'grammar' });
+    else if (m === 'words') set({ kind: 'vocab', grammar: ['article-plural'] });
+    else set({ kind: 'vocab', grammar: withSentences({ kind: 'vocab', grammar: form.grammar }) ? form.grammar : DEFAULT_SETUP.grammar });
+  }
+
+  // at least one sentence task stays on here: to have none, choose "Vocabulary"
   function toggleGrammar(g) {
-    set({ grammar: form.grammar.includes(g) ? form.grammar.filter((x) => x !== g) : GRAMMAR_POINTS.filter((x) => x === g || form.grammar.includes(x)) });
+    const grammar = form.grammar.includes(g) ? form.grammar.filter((x) => x !== g) : GRAMMAR_POINTS.filter((x) => x === g || form.grammar.includes(x));
+    if (withSentences({ kind: 'vocab', grammar })) set({ grammar });
   }
 
   function start() {
@@ -134,20 +144,20 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
 
         <div className="card setup-card">
           <Section title={t('setupKind')}>
-            <div className="kind-options" role="radiogroup" aria-label={t('setupKind')} onKeyDown={arrowKeys(KINDS, form.kind, (k) => set({ kind: k }))}>
-              {KINDS.map((k) => (
+            <div className="kind-options" role="radiogroup" aria-label={t('setupKind')} onKeyDown={arrowKeys(MODES, mode, chooseMode)}>
+              {MODES.map((k) => (
                 <button
                   key={k}
                   type="button"
                   role="radio"
-                  aria-checked={form.kind === k}
-                  tabIndex={form.kind === k ? 0 : -1}
-                  className={`kind-option${form.kind === k ? ' on' : ''}`}
-                  onClick={() => set({ kind: k })}
+                  aria-checked={mode === k}
+                  tabIndex={mode === k ? 0 : -1}
+                  className={`kind-option${mode === k ? ' on' : ''}`}
+                  onClick={() => chooseMode(k)}
                 >
                   <span className="kind-name">
                     {t(`kind_${k}`)}
-                    {form.kind === k && <Check size={16} strokeWidth={2.4} />}
+                    {mode === k && <Check size={16} strokeWidth={2.4} />}
                   </span>
                   <span className="kind-help">{t(`kindHelp_${k}`)}</span>
                 </button>
@@ -238,6 +248,7 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
                 <Segmented label={t('setupFlashcards')} options={DIRECTIONS} value={form.direction} onChange={(v) => set({ direction: v })} render={(d) => t(`dir_${dirKey(d)}`)} />
               </Section>
 
+              {mode === 'vocab' && (
               <Section title={t('setupGrammar')} help={t('setupGrammarHelp')}>
                 <div className="chips" role="group" aria-label={t('setupGrammar')}>
                   {GRAMMAR_POINTS.map((g) => (
@@ -254,6 +265,7 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
                   ))}
                 </div>
               </Section>
+              )}
             </>
           )}
 

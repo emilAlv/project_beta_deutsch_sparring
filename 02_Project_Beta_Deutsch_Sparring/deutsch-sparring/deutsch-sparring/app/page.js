@@ -679,6 +679,7 @@ export default function Home() {
       // vocabulary: the words picked at the start stay the same; without them the server picks, using our scores
       wordIds: s.wordIds,
       ...(isVocab(s) && !s.wordIds?.length ? { scores: loadScores(), source: st.source || 'both' } : {}),
+      grammarFocus: s.grammarFocus || null, // so the server can hide it if it would give away the next card
       progress: score(s.answers),
       // Recent questions from this session and earlier sessions with the same setup.
       // Starting again should continue with fresh exercises, not reset the tutor's memory.
@@ -788,6 +789,7 @@ export default function Home() {
       s.lastType = exercise.type;
     }
     if (reply.grammarFocus) s.grammarFocus = reply.grammarFocus;
+    else if (reply.focusHidden) s.grammarFocus = null; // it would have given away the open card
 
     const justFinished = s.finished && !wasFinished;
     if (justFinished) s.endedAt = Date.now();

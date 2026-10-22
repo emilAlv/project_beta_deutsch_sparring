@@ -16,6 +16,7 @@ import { detectIntent, detectTopicWish } from './intents.js';
 import { RULES } from './grammar.js';
 import { chooseTask, findTask, infinitive } from './word-tasks.js';
 import { align, localizeWord, toVariant } from './variants.js';
+import { focusRevealsAnswer } from './reply.js';
 
 const DEFAULT_GRAMMAR = 'lektion-01-dativ-akkusativ';
 
@@ -39,6 +40,17 @@ const FOCUS = {
     watchOut: 'Im Dativ und Genitiv endet das Adjektiv auf -en: mit dem alten Schrank, wegen des alten Schranks.',
   },
 };
+
+// The example words in the vocabulary focus card: never the word of the open card (it would give the answer away).
+const VOCAB_EXAMPLES = [
+  [{ label: 'der', value: 'maskulin', note: 'der Tisch, der Schrank (CH: der Kasten)' }, { label: 'die / das', value: 'feminin / neutral', note: 'die Lampe · das Bett' }],
+  [{ label: 'der', value: 'maskulin', note: 'der Stuhl, der Garten' }, { label: 'die / das', value: 'feminin / neutral', note: 'die Tür · das Fenster' }],
+];
+function vocabFocus(answer) {
+  const pick = (boxes) => ({ ...FOCUS.vocab, boxes });
+  const safe = VOCAB_EXAMPLES.find((boxes) => !focusRevealsAnswer(pick(boxes), answer));
+  return safe ? pick(safe) : { ...FOCUS.vocab, boxes: [] };
+}
 
 function grammarErrorType(topic) {
   const text = `${topic?.title || ''} ${topic?.rule || ''}`.toLowerCase();
@@ -455,13 +467,13 @@ export async function mockReply({ text, settings, session, progress, topic, topi
 
   // nothing open: start (question 1) or continue with the next question
   if (!open) {
-    out.grammarFocus = useVocab ? FOCUS.vocab : entry ? curriculumFocus(entry) : FOCUS.grammar;
     out.message = progress.done
       ? 'Weiter geht’s!'
       : useVocab
         ? `Los geht’s mit den Karteikarten zu «${topic.short}». (Demo-Modus)`
         : `Sehr gern! Wir üben «${topic?.short || 'Dativ oder Akkusativ'}». (Demo-Modus)`;
     ask(progress.done + 1);
+    out.grammarFocus = useVocab ? vocabFocus(out.exercise.answer) : entry ? curriculumFocus(entry) : FOCUS.grammar;
     return json();
   }
 
@@ -473,9 +485,9 @@ export async function mockReply({ text, settings, session, progress, topic, topi
       ? 'Merke dir jedes Nomen mit **Artikel** und Plural. Im Dativ und im Genitiv enden Adjektive nach dem Artikel auf -en.'
       : entry ? `Die Regel: ${entry.rule.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ')}`
         : 'Die Regel: Bei den Wechselpräpositionen fragst du **Wo?** (Position) → Dativ oder **Wohin?** (Bewegung) → Akkusativ.';
-    out.grammarFocus = useVocab ? FOCUS.vocab : entry ? curriculumFocus(entry) : FOCUS.grammar;
     out.panelView = 'grammar';
     ask(open);
+    out.grammarFocus = useVocab ? vocabFocus(out.exercise.answer) : entry ? curriculumFocus(entry) : FOCUS.grammar;
     return json();
   }
   if (/^(tipp|hint|give me a hint|gib mir einen tipp|einen tipp)/.test(say)) {
@@ -525,7 +537,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     out.message = right ? 'Super, das war die letzte Frage – gut gemacht!' : 'Das war die letzte Frage. Gut gemacht – schau dir rechts deine Lücken an.';
     return json();
   }
-  out.message = right ? ['Super, genau richtig!', 'Perfekt!', 'Sehr gut!'][open % 3] : 'Fast! Nur eine kleine Änderung:';
+  out.message = right ? ['Super, genau richtig!', 'Perfekt!', 'Sehr gut!'][open % 3] : 'Noch nicht ganz. So ist es richtig:';
   ask(open + 1);
   return json();
 }
