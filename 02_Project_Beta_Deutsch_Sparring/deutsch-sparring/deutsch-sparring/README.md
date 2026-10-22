@@ -154,7 +154,10 @@ survives a reload. Home shows (`components/Home.js`):
    | Name | Value |
    |---|---|
    | `GEMINI_API_KEY` | your key from Google AI Studio |
-   | `CLASS_CODE` | a code for your classmates, e.g. `schritte5` (optional, case-sensitive) |
+   | `CLASS_CODE` | a code for your classmates: **long and random, at least 12 characters** (letters and digits, a made-up example looks like `k7Qp2Lx9Vr4m` – make your own with a password generator, never copy an example; case-sensitive; optional) |
+
+   Why long and random: a short word-like code (`schritte5`) can be guessed by a script, and then strangers use your
+   AI key. Each network may only make 30 wrong guesses a day, so a 12-character random code cannot be guessed.
 5. Click **Deploy**. After ~1 minute you get a link like `deutsch-sparring.vercel.app`.
 
 The coach has three optional settings of its own, so it can think harder than the tutor without
@@ -169,9 +172,23 @@ means better plans but slower answers. If a model does not accept the setting, t
 own default, because lower values can make them loop.
 
 Optional variables: `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_FALLBACK_MODEL`
-(default `gemini-3.5-flash-lite`), `DAILY_LIMIT` (messages per student per day, default 150 – counted
-per browser, so a whole class on one school network is not locked out; only wrong class codes count as tries),
-`MOCK=1` (demo tutor without AI, see below).
+(default `gemini-3.5-flash-lite`), `DAILY_LIMIT` (AI messages per student per day, default 150; see *Limits* below),
+`SIGNUP_PER_HOUR` (new accounts per network per hour, default 10 – raise it to e.g. 30 for the lesson where the
+whole class signs up from the school network), `MOCK=1` (demo tutor without AI, see below).
+
+**Limits** (`lib/guard.js`; counted in the database table `usage` when one is connected, so every server copy on
+Vercel sees the same numbers; without a database in the server's memory). A "day" is a UTC day.
+- AI messages (tutor + coach): with accounts **150 per account** (`DAILY_LIMIT`) and **3000 per network**
+  (`DAILY_LIMIT` × 20). Without accounts **750 per network** (`DAILY_LIMIT` × 5) – the whole class on one school
+  network shares it, because a browser could otherwise pretend to be a new student with every message.
+- Class code: **30 wrong codes per network per day** (/api/code, /api/chat, /api/coach and sign-up share it); after
+  that even the right code waits until tomorrow on that network.
+- Log-in: **10 wrong passwords per username + network** in 15 minutes, **100 per network** in 15 minutes. Someone on
+  another network can never lock a classmate out.
+- Sign-up: **10 tries per username + network** and **10 per network** (`SIGNUP_PER_HOUR`) per hour.
+- Saves per account per day: **1500 answers, 100 new sessions, 1500 session updates, 200 goal saves**. Over a limit
+  the app answers 429 `{ code: 'limit' }` and shows "You reached today's save limit".
+- Old counters (more than two days old) are deleted now and then by the app and by `node scripts/db-migrate.mjs`.
 
 **Accounts** switch on when a database (`DATABASE_URL` or `POSTGRES_URL`, set by Vercel → Storage →
 Neon) **and** `SESSION_SECRET` are set. Then the app opens with *Log in* / *Create account*
@@ -297,7 +314,7 @@ server (anything else = `ch`). Everything that differs lives in `lib/variants.js
 ### The database: numbered steps, and how to add a column
 
 `lib/schema.mjs` holds `MIGRATIONS`, a numbered list of steps (step 1 = first tables, 2 = extra columns on
-`answers`, 3 = `goals.plan` …). The table `schema_version` remembers the last step that was done. When the app
+`answers`, 3 = `goals.plan`, 4 = the `usage` table for the limits …). The table `schema_version` remembers the last step that was done. When the app
 starts it asks ONE question ("which step is the database at?") and only if it is behind does it run the missing
 steps – each step in one transaction together with the note "step N done", so a step is either completely done
 or not at all. A brand-new database runs all steps; the existing live database (no `schema_version` yet) runs

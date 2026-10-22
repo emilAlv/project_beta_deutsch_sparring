@@ -16,13 +16,13 @@ export async function POST(req) {
     const body = await req.json().catch(() => ({}));
     const username = cleanUsername(body?.username).slice(0, 40);
     const password = typeof body?.password === 'string' ? body.password : '';
-    if (tooManyLoginTries(req, username)) return fail('too_many', 429);
+    if (await tooManyLoginTries(req, username)) return fail('too_many', 429);
 
     const user = username && password && password.length <= PASSWORD_MAX ? await users().findByUsername(username) : null;
     // no user: verifyPassword still does the full work, then says no
     const ok = await verifyPassword(password.slice(0, PASSWORD_MAX), user?.password_hash ?? null, user?.salt ?? null);
     if (!user || !ok) {
-      countFailedLogin(req, username);
+      await countFailedLogin(req, username);
       return fail('bad_login', 401);
     }
     const res = Response.json({ ok: true, username: user.username });

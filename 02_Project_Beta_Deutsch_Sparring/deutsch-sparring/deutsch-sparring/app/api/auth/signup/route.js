@@ -3,7 +3,7 @@ import {
 } from '../../../../lib/auth';
 import { users } from '../../../../lib/users';
 import { hashPassword } from '../../../../lib/password.mjs';
-import { checkClassCode, tooManySignupTries, countSignupTry } from '../../../../lib/guard';
+import { checkCode, tooManySignupTries, countSignupTry } from '../../../../lib/guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,13 +19,15 @@ export async function POST(req) {
     const password = typeof body?.password === 'string' ? body.password : '';
     const classCode = String(body?.classCode ?? '').trim();
 
-    if (tooManySignupTries(req, username)) return fail('too_many', 429);
+    if (await tooManySignupTries(req, username)) return fail('too_many', 429);
     if (!USERNAME_RULE.test(username)) return fail('username_rules', 400);
     if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) return fail('password_rules', 400);
 
-    const codeOk = checkClassCode(classCode);
-    countSignupTry(req, username, { wrongCode: !codeOk });
-    if (!codeOk) return fail('bad_code', 401);
+    await countSignupTry(req, username);
+    // the same class-code check as the chat: wrong codes count per network (lib/guard.js)
+    const code = await checkCode(req, { classCode });
+    if (code === 'too_many') return fail('too_many', 429);
+    if (code !== 'ok') return fail('bad_code', 401);
 
     const { hash, salt } = await hashPassword(password);
     const user = await users().create({ username, hash, salt });

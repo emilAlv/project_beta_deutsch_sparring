@@ -5,7 +5,7 @@
 import {
   usesServer, loadGoalsLocal, saveGoalLocal, deleteGoalLocal, loadScores, loadAnswerLog, loadRuleLog, progressSaved, markReachedLocal,
 } from './storage';
-import { postNow } from './progress-client';
+import { postWithCode } from './progress-client';
 import { todayKey } from './goals';
 import { tickExam } from './home-plan';
 
@@ -69,11 +69,11 @@ export const previewFix = (request, lever) => planCall({ fix: { request, lever }
 // Apply: the goal as it is now + the change → the new goal to save
 export const changeGoal = (goal, levers, label) => planCall({ goal, levers, label });
 
-// → true when saved
+// → { ok } – or { ok: false, code } (code 'limit' = today's save limit reached, see lib/progress-api.js)
 export async function saveGoal(goal) {
-  if (!usesServer()) return saveGoalLocal(goal);
-  const answer = await postNow('/api/goals', { goal });
-  return Boolean(answer?.ok);
+  if (!usesServer()) return { ok: Boolean(saveGoalLocal(goal)) };
+  const { ok, code } = await postWithCode('/api/goals', { goal });
+  return ok ? { ok: true } : { ok: false, code };
 }
 
 export async function removeGoal(id) {

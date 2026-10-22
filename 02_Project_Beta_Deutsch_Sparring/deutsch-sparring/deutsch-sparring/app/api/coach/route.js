@@ -1,7 +1,7 @@
 import { allTopics } from '../../../lib/topics';
 import { generate, coachModelSettings } from '../../../lib/gemini';
 import { parseModelJson, salvageMessage } from '../../../lib/reply';
-import { checkClassCode, overDailyLimit } from '../../../lib/guard';
+import { checkCode, overDailyLimit } from '../../../lib/guard';
 import { requireUser } from '../../../lib/auth';
 import { fail, reasonCode, replyShape, readJsonBody } from '../../../lib/route-guard';
 import { homeData, planContext } from '../../../lib/home-data';
@@ -48,7 +48,11 @@ async function handle(req) {
   if (bad) return bad;
 
   // the class code was checked once at sign-up when accounts are on
-  if (!user && !checkClassCode(body.classCode)) return fail('bad_code', 401);
+  if (!user) {
+    const code = await checkCode(req, body);
+    if (code === 'too_many') return fail('code_tries', 429);
+    if (code !== 'ok') return fail('bad_code', 401);
+  }
 
   // --- the conversation: the last few turns; the last one must be from the student (or the coach starts) ---
   const greeting = body.kind === 'greeting';
@@ -56,7 +60,7 @@ async function handle(req) {
   if (!greeting && turns.at(-1)?.role !== 'user') return fail('no_message', 400);
   const lastUser = greeting ? '' : turns.at(-1).text;
 
-  if (overDailyLimit(req, body.clientId, user?.id)) {
+  if (await overDailyLimit(req, user?.id)) {
     return fail('limit', 429);
   }
 

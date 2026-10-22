@@ -294,7 +294,7 @@ export default function Coach({ name, classCode, clientId, goals, topics, today,
     const out = await onApplyPlan(msg.plan);
     setApplying('');
     if (out?.ok) setCard(msg.id, 'plan', 'applied');
-    else setError2(msg.id, out?.stale ? t('coachPlanStale') : t('coachPlanSaveError'));
+    else setError2(msg.id, out?.stale ? t('coachPlanStale') : t(out?.code === 'limit' ? 'saveLimit' : 'coachPlanSaveError'));
   }
 
   async function accept(msg) {
@@ -306,7 +306,7 @@ export default function Coach({ name, classCode, clientId, goals, topics, today,
       setCard(msg.id, 'proposal', 'accepted');
       // a local line, no AI call
       commit([...msgsRef.current, { id: newGoalId('c'), role: 'coach', auto: true, at: Date.now(), text: t('coachLineGoal', { title: msg.proposal.preview.title }), quick: [t('coachChip_today'), t('coachChip_plan')] }]);
-    } else setError2(msg.id, t('gpSaveError'));
+    } else setError2(msg.id, t(out?.code === 'limit' ? 'saveLimit' : 'gpSaveError'));
   }
 
   // one of the generator's fixes: the same goal previewed again, as a new card

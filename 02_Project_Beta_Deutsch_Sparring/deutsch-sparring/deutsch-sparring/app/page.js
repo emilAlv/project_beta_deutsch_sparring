@@ -715,7 +715,7 @@ export default function Home() {
         }
         // the server sends a fixed code (and a short reason such as "db"); the text comes from lib/ui-text.js
         const msg = data.code && t(`tutorErr_${data.code}`) !== `tutorErr_${data.code}` ? t(`tutorErr_${data.code}`) : t('errorUnexpected', { status: res.status });
-        throw new UiError(data.detail ? `${msg} (${data.detail})` : msg, !['limit', 'config', 'too_big'].includes(data.code));
+        throw new UiError(data.detail ? `${msg} (${data.detail})` : msg, !['limit', 'code_tries', 'config', 'too_big'].includes(data.code));
       }
       if (!data.reply) {
         // not valid JSON: show the text, keep the session and the panel as they are

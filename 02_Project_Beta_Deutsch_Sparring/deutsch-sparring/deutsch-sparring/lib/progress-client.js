@@ -4,17 +4,25 @@
 
 let chain = Promise.resolve();
 
-// → the answer as JSON, or null (failed / refused)
-async function attempt(path, body) {
+// → { data } (the answer as JSON) or { refused: code } (4xx, e.g. 'limit' = today's save limit) or {} (failed)
+async function send(path, body) {
   for (let i = 0; i < 3; i += 1) {
     try {
       const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (res.ok) return await res.json().catch(() => ({ ok: true }));
-      if (res.status >= 400 && res.status < 500) return null; // a refusal will not get better by retrying
+      if (res.ok) return { data: await res.json().catch(() => ({ ok: true })) };
+      if (res.status >= 400 && res.status < 500) { // a refusal will not get better by retrying
+        const data = await res.json().catch(() => ({}));
+        return { refused: data.code || 'refused' };
+      }
     } catch {}
     await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
   }
-  return null;
+  return {};
+}
+
+// → the answer as JSON, or null (failed / refused)
+async function attempt(path, body) {
+  return (await send(path, body)).data ?? null;
 }
 
 // Fire and forget, but in order.
@@ -36,3 +44,9 @@ export async function getJson(path) {
 }
 
 export const postNow = (path, body) => attempt(path, body);
+// like postNow, but says WHY a save was refused → { ok: true, data } | { ok: false, code } ('limit', 'server', …)
+export async function postWithCode(path, body) {
+  const { data, refused } = await send(path, body);
+  if (data?.ok) return { ok: true, data };
+  return { ok: false, code: refused || 'server' };
+}

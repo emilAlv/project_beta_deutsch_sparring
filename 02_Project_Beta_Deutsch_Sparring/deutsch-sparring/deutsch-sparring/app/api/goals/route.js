@@ -1,4 +1,4 @@
-import { progressRoute, bad } from '../../../lib/progress-api';
+import { progressRoute, bad, overCap } from '../../../lib/progress-api';
 import { goalsStore } from '../../../lib/goals-store';
 import { cleanGoal, cleanGoalId, todayKey } from '../../../lib/goals';
 import { tickExam } from '../../../lib/home-plan';
@@ -16,6 +16,8 @@ export const GET = (req) => progressRoute(req, {}, async ({ user }) => ({ goals:
 export const POST = (req) => progressRoute(req, { write: true, maxBytes: 60_000 }, async ({ user, body }) => {
   const goal = Number(body.goal?.version) === PLAN_VERSION ? cleanPlan(body.goal) : cleanGoal(body.goal);
   if (!goal) return bad('bad_goal');
+  const capped = await overCap(user, 'goal');
+  if (capped) return capped;
   const ok = await goalsStore().save(user.id, goal);
   return ok ? { ok: true, goal } : Response.json({ code: 'too_many' }, { status: 409 });
 });
@@ -30,6 +32,8 @@ export const PATCH = (req) => progressRoute(req, { write: true, maxBytes: 2_000 
   const next = goal && tickExam(goal, milestoneId, todayKey(), body.result);
   const clean = next && cleanPlan(next);
   if (!clean) return bad('bad_goal');
+  const capped = await overCap(user, 'goal');
+  if (capped) return capped;
   const ok = await goalsStore().save(user.id, clean);
   return ok ? { ok: true, goal: clean } : Response.json({ code: 'too_many' }, { status: 409 });
 });

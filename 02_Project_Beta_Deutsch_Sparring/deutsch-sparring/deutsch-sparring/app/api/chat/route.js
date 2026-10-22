@@ -10,7 +10,7 @@ import { mockReply } from '../../../lib/mock';
 import {
   RESPONSE_SCHEMA, DIFFICULTY_DE, LEVELS, normalizeReply, parseModelJson, salvageMessage,
 } from '../../../lib/reply';
-import { checkClassCode, overDailyLimit } from '../../../lib/guard';
+import { checkCode, overDailyLimit } from '../../../lib/guard';
 import { draftWithNoveltyRetry } from '../../../lib/novelty';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
@@ -48,9 +48,14 @@ async function handle(req) {
   const name = user ? user.username : body?.name;
 
   // the class code was checked once at sign-up when accounts are on
-  if (!user && !checkClassCode(classCode)) return fail('bad_code', 401);
+  // (wrong codes are counted per network: too many → 429 'code_tries' for the rest of the day)
+  if (!user) {
+    const code = await checkCode(req, { classCode });
+    if (code === 'too_many') return fail('code_tries', 429);
+    if (code !== 'ok') return fail('bad_code', 401);
+  }
   if (!Array.isArray(messages) || messages.length === 0) return fail('no_message', 400);
-  if (overDailyLimit(req, body.clientId, user?.id)) {
+  if (await overDailyLimit(req, user?.id)) {
     return fail('limit', 429);
   }
 

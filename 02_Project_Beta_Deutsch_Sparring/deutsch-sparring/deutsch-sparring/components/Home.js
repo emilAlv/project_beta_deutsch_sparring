@@ -246,7 +246,8 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
   async function acceptGoal(proposal) {
     const built = await buildGoal(proposal.request);
     if (!built.ok || !built.goal) return { ok: false };
-    if (!(await saveGoal(built.goal))) return { ok: false };
+    const saved = await saveGoal(built.goal);
+    if (!saved.ok) return saved;
     await reload();
     return { ok: true };
   }
@@ -256,7 +257,8 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
     if (!goal) return { ok: false, stale: true };
     const out = await changeGoal(goal, plan.levers, plan.label || '');
     if (!out.ok || !out.goal) return { ok: false, stale: true };
-    if (!(await saveGoal(out.goal))) return { ok: false };
+    const saved = await saveGoal(out.goal);
+    if (!saved.ok) return saved;
     await reload();
     return { ok: true };
   }
@@ -268,8 +270,9 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
   async function convertAll() {
     setUpgrading({ busy: true, error: '', skipped: false });
     for (const { next } of pending) {
-      if (!(await saveGoal(next))) {
-        setUpgrading({ busy: false, error: t('upError'), skipped: false });
+      const saved = await saveGoal(next);
+      if (!saved.ok) {
+        setUpgrading({ busy: false, error: t(saved.code === 'limit' ? 'saveLimit' : 'upError'), skipped: false });
         return;
       }
     }
