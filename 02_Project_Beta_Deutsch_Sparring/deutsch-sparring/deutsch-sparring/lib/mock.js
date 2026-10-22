@@ -9,6 +9,7 @@
 // Extra test words: "langsam" (slow answer), "kaputt" (broken JSON), "rohtext" (plain text
 // instead of JSON), "absturz" (server error), "keine lust mehr" (the student wants to stop).
 
+import { genderRule } from './gender.js';
 import { ModelError } from './gemini.js';
 import { getExamples } from './content.js';
 import { curriculumEntry, gapExample, shortTitle } from './curriculum.js';
@@ -537,7 +538,17 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   if (!right && !out.feedback.why) {
     const f = out.feedback;
     const fixed = (f.changedWords || []).filter(Boolean).join(' ');
-    f.why = {
+    // a wrong article: the app's rule of thumb from the ending (lib/gender.js), or the honest "no rule"
+    const w = useVocab && f.errorType === 'Artikel' ? q?.word : null;
+    const g = w ? genderRule(w.noun || String(w.de).replace(/^(der|die|das) /, ''), w.article) : null;
+    if (w) {
+      f.why = {
+        mistake: `Der Artikel ist «${w.article}».`,
+        rule: g ? (g.fits ? g.text : g.text.replace(' AUSNAHME:', ' Aber dieses Wort ist eine Ausnahme:')) : 'Hier hilft keine Regel: lerne das Wort immer mit Artikel.',
+        here: `Richtig ist: ${f.corrected}.`,
+      };
+    }
+    if (!f.why) f.why = {
       mistake: fixed ? `Hier fehlt oder stimmt nicht: «${fixed}».` : `«${f.studentAnswer}» → «${f.corrected}»`,
       rule: f.explanation || (f.rule ? `Regel: ${f.rule}.` : 'Lerne das Wort immer mit Artikel und Plural.'),
       here: `Richtig ist: ${f.corrected}.`,

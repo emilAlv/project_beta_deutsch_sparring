@@ -3,6 +3,7 @@
 // enrichment (no English yet, a noun without article …) are left out: they cannot be checked.
 // "From the course" is a SOURCE (a filter), never a topic: the topics are sections and lists.
 
+import { genderRule } from './gender.js';
 import fs from 'fs';
 import path from 'path';
 import { matchesFilter } from './scores.js';
@@ -119,14 +120,16 @@ export function levelsOf({ section, list } = {}) {
 }
 
 // ---- what goes into the tutor's prompt: one compact line per word ----
-export const WORD_LINE_HEADER = 'id | German | article | plural or Perfekt | English | adjective | case';
+export const WORD_LINE_HEADER = 'id | German | article | plural or Perfekt | English | adjective | case | gender rule';
 
 export function wordLine(w) {
   const second = w.type === 'noun'
     ? (w.number === 'pl' ? 'only plural' : w.plural || (w.number === 'sg' ? 'no plural' : ''))
     : w.perfekt;
   const de = w.type === 'noun' && w.noun ? w.noun : w.de;
-  return [w.id, de, w.article, second, w.en, w.adjective, w.case]
+  // nouns: the rule of thumb for der/die/das from the ending, worked out by the app (lib/gender.js) – or an exception
+  const gender = w.type === 'noun' ? genderRule(de, w.article)?.text || '' : '';
+  return [w.id, de, w.article, second, w.en, w.adjective, w.case, gender]
     .map((x) => String(x || '').replace(/\s*\|\s*/g, '/').trim())
     .join(' | ');
 }
