@@ -122,6 +122,7 @@ export function exerciseModelsBlock(models = []) {
 Base each new question on ONE of these models and go through them in turn (never the same model twice in a row; in a long session start again with completely new variations).
 - Write every question as a NEW variation: keep the grammar point, the task type and the level; change ALL content words, names, places and the situation.
 - NEVER ask a model sentence itself, not even with one word changed. The model shows the target form; the student must not recognise it.
+- Write your own hint for the new question (following the hint rules). A bracket hint in a model, e.g. "(it still goes on)", is for you: never copy it if it gives the answer away.
 - The reference answer and "also correct" belong to the MODEL. Work out the answer to YOUR new question yourself (exercise.answer).
 - When you check an answer, accept every correct alternative and any other natural correct solution (also the other spelling variant and word variant).
 - If the student falls into a model's trap, name it briefly in feedback.why / explanation (simple German). Do not quiz the trap on its own.
