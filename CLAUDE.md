@@ -60,6 +60,13 @@ Keep it current: a task moves Prioritized → In Progress when a builder starts 
 Emilio should try and the PR number) → Done after he has tested it. New requests from Emilio become cards; things only he
 can do go to Challenges & Roadblocks, open decisions to Questions. Card colours are covers, which the connection cannot
 set – Emilio sets them by hand.
+Every open German Tutor card gets one or two labels (they exist on the board; reuse them, never create new ones without
+asking): **Content** (blue: lessons, exercises, word lists, class material) · **AI tutor & coach quality** (purple: how
+Gemini teaches/explains/coaches, prompts, model choice, AI cost) · **UI / UX design** (green: screens, layout,
+accessibility) · **Learning Logic** (yellow: scores, spaced repetition, word picker, plan and milestones) ·
+**Security & privacy** (red: logins, limits, personal data, copyright, secrets) · **Infrastructure & ops** (orange:
+Vercel, database, settings, app speed, clean-up). The Trello connection reaches the board through the account
+@emiliogonzalezalvarez; if it cannot see the board, tell Emilio instead of creating a new one.
 
 **Requests that arrive while an agent works:** say in one line that it is noted, finish the current check, then
 handle it – several small requests may go into one PR.
