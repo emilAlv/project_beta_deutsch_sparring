@@ -937,3 +937,18 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
   .gantt-row, .gantt-part { grid-template-columns: 110px 1fr; }
   .zoom-seg { flex-grow: 0 !important; flex-basis: auto !important; }
 }
+
+/* R17: a skipped answer is neutral (not a mistake) */
+.answer-list li .answer-tag.neutral { color: var(--muted); }
+
+/* R17: summary "To repeat" (whole question, corrected sentence, skipped solution) and word scores */
+.sum-tag { border-radius: 14px; }
+.sum-parts { color: var(--muted); }
+.sum-repeat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.sum-repeat-list li { padding: 8px 10px; border: 1px solid var(--amber-line); border-radius: 10px; background: var(--surface); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.sum-repeat-list p { margin: 0; }
+.sum-q { font-weight: 500; }
+.sum-fix { margin-top: 4px !important; color: var(--brand); }
+.sum-fix-label { color: var(--muted); }
+.sum-fix .fixed { padding: 0 3px; border-radius: 4px; background: rgba(214, 162, 83, 0.28); }
+.sum-skipped-plain { color: var(--muted); }

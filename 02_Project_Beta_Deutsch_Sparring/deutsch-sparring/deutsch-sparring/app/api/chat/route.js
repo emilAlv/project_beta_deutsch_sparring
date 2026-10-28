@@ -123,6 +123,13 @@ async function handle(req) {
     corrected: String(m?.corrected || '').slice(0, 200),
     rule: String(m?.rule || '').slice(0, 80),
   }));
+  // "Repeat my mistakes": the mistakes of THIS session that the app sends with the chip (rule / word, never trusted further than text)
+  const repeat = (Array.isArray(body.repeatMistakes) ? body.repeatMistakes : []).slice(0, 8).map((m) => ({
+    studentAnswer: String(m?.studentAnswer || '').slice(0, 200),
+    corrected: String(m?.corrected || '').slice(0, 200),
+    rule: String(m?.rule || '').slice(0, 80),
+    word: String(m?.word || '').slice(0, 60),
+  }));
   const asked = (Array.isArray(body.asked) ? body.asked : []).slice(-50).map((x) => String(x).slice(0, 120)).filter(Boolean);
   const notes = (Array.isArray(body.notes) ? body.notes : []).slice(0, 6).map((n) => String(n).slice(0, 80));
 
@@ -236,6 +243,7 @@ async function handle(req) {
       session,
       progress,
       mistakes,
+      repeat,
       notes,
       guessed,
       asked,

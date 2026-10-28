@@ -2,7 +2,7 @@
 
 import { t, LOCALE, dirKey } from '../lib/ui-text';
 import { compareAnswer } from '../lib/diff';
-import { score, taskStates, headlineKey, ruleRows } from '../lib/stats';
+import { score, scoreLine, conversationExamples, taskStates, headlineKey, ruleRows } from '../lib/stats';
 import { ProgressTrack } from './Chat';
 import { Marked } from './Rich';
 import SceneArt from './SceneArt';
@@ -143,9 +143,7 @@ function GlanceView({ session, topic, recent }) {
         <div className="perf-summary">
           <div>
             <p className="headline">{t(headlineKey(sc))}</p>
-            <p className="detail">
-              {sc.answered === 0 ? t('basedOnNone') : sc.answered === 1 ? t('basedOnOne') : t('basedOnMany', { n: sc.answered })}
-            </p>
+            <p className="detail">{sc.done === 0 ? t('basedOnNone') : scoreLine(sc, t)}</p>
           </div>
           {sc.answered > 0 && (
             <div className="perf-score">
@@ -180,7 +178,7 @@ function GlanceView({ session, topic, recent }) {
                   <span className="recent-topic">{r.topicName || '—'}</span>
                   <span className="muted"> · {new Date(r.updatedAt).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })}</span>
                 </span>
-                <span className="recent-score">{r.correct}/{r.answered}</span>
+                <span className="recent-score">{scoreLine(r, t)}</span>
               </li>
             ))}
           </ul>
@@ -206,9 +204,9 @@ function ProgressView({ session }) {
       <section className="card answers">
         <p className="answers-head">
           <span className="caps">{t('yourAnswers')}</span>
-          {sc.answered > 0 && <span className="answers-score">{t('scoreCorrect', sc)}</span>}
+          {sc.done > 0 && <span className="answers-score">{scoreLine(sc, t)}</span>}
         </p>
-        {sc.answered === 0 ? (
+        {sc.done === 0 ? (
           <p className="detail">{t('noAnswers')}</p>
         ) : (
           <ul className="answer-list">
@@ -229,9 +227,12 @@ function AnswerRow({ a }) {
   const typeName = type && t(`ex_${type}`);
   const meta = [a.n, typeName !== `ex_${type}` && typeName].filter(Boolean).join(' · ');
   const question = a.question || a.line || a.skippedLine;
-  const tag = a.correct
-    ? <span className="answer-tag">✓ {t('tagRight')}</span>
-    : <span className="answer-tag">✗ {t('tagRepeat')}</span>;
+  // right = green · wrong = amber "to repeat" · skipped = neutral "– Skipped" (not a mistake)
+  const tag = a.skipped
+    ? <span className="answer-tag neutral">{t('tagSkipped')}</span>
+    : a.correct
+      ? <span className="answer-tag">✓ {t('tagRight')}</span>
+      : <span className="answer-tag">✗ {t('tagRepeat')}</span>;
   const state = a.skipped ? 'skipped' : a.correct ? 'right' : 'wrong';
   return (
     <li className={state}>
@@ -283,9 +284,7 @@ function GrammarView({ session }) {
     );
   }
   // two examples from this conversation: a corrected mistake first, then a right answer
-  const wrong = [...session.answers].reverse().find((a) => !a.correct && !a.skipped);
-  const right = [...session.answers].reverse().find((a) => a.correct);
-  const examples = [wrong, right].filter(Boolean).slice(0, 2);
+  const examples = conversationExamples(session);
   return (
     <section className="card grammar">
       <p className="caps">{t('grammarFocus')}</p>
@@ -293,8 +292,8 @@ function GrammarView({ session }) {
       <p className="grammar-rule">{g.rule}</p>
       {g.boxes.length > 0 && (
         <div className="rule-boxes">
-          {g.boxes.map((b) => (
-            <div key={b.label} className="rule-box">
+          {g.boxes.map((b, i) => (
+            <div key={`${i}-${b.label}`} className="rule-box">
               <p className="rule-box-label">{b.label}</p>
               <p className="rule-box-value">{b.value}</p>
               <p className="rule-box-note">{b.note}</p>

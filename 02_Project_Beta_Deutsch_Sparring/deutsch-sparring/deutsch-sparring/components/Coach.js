@@ -9,6 +9,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t } from '../lib/ui-text';
+import { scoreLine } from '../lib/stats';
 import { fmtDay } from '../lib/dates';
 import { dayKey, coachTriedDay, setCoachTriedDay } from '../lib/storage';
 import { loadCoachMessages, saveCoachMessages, askCoach } from '../lib/coach-client';
@@ -246,7 +247,7 @@ export default function Coach({ name, classCode, clientId, goals, topics, today,
       if (sid && !saved.some((m) => m.id === sid) && dayKey(lastSession.updatedAt || Date.now()) === dayKey()) {
         saved = [...saved, {
           id: sid, role: 'coach', auto: true, at: Date.now(),
-          text: t('coachLineSession', { correct: lastSession.correct, answered: lastSession.answered }),
+          text: t('coachLineSession', { line: scoreLine(lastSession, t) }),
           quick: [t('coachChip_today'), t('coachChip_weak')],
         }].slice(-MAX_MESSAGES);
         saveCoachMessages(saved);
