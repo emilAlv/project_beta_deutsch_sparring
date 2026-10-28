@@ -48,9 +48,10 @@ const VOCAB_EXAMPLES = [
   [{ label: 'der', value: 'maskulin', note: 'der Tisch, der Schrank (CH: der Kasten)' }, { label: 'die / das', value: 'feminin / neutral', note: 'die Lampe · das Bett' }],
   [{ label: 'der', value: 'maskulin', note: 'der Stuhl, der Garten' }, { label: 'die / das', value: 'feminin / neutral', note: 'die Tür · das Fenster' }],
 ];
-function vocabFocus(answer) {
+// answers: the German answers of ALL the session's cards, so no example is a word that is asked later
+function vocabFocus(answers) {
   const pick = (boxes) => ({ ...FOCUS.vocab, boxes });
-  const safe = VOCAB_EXAMPLES.find((boxes) => !focusRevealsAnswer(pick(boxes), answer));
+  const safe = VOCAB_EXAMPLES.find((boxes) => answers.every((a) => !focusRevealsAnswer(pick(boxes), a)));
   return safe ? pick(safe) : { ...FOCUS.vocab, boxes: [] };
 }
 
@@ -73,9 +74,10 @@ function curriculumExamples(entry) {
   });
 }
 
-// the "grammar focus" card of a curriculum topic: rule + the first two examples as boxes
+// the "grammar focus" card of a curriculum topic: rule + two examples as boxes. The LAST two examples: the questions
+// start with the first ones, so the card does not show the solution of question 1 or 2.
 function curriculumFocus(entry) {
-  const [a, b] = entry.examples.map(gapExample);
+  const [a, b] = entry.examples.slice(-2).map(gapExample);
   return {
     title: shortTitle(entry),
     rule: entry.rule.split(/(?<=[.!?])\s+/).slice(0, 2).join(' '),
@@ -337,7 +339,7 @@ function checkVocab(q, answer, settings) {
   const card = fullCard(w); // the article and the plural are always shown, as information on Easy
   const extra = isNoun(w)
     ? [w.plural ? `Plural: ${w.plural}.` : 'Nur Plural.', w.variants.length ? `Auch: ${w.variants.join(', ')}.` : ''].filter(Boolean).join(' ')
-    : w.perfekt ? `Perfekt: ${w.perfekt}.` : '';
+    : w.perfekt && !(settings.sentences && (settings.grammar || []).includes('perfekt')) ? `Perfekt: ${w.perfekt}.` : ''; // not before the Perfekt task
   if (q.exercise.direction === 'en-de') {
     const forms = [w.de, ...w.variants];
     const full = forms.some((f) => has(a, f)); // article + noun
@@ -482,7 +484,8 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     return json();
   }
   // the student asks for another topic in their own words: settings are fixed during a session
-  const wish = detectTopicWish(text, lessons, { running: true });
+  // (not for the app's own opening message "Starte bitte das Thema «…»": a topic name can look like a wish)
+  const wish = session.start ? null : detectTopicWish(text, lessons, { running: true });
   const other = wish && lessons.find((l) => l.id !== topicId && (l.id === wish.topicId || l.type === wish.group));
   if (other) {
     out.message = 'Das Thema bleibt während der Sitzung gleich. Beende die Sitzung, um etwas anderes zu üben.';
@@ -517,7 +520,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
         ? `Los geht’s mit den Karteikarten zu «${topic.short}». (Demo-Modus)`
         : `Sehr gern! Wir üben «${topic?.short || 'Dativ oder Akkusativ'}». (Demo-Modus)`;
     ask(progress.done + 1);
-    out.grammarFocus = useVocab ? vocabFocus(out.exercise.answer) : entry ? curriculumFocus(entry) : FOCUS.grammar;
+    out.grammarFocus = useVocab ? vocabFocus([out.exercise.answer, ...vocab.map((w) => w.de)]) : entry ? curriculumFocus(entry) : FOCUS.grammar;
     return json();
   }
 
@@ -531,7 +534,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
         : 'Die Regel: Bei den Wechselpräpositionen fragst du **Wo?** (Position) → Dativ oder **Wohin?** (Bewegung) → Akkusativ.';
     out.panelView = 'grammar';
     ask(open);
-    out.grammarFocus = useVocab ? vocabFocus(out.exercise.answer) : entry ? curriculumFocus(entry) : FOCUS.grammar;
+    out.grammarFocus = useVocab ? vocabFocus([out.exercise.answer, ...vocab.map((w) => w.de)]) : entry ? curriculumFocus(entry) : FOCUS.grammar;
     return json();
   }
   if (/^(tipp|hint|give me a hint|gib mir einen tipp|einen tipp)/.test(say)) {

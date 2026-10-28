@@ -11,6 +11,7 @@ import {
   withSentences, sessionSettings, DEFAULT_SETUP,
 } from '../lib/session-settings';
 import { setupMatches } from '../lib/milestone-session';
+import { QUESTION_MIN } from '../lib/intents';
 import { Check } from './icons';
 
 const isGrammarTopic = (x) => x.type !== 'Wortschatz' && x.id !== 'free';
@@ -103,8 +104,17 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
   const topic = vocab ? vocabTopic : grammarTopic;
 
   const available = countOf(vocabTopic, form.level, form.source);
-  const needed = wordsNeeded(form.questions, withSentences(form));
-  const effective = { ...form, grammarTopic: grammarTopic?.id || null, section: section?.id || null, list: list?.id || null };
+  // a short list cannot fill the chosen number of questions without asking the same word again and again:
+  // fewer than half as many words as questions → fewer questions (never below the minimum), and the screen says so
+  const wordCap = vocab && vocabTopic && available > 0 ? available * 2 : Infinity;
+  const questions = wordCap < form.questions ? Math.max(QUESTION_MIN, wordCap) : form.questions;
+  const cut = questions < form.questions;
+  const repeats = wordCap < QUESTION_MIN; // even the minimum asks words more than twice
+  const shortNote = cut || repeats
+    ? repeats ? t('setupRepeat', { n: available }) : t('setupCut', { n: available, q: questions, asked: form.questions })
+    : null;
+  const needed = wordsNeeded(questions, withSentences(form));
+  const effective = { ...form, questions, grammarTopic: grammarTopic?.id || null, section: section?.id || null, list: list?.id || null };
   const topicLabel = !topic ? '' : vocab && list ? `${section.short} › ${list.short}` : topic.short;
 
   const summary = [
@@ -112,8 +122,10 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
     topicLabel || t('setupChooseTopic'),
     form.level,
     t(`diff_${form.difficulty}`),
-    t('questionsN', { n: form.questions }),
+    cut ? t('setupCutSummary', { n: available, q: questions }) : t('questionsN', { n: questions }),
+    vocab ? t(`source_${form.source}`) : null,
     vocab ? t(`dirShort_${dirKey(form.direction)}`) : null,
+    mode === 'vocab' ? GRAMMAR_POINTS.filter((g) => form.grammar.includes(g)).map((g) => t(`gp_${g}`)).join(' + ') : null,
     t(`variantShort_${form.variant}`),
   ].filter(Boolean).join(' · ');
 
@@ -197,6 +209,12 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
             </div>
           </Section>
 
+          {vocab && (
+            <Section title={t('setupSource')}>
+              <Segmented label={t('setupSource')} options={SOURCES} value={form.source} onChange={(v) => set({ source: v })} render={(s) => t(`source_${s}`)} />
+            </Section>
+          )}
+
           <Section title={t('setupTopic')}>
             {vocab ? (
               sections.length ? (
@@ -222,9 +240,11 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
                       />
                     </>
                   )}
-                  <p className="setup-help">
-                    {available >= needed ? t('setupWordsNote', { n: needed, total: available }) : t('setupWordsFew', { total: available })}
-                  </p>
+                  {(available >= needed || !shortNote) && (
+                    <p className="setup-help">
+                      {available >= needed ? t('setupWordsNote', { n: needed, total: available }) : t('setupWordsFew', { n: available })}
+                    </p>
+                  )}
                 </>
               ) : <p className="setup-help">{t('setupNoWords')}</p>
             ) : grammarTopics.length ? (
@@ -255,11 +275,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
 
           {vocab && (
             <>
-              <Section title={t('setupSource')}>
-                <Segmented label={t('setupSource')} options={SOURCES} value={form.source} onChange={(v) => set({ source: v })} render={(s) => t(`source_${s}`)} />
-              </Section>
-
-              <Section title={t('setupFlashcards')} help={t('refLang')}>
+              <Section title={t('setupFlashcards')}>
                 <Segmented label={t('setupFlashcards')} options={DIRECTIONS} value={form.direction} onChange={(v) => set({ direction: v })} render={(d) => t(`dir_${dirKey(d)}`)} />
               </Section>
 
@@ -294,7 +310,8 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
         <div className="setup-bar-inner">
           <div className="setup-summary">
             <p className="caps">{t('setupBarLabel')}</p>
-            <p className="setup-summary-line" title={summary}>{summary}</p>
+            <p className="setup-summary-line">{summary}</p>
+            {shortNote && <p className="setup-note" data-testid="setup-note">{shortNote}</p>}
             {error && <p className="setup-error" role="alert">{error}</p>}
           </div>
           {onCancel && <button type="button" className="button-outline" onClick={onCancel}>{t('setupCancel')}</button>}
