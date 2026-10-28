@@ -132,6 +132,7 @@ export default function AuthCard({ initialMode = 'login' }) {
         <button type="submit" className="auth-submit" disabled={busy}>
           {busy ? t('authWorking') : signup ? t('authCreate') : t('authLogIn')}
         </button>
+        {!signup && <p className="auth-forgot detail">{t('authForgot')}</p>}
       </form>
     </main>
   );

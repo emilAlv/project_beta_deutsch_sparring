@@ -203,7 +203,7 @@ Vercel sees the same numbers; without a database in the server's memory). A "day
 **Accounts** switch on when a database (`DATABASE_URL` or `POSTGRES_URL`, set by Vercel → Storage →
 Neon) **and** `SESSION_SECRET` are set. Then the app opens with *Log in* / *Create account*
 (the class code is asked once at sign-up), the student's name is their username, *Log out* is in
-the avatar menu and the daily limit counts per account. Step-by-step setup, what is stored and
+the avatar menu (it also clears this browser's copy of the student's data and the class code) and the daily limit counts per account. Step-by-step setup, what is stored and
 how to reset a password: `docs/security-accounts.md`.
 After changing a variable: Vercel → Deployments → ⋯ → Redeploy.
 

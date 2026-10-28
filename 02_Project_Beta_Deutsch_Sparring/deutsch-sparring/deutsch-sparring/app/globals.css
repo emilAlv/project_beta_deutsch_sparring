@@ -521,6 +521,7 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 }
 .auth-submit:hover:not(:disabled) { background: var(--brand-hover); }
 .auth-submit:disabled { opacity: 0.6; cursor: default; }
+.auth-forgot { margin: 0; text-align: center; }
 
 /* ---------- setup screen (before each session) ---------- */
 .setup-page { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }

@@ -32,11 +32,17 @@ in the database, so it follows the student to any device:
 
 All rows are tied to the account (`user_id`) and deleted with it. Every request checks that you
 are logged in and only ever reads or writes **your own** rows; the id of the student is taken from
-the signed login cookie, never from the request. Word scores are calculated **on the server**
-(`lib/scores.js`), so a browser cannot give itself a 10. The word picker of the tutor also reads
-them from the database, not from the browser. The streak is counted from the days with answers.
-Everything sent by the browser is checked and limited in size (a request over 20 KB is refused;
-the one-time import 500 KB).
+the signed login cookie, never from the request. The word scores are worked out **on the server**
+(`lib/scores.js`) from the answer the browser sends – see "What the server trusts" below. The word
+picker of the tutor also reads them from the database, not from the browser. The streak is counted
+from the days with answers. Every size limit is listed in "Size limits" below.
+
+**What the server trusts (plain English).** The server does not check the answer itself. The browser
+tells it whether an answer was right, wrong or skipped, and the server saves that and works out the
+word scores from it. So a student who uses the browser's developer tools (or a script) could send
+"right" for every answer and give themselves high scores. This only changes their own progress. The
+server does check that the request is from a logged-in student, that it is well formed, and the daily
+caps below, so a script cannot fill the database.
 
 **The coach.** The coach on the Home page is a second chat, separate from the tutor. To answer, the server sends
 Google's AI a short summary: the student's goals and milestones, the numbers and strengths/gaps worked out by
@@ -72,8 +78,14 @@ different.
   is not sent along when another website tries to use our app (`SameSite=Lax`).
 - Without a valid cookie every page goes to the login page and every API route answers
   "not logged in". Each API route checks the account again itself.
-- *Log out* (avatar menu, top right) deletes the cookie.
-- A password reset (below) makes old cookies useless at once: the student is logged out on all devices.
+- *Log out* (avatar menu, top right) ends the session **in that browser only**. The server keeps no list
+  of logins: the cookie is checked by its signature, so a copy of it somewhere else keeps working until
+  it runs out (30 days) or the password is reset. Log out also clears this browser's copy of the
+  student's data and the class code (R7, `clearAccountData` in `lib/storage.js`); other students' data
+  on the same computer stays.
+- A password reset (below) makes every old cookie useless at once, because the cookie holds a
+  fingerprint of the password: the student is logged out on all devices. (Checked in `lib/auth.js`
+  `currentUser` and `lib/session.js` `passwordVersion`.) There is no "log out everywhere" button yet.
 
 ## Protection against guessing
 
@@ -87,9 +99,13 @@ different.
 - **The class code must be long and random: at least 12 characters** (letters and digits, from a
   password generator; it looks like `k7Qp2Lx9Vr4m`, but make your own, never copy an example). A word-like code such as `schritte5` can
   be guessed; a 12-character random code cannot be guessed with 30 tries a day.
-- Saves per account per day are capped (1500 answers, 100 new sessions, 200 goal saves), so a
-  script cannot fill the free database.
-- The daily chat limit (`DAILY_LIMIT`) counts per account, on every device.
+- **Sign-up tells you when a username is taken** ("This username is already taken. Please choose
+  another one."). That is deliberate and it means a username can be found out by trying it. Login never
+  says whether a username exists.
+- Saves per account per day are capped (1500 answers, 100 new sessions, 1500 session updates, 200 goal
+  saves), so a script cannot fill the free database.
+- The daily AI limit (`DAILY_LIMIT`, 150 by default) counts per account, on every device, for the tutor
+  and the coach together. See "Size limits and daily caps" below for the network limits.
 - Passwords, fingerprints and secrets are never written to the logs.
 
 **Where the counts live:** all these counters (tries, daily limit, saves) are kept in one small
@@ -98,10 +114,36 @@ no username or network address in plain text). Every server copy on Vercel sees 
 numbers, and a deploy does not reset them. Rows older than two days are deleted. Without a
 database (demo mode, local tests) they live in the server's memory as before.
 
+**Size limits and daily caps (from the code; "KB" = kilobytes of what the browser sends).** If a request is
+bigger than its limit it is refused with "too big" and nothing is saved.
+
+| Route (what it does) | Largest request |
+|---|---|
+| `/api/chat` (tutor chat) | 150 KB |
+| `/api/coach` (Home coach), accounts on | 30 KB |
+| `/api/coach` (Home coach), accounts off | 400 KB |
+| `/api/coach/messages` (saves coach chat) | 60 KB |
+| `/api/progress/answer`, `/api/progress/session` (save answers and sessions) | 20 KB |
+| `/api/goals` POST (save a goal) | 60 KB |
+| `/api/goals` PATCH (change a goal) | 2 KB |
+| `/api/goals` DELETE, all GET routes | no body |
+| `/api/stats` POST, `/api/plan` POST (Home page data and plan) | 400 KB |
+| `/api/progress/import` (one-time copy of old browser data) | 500 KB |
+| `/api/auth/login`, `/api/auth/signup`, `/api/code` (class-code check) | no size limit in our code (the hosting platform's own limit applies) |
+
+Daily and network caps (defaults; `lib/guard.js`):
+
+- AI messages (tutor and coach): 150 a day per account (`DAILY_LIMIT`). With accounts on, a whole
+  network (a school) gets 20 students' worth (3000 a day). With accounts off, 5 times the limit per network.
+- Wrong class codes: 30 a day per network. The same counter is used by the chat, the coach and sign-up.
+- Wrong passwords: 10 per username and network in 15 minutes, and 100 per network in 15 minutes.
+- Sign-up tries: 10 per username and network per hour, and `SIGNUP_PER_HOUR` (10) per network per hour.
+
 **Known limits (fine for a class, worth knowing):** someone on the SAME network (e.g. the school
 network) who types a classmate's username wrong 10 times can block that username on that network
 for 15 minutes; from home it still works. There is no "forgot password" e-mail and no
-"change password" screen yet – you reset passwords with the script below.
+"change password" screen yet – the login page says "Forgot your password? Ask your teacher to reset
+it." (R7), and the teacher resets it with the script below.
 
 ## Switch accounts on in Vercel (about 10 minutes)
 
@@ -121,7 +163,15 @@ for 15 minutes; from home it still works. There is no "forgot password" e-mail a
 6. Open the app: you see the login page. Choose *Create account*, enter a username, password
    and the class code. The table is created by itself on the first sign-up.
 
-Keep `CLASS_CODE` set: it is what stops strangers from making accounts.
+Keep `CLASS_CODE` set: it is what stops strangers from making accounts. (If it is not set, the sign-up
+check accepts any code.)
+
+**With accounts off, the class code is kept in the browser.** Until accounts are on, a student types the
+class code into the chat once, and the browser keeps it (in its profile, in `wort_profile`) so the app
+does not ask again. Anyone who can open that browser can read it, and it is sent with each AI request.
+Two ways to deal with that: turn accounts on for the class (then the code is only typed at sign-up and
+the browser does not keep it, see the log-out note above), or change the code each term and tell the
+students the new one.
 If you ever change `SESSION_SECRET`, everyone is logged out once (nothing else is lost).
 To switch accounts off again: delete `SESSION_SECRET` and redeploy.
 
