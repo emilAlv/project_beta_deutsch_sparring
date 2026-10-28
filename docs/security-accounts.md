@@ -129,7 +129,7 @@ bigger than its limit it is refused with "too big" and nothing is saved.
 | `/api/goals` DELETE, all GET routes | no body |
 | `/api/stats` POST, `/api/plan` POST (Home page data and plan) | 400 KB |
 | `/api/progress/import` (one-time copy of old browser data) | 500 KB |
-| `/api/auth/login`, `/api/auth/signup`, `/api/code` (class-code check) | no size limit in our code (the hosting platform's own limit applies) |
+| `/api/auth/login`, `/api/auth/signup`, `/api/code` (class-code check) | 2 KB |
 
 Daily and network caps (defaults; `lib/guard.js`):
 
