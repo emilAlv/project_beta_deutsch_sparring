@@ -259,11 +259,12 @@ check('garbage compact → nothing', S.recordFromCompact(['x', 3]) === null && S
   const rec2 = (m, a, p) => ({ v: { s: m, k: 0, due }, ...(a != null ? { a: { s: a, k: 0, due } } : {}), ...(p != null ? { p: { s: p, k: 0, due } } : {}) });
   // n1: meaning weak · n2: article weak · n3: plural weak · v1: meaning middling
   const scores2 = { n1: rec2(2, 9, 9), n2: rec2(9, 3, 9), n3: rec2(9, 9, 4), v1: rec2(5) };
-  const order = (difficulty) => S.pickWords({ words: pool, scores: scores2, count: 4, difficulty, now: T0 }).map((w) => w.id);
+  const fixed = () => 0.5; // a fixed "random" order: words with equal scores (n2, n3 on Easy) keep the same order in both calls
+  const order = (difficulty) => S.pickWords({ words: pool, scores: scores2, count: 4, difficulty, now: T0, rand: fixed }).map((w) => w.id);
   eq('Easy picks by Meaning: weakest m first (n1 2, v1 5, then the 9s)', order('easy').slice(0, 2), ['n1', 'v1']);
   eq('Medium picks by min(m, a): n1 (2), n2 (3), v1 (5)', order('medium').slice(0, 3), ['n1', 'n2', 'v1']);
   eq('Hard picks by min(m, a, p): n1 (2), n2 (3), n3 (4), v1 (5)', order('hard'), ['n1', 'n2', 'n3', 'v1']);
-  eq('default level = Easy (old behaviour)', S.pickWords({ words: pool, scores: scores2, count: 4, now: T0 }).map((w) => w.id), order('easy'));
+  eq('default level = Easy (old behaviour)', S.pickWords({ words: pool, scores: scores2, count: 4, now: T0, rand: fixed }).map((w) => w.id), order('easy'));
   // due: the Article score is due later than Meaning; it only matters from Medium
   const later = { n2: { v: { s: 9, k: 0, due: T0 + 9 * DAY }, a: { s: 9, k: 0, due: T0 - DAY } } };
   const pickOne = (difficulty) => S.pickWords({ words: [noun('n2')], scores: later, count: 1, difficulty, now: T0 })[0].id;
@@ -376,6 +377,18 @@ eq('parts line: nothing for sentence tasks', CP.partsView({ corrected: 'x' }), [
   const stmts = last.statements.join('\n');
   check('migration step 5 adds a, a_streak, a_due, p, p_streak, p_due (IF NOT EXISTS)', last.version === 5 && ['a smallint', 'a_streak int', 'a_due timestamptz', 'p smallint', 'p_streak int', 'p_due timestamptz'].every((c) => stmts.includes(`ADD COLUMN IF NOT EXISTS ${c}`)));
   check('migration step 5 backfills a from v only where a is empty', /UPDATE word_scores SET a = v, a_streak = v_streak, a_due = v_due WHERE a IS NULL AND v IS NOT NULL/.test(stmts));
+}
+
+// ---- equally urgent words come in a new order each session (the first word of a list must not always open it) ----
+{
+  const pool = Array.from({ length: 20 }, (_, i) => ({ id: `w${String(i).padStart(2, '0')}`, de: `Wort${i}`, type: 'phrase', level: 'A1', sources: ['goethe'], topics: ['T'] }));
+  const seeded = (seed) => () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const firsts = new Set([1, 2, 3, 4, 5, 6].map((seed) => S.pickWords({ words: pool, count: 10, rand: seeded(seed) })[0]?.id));
+  check('new words: the first word differs between sessions', firsts.size >= 3, [...firsts].join(','));
+  const now = Date.now();
+  const scores = { w19: { v: { s: 2, k: 0, due: now - 1000 } } }; // a weak, due word
+  const picked = S.pickWords({ words: pool, scores, count: 10, now, rand: seeded(7) });
+  check('a weak word that is due still comes before new words', picked[0]?.id === 'w19', picked.map((w) => w.id).join(','));
 }
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll checks passed.');
