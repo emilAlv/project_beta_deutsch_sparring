@@ -177,14 +177,29 @@ During integration, **deduplicate** overlapping examples in this intake log and 
 - **Editorial decision:** do not make every photographed topic A1 or every case-related form A2. Introduce simple expressions at A1 and test flexible form/case contrasts at A2. A note about `bevor` is deferred for later study.
 - **Status:** `classified`, waiting for further class contributions, no live lesson files edited.
 
+### EC-003 – Original exercises from the classroom photographs
+
+- **Created:** 2026-10-28
+- **Request:** Turn the photographed A1/A2 practice patterns into exercises that feel like the classroom material without copying a textbook.
+- **Exercise bank:** [classroom-original-exercise-bank-2026-10-28.md](classroom-original-exercise-bank-2026-10-28.md) – **16 themed packs, 128 original prompt–answer pairs**, plus one communicative follow-up situation per pack.
+- **Coverage:** A1 imperatives, possessives, simple body/health vocabulary, `sollen`, directions, calendars and basic time; A1–A2 temporal contrasts; A2 dative verbs, `welcher/dieser`, `wo/wohin`, fixed-case prepositions, pronouns, two-object verbs, reflexive verbs, Perfekt and `hin/her`.
+- **Copyright safeguards:** Preserve pedagogical skills and generic exercise formats; replace photographed tasks, wording, settings, people and sequences with independently written examples. Do not commit the photos or textbook illustrations.
+- **Validation:** 16 packs and 128 correctly delimited source-table rows checked; corrected a faulty auxiliary-verb example, an overly prescriptive `hin/herein` exercise, an ambiguous time prompt and a pronoun prompt missing address register.
+- **Level progression:** Each pack declares its level and the proposed existing curriculum destination; no duplicate published lessons were created.
+- **Relation to EC-001:** The earlier 48-task time-expression draft and the new general pack overlap by design. **Deduplicate and select the best tasks before integration; do not simply concatenate both files.**
+- **Status:** `edited / staged`. This is a reusable source exercise bank; the running app's `content/`, `lib/curriculum.js` and `vocab/words.json` are unchanged. No merge to `main`.
+
 ## Integration queue
 
 | ID | Topic | Proposed destination | Status |
 |---|---|---|---|
 | EC-001 | A1 time expressions and Dativ; 16 initial prompts + 48-task photo-inspired expansion | `g-a1-zeit-ort`, `lektion-a1-07-zeit-termine.md`; cross-reference `g-a1-perfekt` | edited, staged; deduplicate on integration |
+| EC-002 | Review of the 45 uploaded classroom photos, A1/A2 distribution | [Photo inventory](classroom-photo-inventory-2026-10-22.md) | classified |
+| EC-003 | 16 themed A1/A2 exercise packs, 128 original exercises | [Exercise bank](classroom-original-exercise-bank-2026-10-28.md) → existing curricular topics | edited, staged; awaiting integration |
 
 ## Change log
 
+- **2026-10-28** – Converted photo themes into EC-003: 16 original A1/A2 themed exercise packs (128 questions, solutions and transfer situations), checked structure and corrected editorial issues. Committed only to working branch; integration and merge are pending.
 - **2026-10-22** – Revised EC-001 into explicit A1 foundation and A2 consolidation after Emilio's clarification. Logged EC-002 and linked 45-photo inventory. No merge or live curriculum modifications.
 - **2026-10-22** – EC-001 photo-inspired expansion (48 tasks with solutions and 5 open prompts) added as a separate editable draft; original intake entry preserved. No app content changed.
 
