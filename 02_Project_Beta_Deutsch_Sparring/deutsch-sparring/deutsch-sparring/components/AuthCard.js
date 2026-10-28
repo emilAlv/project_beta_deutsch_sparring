@@ -97,6 +97,7 @@ export default function AuthCard({ initialMode = 'login' }) {
           <span className="caps">{t('authUsername')}</span>
           <input
             name="username"
+            aria-required="true"
             aria-invalid={badField === 'username' || undefined}
             aria-describedby={badField === 'username' ? 'auth-error' : undefined}
             ref={(el) => { fields.current.username = el; }}
@@ -115,6 +116,7 @@ export default function AuthCard({ initialMode = 'login' }) {
           <span className="auth-password">
             <input
               name="password"
+              aria-required="true"
               aria-invalid={badField === 'password' || undefined}
               aria-describedby={badField === 'password' ? 'auth-error' : undefined}
               ref={(el) => { fields.current.password = el; }}
@@ -136,6 +138,7 @@ export default function AuthCard({ initialMode = 'login' }) {
             <span className="caps">{t('authClassCode')}</span>
             <input
               name="classCode"
+              aria-required="true"
               aria-invalid={badField === 'classCode' || undefined}
               aria-describedby={badField === 'classCode' ? 'auth-error' : undefined}
               ref={(el) => { fields.current.classCode = el; }}
