@@ -34,7 +34,7 @@ import { score, summaryOf } from '../lib/stats';
 import { mergeQuestions, recentQuestions, sessionQuestions } from '../lib/question-history';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
-  recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount,
+  recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount, clearAccountData,
   initProgress, progressSaved, startSessionRecord,
 } from '../lib/storage';
 
@@ -252,11 +252,14 @@ export default function Home() {
   }
 
   async function logOut() {
+    const username = account?.username || '';
     closeSession(false);
     dropRequest();
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
+    // R7: this browser forgets the student's data and the class code before the login page
+    clearAccountData(username);
     toLogin();
   }
 

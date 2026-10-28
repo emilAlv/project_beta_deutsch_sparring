@@ -74,6 +74,23 @@ function write(key, value) {
   } catch {}
 }
 
+// Log out (R7): this browser forgets what it kept for that student – their per-account keys ("wort_history@anna" …)
+// and the class code in the profile. Other students' keys on the same computer are not touched.
+export function clearAccountData(username) {
+  const name = String(username || '').toLowerCase();
+  if (!name) return;
+  const suffix = `@${name}`;
+  try {
+    for (const key of PER_ACCOUNT) localStorage.removeItem(`${KEYS[key]}${suffix}`);
+    localStorage.removeItem(`wort_imported${suffix}`); // the once-per-account import flag (initProgress)
+    const profile = JSON.parse(localStorage.getItem(KEYS.profile) || 'null');
+    if (profile && typeof profile === 'object' && 'classCode' in profile) {
+      const { classCode, ...rest } = profile;
+      localStorage.setItem(KEYS.profile, JSON.stringify(rest));
+    }
+  } catch {}
+}
+
 // ---------- progress on the server (only when logged in) ----------
 const readLocal = (key) => {
   try {
