@@ -114,8 +114,24 @@ ${asked.length ? asked.map((a) => `- ${unfence(a)}`).join('\n') : '(none)'}
 </student-data>`;
 }
 
+// The picked exercise MODELS of the topic (lib/exercise-models.js) as a block for the system prompt. '' without models.
+export function exerciseModelsBlock(models = []) {
+  if (!models.length) return '';
+  const one = (m, i) => `${i + 1}. [${m.type}] model: "${unfence(m.model)}" | reference answer: "${unfence(m.answer)}"${m.alternatives.length ? ` | also correct: ${m.alternatives.map((a) => `"${unfence(a)}"`).join(', ')}` : ''} | trains: ${unfence(m.focus)}${m.trap ? ` | trap: ${unfence(m.trap)}` : ''}`;
+  return `EXERCISE MODELS (class material: patterns, NOT fixed questions)
+Base each new question on ONE of these models and go through them in turn (never the same model twice in a row; in a long session start again with completely new variations).
+- Write every question as a NEW variation: keep the grammar point, the task type and the level; change ALL content words, names, places and the situation.
+- NEVER ask a model sentence itself, not even with one word changed. The model shows the target form; the student must not recognise it.
+- Write your own hint for the new question (following the hint rules). A bracket hint in a model, e.g. "(it still goes on)", is for you: never copy it if it gives the answer away.
+- The reference answer and "also correct" belong to the MODEL. Work out the answer to YOUR new question yourself (exercise.answer).
+- When you check an answer, accept every correct alternative and any other natural correct solution (also the other spelling variant and word variant).
+- If the student falls into a model's trap, name it briefly in feedback.why / explanation (simple German). Do not quiz the trap on its own.
+- Task type "Kommunikative Aufgabe" = exercise.type "Satzbau" (a short answer to a situation).
+${models.map(one).join('\n')}`;
+}
+
 export function buildSystemPrompt({
-  name, lesson, words = null, knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
+  name, lesson, words = null, models = [], knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
 }) {
   const grammar = settings.grammar || [];
   const level = DIFFICULTY[settings.difficulty] || 'medium';
@@ -211,7 +227,7 @@ ${catalog.map((t) => `- ${t.id} – ${t.title} – ${t.type} – ${t.levels.join
 `}KNOWN GRAMMAR
 ${knownGrammar || '(not listed yet – assume A1–A2 of Schritte plus Neu 1–4)'}
 
-${words ? `WORDS FOR THIS SESSION (${words.length} words, one per line, in the order to use them: ${words.header})\n${words.lines.join('\n')}` : lesson ? `TOPIC (lesson)\n${lesson}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}
+${words ? `WORDS FOR THIS SESSION (${words.length} words, one per line, in the order to use them: ${words.header})\n${words.lines.join('\n')}` : lesson ? `TOPIC (lesson)\n${lesson}${models.length && !words ? `\n\n${exerciseModelsBlock(models)}` : ''}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}
 
 ${dataBlock({ notes, mistakes, asked })}`;
 }

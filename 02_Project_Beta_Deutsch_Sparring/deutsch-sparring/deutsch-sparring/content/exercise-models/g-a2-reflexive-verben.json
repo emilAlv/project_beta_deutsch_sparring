@@ -1,0 +1,79 @@
+[
+  {
+    "id": "ref-01",
+    "type": "Lückentext",
+    "model": "Ich ___ mich auf die Ferien. (freuen)",
+    "answer": "freue",
+    "alternatives": [],
+    "focus": "reflexive verb sich freuen, ich-form"
+  },
+  {
+    "id": "ref-02",
+    "type": "Lückentext",
+    "model": "Du musst ___ beeilen. (du)",
+    "answer": "dich",
+    "alternatives": [],
+    "focus": "reflexive pronoun for du",
+    "trap": "Reflexive pronoun follows the subject: ich - mich, du - dich, wir - uns."
+  },
+  {
+    "id": "ref-03",
+    "type": "Lückentext",
+    "model": "Wir interessieren ___ für Musik.",
+    "answer": "uns",
+    "alternatives": [],
+    "focus": "reflexive pronoun for wir"
+  },
+  {
+    "id": "ref-04",
+    "type": "Lückentext",
+    "model": "Wie fühlst du ___ heute?",
+    "answer": "dich",
+    "alternatives": [],
+    "focus": "reflexive pronoun in a question"
+  },
+  {
+    "id": "ref-05",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich freue mir auf das Konzert.",
+    "answer": "Ich freue mich auf das Konzert.",
+    "alternatives": [],
+    "focus": "find the mistake: reflexive pronoun is accusative",
+    "trap": "sich freuen: mich, not mir."
+  },
+  {
+    "id": "ref-06",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: She gets ready for work.",
+    "answer": "Sie macht sich für die Arbeit fertig.",
+    "alternatives": [
+      "Sie macht sich für die Arbeit bereit.",
+      "Sie macht sich fertig für die Arbeit."
+    ],
+    "focus": "reflexive verb sich fertig machen",
+    "trap": "The reflexive pronoun for sie is \"sich\"."
+  },
+  {
+    "id": "ref-07",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du kommst zu spät. Entschuldige dich höflich für deine Verspätung.",
+    "answer": "Ich entschuldige mich für die Verspätung.",
+    "alternatives": [
+      "Ich entschuldige mich für meine Verspätung.",
+      "Ich möchte mich für die Verspätung entschuldigen."
+    ],
+    "focus": "sich entschuldigen für + accusative",
+    "trap": "The verb is reflexive: \"ich entschuldige mich\" (not \"ich entschuldige dich\")."
+  },
+  {
+    "id": "ref-08",
+    "type": "Satzbau",
+    "model": "Bilde einen Satz: heute / wir / uns / treffen",
+    "answer": "Wir treffen uns heute.",
+    "alternatives": [
+      "Heute treffen wir uns."
+    ],
+    "focus": "word order with a reflexive pronoun",
+    "trap": "The reflexive pronoun stands right after the verb (or after the subject)."
+  }
+]

@@ -52,3 +52,15 @@ export function recentQuestions(session = {}, sessions = []) {
 export function mergeQuestions(...lists) {
   return uniqueQuestions(lists.flat()).slice(-50);
 }
+
+// Exercise-model ids used in the last sessions on the same topic, oldest first: the server prefers models NOT in this list
+// (lib/exercise-models.js). The session in progress is left out: its own ids come back as `modelIds`.
+export function seenModelIds(session = {}, sessions = []) {
+  const topicId = session.topicId || session.settings?.topicId || '';
+  return (Array.isArray(sessions) ? sessions : [])
+    .filter((older) => older?.id !== session.id && (older?.topicId || older?.settings?.topicId || '') === topicId)
+    .slice(0, 5)
+    .reverse()
+    .flatMap((older) => (Array.isArray(older.modelIds) ? older.modelIds : []))
+    .slice(-60);
+}

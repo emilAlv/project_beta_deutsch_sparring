@@ -1,0 +1,90 @@
+[
+  {
+    "id": "ges-01",
+    "type": "Lückentext",
+    "model": "Mein linker ___ tut weh. (English: arm)",
+    "answer": "Arm",
+    "alternatives": [],
+    "focus": "body part with article and adjective ending",
+    "trap": "der Arm: mein linker Arm (masculine nominative: -er)."
+  },
+  {
+    "id": "ges-02",
+    "type": "Lückentext",
+    "model": "Meine ___ tun weh. (English: feet)",
+    "answer": "Füsse",
+    "alternatives": [
+      "Füße"
+    ],
+    "focus": "plural of a body part (umlaut)",
+    "trap": "Plural: der Fuss -> die Füsse (umlaut); with a plural subject the verb is \"tun\"."
+  },
+  {
+    "id": "ges-03",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du rufst in der Arztpraxis an. Sage, dass du Fieber hast.",
+    "answer": "Ich habe Fieber.",
+    "alternatives": [
+      "Ich habe seit gestern Fieber.",
+      "Ich habe Fieber und fühle mich schlecht."
+    ],
+    "focus": "naming a symptom with \"Ich habe ...\"",
+    "trap": "Symptoms like Fieber, Husten, Kopfweh have no article: \"Ich habe Fieber\" (not \"ein Fieber\")."
+  },
+  {
+    "id": "ges-04",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Mein Augen tun weh.",
+    "answer": "Meine Augen tun weh.",
+    "alternatives": [],
+    "focus": "find the mistake: possessive article before a plural noun",
+    "trap": "Plural nouns take \"meine\", not \"mein\"."
+  },
+  {
+    "id": "ges-05",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: I have a stomach ache.",
+    "answer": "Ich habe Bauchweh.",
+    "alternatives": [
+      "Ich habe Bauchschmerzen.",
+      "Mein Bauch tut weh.",
+      "Ich habe Magenschmerzen."
+    ],
+    "focus": "saying where it hurts",
+    "trap": "Bauchweh / Kopfweh have no article."
+  },
+  {
+    "id": "ges-06",
+    "type": "Kommunikative Aufgabe",
+    "model": "Dein Freund fragt: \"Was ist los?\" Sage, dass dir das Bein wehtut.",
+    "answer": "Mein Bein tut weh.",
+    "alternatives": [
+      "Mir tut das Bein weh.",
+      "Das Bein tut mir weh.",
+      "Ich habe Schmerzen im Bein."
+    ],
+    "focus": "saying that a body part hurts with wehtun",
+    "trap": "wehtun takes the dative: \"mir tut ... weh\"."
+  },
+  {
+    "id": "ges-07",
+    "type": "Lückentext",
+    "model": "___ Hals tut mir weh. (my)",
+    "answer": "Mein",
+    "alternatives": [],
+    "focus": "possessive article before a masculine noun"
+  },
+  {
+    "id": "ges-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Deine Kollegin ist erkältet. Reagiere mit einem kurzen Wunsch.",
+    "answer": "Gute Besserung!",
+    "alternatives": [
+      "Gute Besserung.",
+      "Ich wünsche dir gute Besserung!",
+      "Werd bald gesund!",
+      "Erhol dich gut!"
+    ],
+    "focus": "a short get-well wish"
+  }
+]

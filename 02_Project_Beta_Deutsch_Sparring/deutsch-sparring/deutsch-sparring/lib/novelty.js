@@ -44,6 +44,25 @@ export function isNearDuplicateExercise(line, previous = []) {
   });
 }
 
+// Is this exercise line (almost) the same as the prompt of one of the picked exercise MODELS (lib/exercise-models.js)?
+// A model is a pattern, never a question: a copy gets one retry. A real variation (other content words) passes.
+export function isModelCopy(line, models = []) {
+  const a = normalizeExerciseLine(line);
+  if (!a) return false;
+  const left = tokenSet(a);
+  return models.some((m) => {
+    const b = normalizeExerciseLine(m?.model);
+    if (!b) return false;
+    if (a === b) return true;
+    if (Math.min(a.length, b.length) >= 15 && (a.includes(b) || b.includes(a))) return true;
+    const right = tokenSet(b);
+    if (Math.min(left.size, right.size) < 3) return false;
+    let common = 0;
+    for (const token of left) if (right.has(token)) common += 1;
+    return common / Math.max(left.size, right.size) >= 0.8;
+  });
+}
+
 export function hasMechanicalExerciseFormat(line) {
   const value = String(line || '');
   return value.includes('+') || /·\s*(?:nominativ|akkusativ|dativ|genitiv)\b/iu.test(value);
@@ -58,27 +77,35 @@ The first draft below was rejected because it repeats an earlier exercise:
 <rejected-draft>${rejected}</rejected-draft>
 Keep the same target word, grammar point, level and question number, but create a genuinely different task. Change at least three of: setting, speaker, relationship, purpose, speech act, main verb and sentence structure. Do not reuse the rejected line. Return the complete JSON response again.`;
 
+export const MODEL_COPY_RETRY_NOTE = (rejected) => `
+
+MODEL COPY RETRY
+The first draft below was rejected because it copies an exercise MODEL instead of writing a new exercise from it:
+<rejected-draft>${rejected}</rejected-draft>
+Keep the same grammar point, task type, level and question number, but write a NEW exercise: change ALL content words, names, places and the situation. Do not reuse the model sentence. Return the complete JSON response again.`;
+
 // Asks the AI once (`ask()` → text). Only a TRUE near-duplicate of an earlier exercise of this session
 // earns ONE more call, and only when there is enough time left. A draft with a "mechanical" format
 // (the prompt already forbids it) is accepted as it is. The retry never makes things worse: if it
 // fails, or is again a duplicate, the usable first draft is kept – the student never sees a 'novelty' error.
 //   ask(extraInstruction) → Promise<string>   parse(text) → draft object or null
 //   openLine: the task the student is still working on (a repeat without feedback is fine: "same task, again")
-export async function draftWithNoveltyRetry({ ask, parse, previous = [], openLine = '', deadline, minMsLeft = RETRY_MIN_MS_LEFT, now = Date.now, log = console.log }) {
+export async function draftWithNoveltyRetry({ ask, parse, previous = [], copyOf = [], openLine = '', deadline, minMsLeft = RETRY_MIN_MS_LEFT, now = Date.now, log = console.log }) {
   const text = await ask();
   const draft = parse(text);
   const line = draft?.exercise?.line;
   if (!line) return text;
   if (openLine && !draft.feedback && normalizeExerciseLine(line) === normalizeExerciseLine(openLine)) return text;
-  if (!isNearDuplicateExercise(line, previous)) return text;
+  const copied = copyOf.length > 0 && isModelCopy(line, copyOf);
+  if (!copied && !isNearDuplicateExercise(line, previous)) return text;
   const msLeft = deadline ? deadline - now() : Infinity;
   if (msLeft < minMsLeft) {
     log('tutor: near-duplicate exercise kept (not enough time left for a retry)');
     return text;
   }
-  log('tutor: near-duplicate exercise, one retry'); // never the exercise text itself
+  log(copied ? 'tutor: exercise copies a model, one retry' : 'tutor: near-duplicate exercise, one retry'); // never the exercise text itself
   try {
-    const retried = await ask(NOVELTY_RETRY_NOTE(String(line).slice(0, 300)));
+    const retried = await ask((copied ? MODEL_COPY_RETRY_NOTE : NOVELTY_RETRY_NOTE)(String(line).slice(0, 300)));
     return parse(retried) ? retried : text;
   } catch {
     return text; // a failed retry must not lose the usable first draft

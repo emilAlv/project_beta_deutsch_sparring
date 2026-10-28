@@ -1,0 +1,87 @@
+[
+  {
+    "id": "weg-01",
+    "type": "Lückentext",
+    "model": "Entschuldigung, ___ ist die Apotheke?",
+    "answer": "wo",
+    "alternatives": [],
+    "focus": "asking for a place with wo"
+  },
+  {
+    "id": "weg-02",
+    "type": "Lückentext",
+    "model": "Gehen Sie zuerst ___ und dann rechts.",
+    "answer": "geradeaus",
+    "alternatives": [],
+    "focus": "giving directions: geradeaus"
+  },
+  {
+    "id": "weg-03",
+    "type": "Lückentext",
+    "model": "Ich gehe ___ Post. (zu, die Post)",
+    "answer": "zur",
+    "alternatives": [
+      "zu der"
+    ],
+    "focus": "zu + dative, feminine noun (zur)",
+    "trap": "zu always takes the dative: zum Bahnhof, zur Post."
+  },
+  {
+    "id": "weg-04",
+    "type": "Lückentext",
+    "model": "Wir fahren ___ Zug nach Bern. (mit, der Zug)",
+    "answer": "mit dem",
+    "alternatives": [],
+    "focus": "mit + dative for transport",
+    "trap": "mit always takes the dative."
+  },
+  {
+    "id": "weg-05",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Gehen Sie geradeaus bis die Ampel.",
+    "answer": "Gehen Sie geradeaus bis zur Ampel.",
+    "alternatives": [
+      "Gehen Sie geradeaus bis zu der Ampel.",
+      "Gehen Sie geradeaus bis an die Ampel."
+    ],
+    "focus": "find the mistake: bis needs zu + dative before a noun with article",
+    "trap": "bis + noun with article: bis zur Ampel, bis zum Bahnhof."
+  },
+  {
+    "id": "weg-06",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du bist in einer fremden Stadt. Frage eine Passantin höflich (Sie), wie du zum Bahnhof kommst.",
+    "answer": "Entschuldigung, wie komme ich zum Bahnhof?",
+    "alternatives": [
+      "Entschuldigen Sie, wie komme ich zum Bahnhof?",
+      "Entschuldigung, wo ist der Bahnhof?",
+      "Wie komme ich bitte zum Bahnhof?"
+    ],
+    "focus": "asking politely for directions",
+    "trap": "Be polite (Entschuldigung, bitte). \"wie komme ich zum ...\" uses zu + dative."
+  },
+  {
+    "id": "weg-07",
+    "type": "Satzbau",
+    "model": "Bilde einen Satz: am Bahnhof / rechts / abbiegen / Sie",
+    "answer": "Biegen Sie am Bahnhof rechts ab.",
+    "alternatives": [
+      "Am Bahnhof biegen Sie rechts ab."
+    ],
+    "focus": "imperative Sie-form with a separable verb",
+    "trap": "abbiegen is separable: the prefix \"ab\" goes to the end."
+  },
+  {
+    "id": "weg-08",
+    "type": "Übersetzung",
+    "model": "Eine Touristin fragt: \"Ist es weit?\" Sage auf Deutsch: five minutes on foot.",
+    "answer": "Ungefähr fünf Minuten zu Fuss.",
+    "alternatives": [
+      "Nein, nur fünf Minuten zu Fuss.",
+      "Fünf Minuten zu Fuss.",
+      "Es sind etwa fünf Minuten zu Fuss."
+    ],
+    "focus": "giving a distance in minutes on foot",
+    "trap": "\"zu Fuss\" (Swiss spelling: ss)."
+  }
+]

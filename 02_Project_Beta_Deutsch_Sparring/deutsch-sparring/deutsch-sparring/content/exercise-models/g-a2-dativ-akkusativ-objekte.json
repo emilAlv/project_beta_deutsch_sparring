@@ -1,0 +1,78 @@
+[
+  {
+    "id": "obj-01",
+    "type": "Lückentext",
+    "model": "Ich gebe ___ Nachbarin den Schlüssel. (die)",
+    "answer": "der",
+    "alternatives": [],
+    "focus": "dative article for the recipient (feminine)",
+    "trap": "Person (recipient) = dative, thing = accusative."
+  },
+  {
+    "id": "obj-02",
+    "type": "Lückentext",
+    "model": "Wir schicken ___ Kollegin eine Nachricht. (unsere)",
+    "answer": "unserer",
+    "alternatives": [],
+    "focus": "possessive article in the dative (feminine)"
+  },
+  {
+    "id": "obj-03",
+    "type": "Lückentext",
+    "model": "Der Lehrer erklärt ___ Kindern die Aufgabe. (die, Plural)",
+    "answer": "den",
+    "alternatives": [],
+    "focus": "dative plural article",
+    "trap": "Dative plural: den + noun with -n (den Kindern)."
+  },
+  {
+    "id": "obj-04",
+    "type": "Lückentext",
+    "model": "Sie zeigt ___ Bruder ein Foto. (ihr)",
+    "answer": "ihrem",
+    "alternatives": [],
+    "focus": "possessive article in the dative (masculine)"
+  },
+  {
+    "id": "obj-05",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich gebe den Frau das Formular.",
+    "answer": "Ich gebe der Frau das Formular.",
+    "alternatives": [],
+    "focus": "find the mistake: dative article feminine",
+    "trap": "die Frau -> der Frau (dative singular); \"den\" is only for the dative plural."
+  },
+  {
+    "id": "obj-06",
+    "type": "Satzbau",
+    "model": "Ersetze das Dativobjekt durch ein Pronomen: Ich gebe meinem Bruder das Buch.",
+    "answer": "Ich gebe ihm das Buch.",
+    "alternatives": [],
+    "focus": "replacing the dative object with a pronoun",
+    "trap": "The pronoun for the person (dative): ihm. The thing stays a noun."
+  },
+  {
+    "id": "obj-07",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: I am sending my friend a postcard.",
+    "answer": "Ich schicke meinem Freund eine Postkarte.",
+    "alternatives": [
+      "Ich schicke meiner Freundin eine Postkarte.",
+      "Ich schicke einem Freund eine Postkarte."
+    ],
+    "focus": "schicken with dative person and accusative thing",
+    "trap": "Person (dative): meinem Freund; thing (accusative): eine Postkarte."
+  },
+  {
+    "id": "obj-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Bitte einen Kollegen (du), dir die Adresse zu schicken.",
+    "answer": "Schickst du mir bitte die Adresse?",
+    "alternatives": [
+      "Kannst du mir bitte die Adresse schicken?",
+      "Schick mir bitte die Adresse."
+    ],
+    "focus": "asking someone to send you something",
+    "trap": "Person = dative (mir), thing = accusative (die Adresse)."
+  }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "dat-01",
+    "type": "Lückentext",
+    "model": "Ich gehe ___ Arzt. (zu, der Arzt)",
+    "answer": "zum",
+    "alternatives": [
+      "zu dem"
+    ],
+    "focus": "zu + dative, contracted form zum",
+    "trap": "\"zu\" always takes the dative, even when you are going somewhere (not \"in den\")."
+  },
+  {
+    "id": "dat-02",
+    "type": "Lückentext",
+    "model": "Sie arbeitet ___ einer Bank. (bei)",
+    "answer": "bei",
+    "alternatives": [],
+    "focus": "bei + dative for the workplace"
+  },
+  {
+    "id": "dat-03",
+    "type": "Lückentext",
+    "model": "Wir kommen ___ Zug. (mit, der Zug)",
+    "answer": "mit dem",
+    "alternatives": [],
+    "focus": "mit + dative, masculine noun",
+    "trap": "mit always takes the dative: mit dem Zug, mit der Tram, mit dem Auto."
+  },
+  {
+    "id": "dat-04",
+    "type": "Lückentext",
+    "model": "Ich komme ___ meiner Freundin. (von)",
+    "answer": "von",
+    "alternatives": [],
+    "focus": "von + dative for the person you come from",
+    "trap": "von (person, place) is not aus (country, town, inside of a place)."
+  },
+  {
+    "id": "dat-05",
+    "type": "Lückentext",
+    "model": "Am Sonntag fahren wir ___ Luzern.",
+    "answer": "nach",
+    "alternatives": [],
+    "focus": "nach + town without an article",
+    "trap": "Towns and most countries: nach. Countries with an article: in die Schweiz."
+  },
+  {
+    "id": "dat-06",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich fahre mit den Bus.",
+    "answer": "Ich fahre mit dem Bus.",
+    "alternatives": [],
+    "focus": "find the mistake: dative article after mit",
+    "trap": "der Bus: after mit the dative is dem."
+  },
+  {
+    "id": "dat-07",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: I am coming from the post office.",
+    "answer": "Ich komme von der Post.",
+    "alternatives": [
+      "Ich komme gerade von der Post.",
+      "Ich komme vom Postamt."
+    ],
+    "focus": "von + dative, feminine noun",
+    "trap": "die Post -> von der Post."
+  },
+  {
+    "id": "dat-08",
+    "type": "Lückentext",
+    "model": "Du erklärst deinen Weg: Wir fahren ___ Basel und gehen dann ___ Hotel. (nach / zu, das Hotel)",
+    "answer": "nach ... zum",
+    "alternatives": [
+      "nach ... zu dem"
+    ],
+    "focus": "combining nach and zu in a short route",
+    "trap": "nach + town (no article), zu + dative (zum Hotel)."
+  }
+]
