@@ -1,0 +1,80 @@
+[
+  {
+    "id": "mod-01",
+    "type": "Lückentext",
+    "model": "Du ___ genug Wasser trinken. (sollen)",
+    "answer": "sollst",
+    "alternatives": [],
+    "focus": "sollen: du-form (someone says you have to)"
+  },
+  {
+    "id": "mod-02",
+    "type": "Lückentext",
+    "model": "Ihr ___ morgen früh kommen. (sollen)",
+    "answer": "sollt",
+    "alternatives": [],
+    "focus": "sollen: ihr-form"
+  },
+  {
+    "id": "mod-03",
+    "type": "Lückentext",
+    "model": "Wir ___ leise sein. (sollen)",
+    "answer": "sollen",
+    "alternatives": [],
+    "focus": "sollen: wir-form, infinitive sein at the end"
+  },
+  {
+    "id": "mod-04",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Du sollst trinkst mehr Wasser.",
+    "answer": "Du sollst mehr Wasser trinken.",
+    "alternatives": [],
+    "focus": "find the mistake: modal verb needs an infinitive at the end",
+    "trap": "After a modal verb the second verb is an infinitive at the END of the sentence."
+  },
+  {
+    "id": "mod-05",
+    "type": "Kommunikative Aufgabe",
+    "model": "Dein Freund muss morgen früh aufstehen. Gib ihm einen einfachen Rat (du).",
+    "answer": "Du solltest früh ins Bett gehen.",
+    "alternatives": [
+      "Geh doch früh ins Bett.",
+      "Geh früh ins Bett.",
+      "Du solltest früh schlafen gehen."
+    ],
+    "focus": "giving advice with sollte or the imperative",
+    "trap": "sollen = someone else says it (doctor, teacher, mother): \"Du sollst früh ins Bett.\" sollte = your own advice: \"Du solltest früh ins Bett gehen.\""
+  },
+  {
+    "id": "mod-06",
+    "type": "Satzbau",
+    "model": "Bilde einen Satz: ihr / sollen / eure Hefte / mitbringen",
+    "answer": "Ihr sollt eure Hefte mitbringen.",
+    "alternatives": [
+      "Eure Hefte sollt ihr mitbringen."
+    ],
+    "focus": "sentence with sollen and a separable verb",
+    "trap": "With a modal verb the separable verb stays together in the infinitive: mitbringen."
+  },
+  {
+    "id": "mod-07",
+    "type": "Satzbau",
+    "model": "Die Lehrerin sagt: \"Wiederholt bitte den Text!\" Sage, was ihr tun sollt (wir, sollen).",
+    "answer": "Wir sollen den Text wiederholen.",
+    "alternatives": [],
+    "focus": "report an instruction with sollen",
+    "trap": "sollen reports what another person wants."
+  },
+  {
+    "id": "mod-08",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: I should call my mother.",
+    "answer": "Ich sollte meine Mutter anrufen.",
+    "alternatives": [
+      "Ich sollte meine Mutter mal anrufen.",
+      "Ich sollte meine Mutter noch anrufen."
+    ],
+    "focus": "advice to yourself with sollte",
+    "trap": "\"I should\" = sollte (advice, bad conscience). \"Ich soll\" would mean someone told me to. anrufen is separable but stays together after a modal verb."
+  }
+]

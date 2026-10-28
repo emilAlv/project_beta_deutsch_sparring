@@ -84,6 +84,31 @@ function curriculumFocus(entry) {
   };
 }
 
+// An exercise MODEL (lib/exercise-models.js) → a row like the example rows. The demo cannot vary a model, so it asks it as it is
+// (the real tutor never does). `model: true` makes grammarItem() build the item from the model's answer and alternatives.
+function modelRows(models, entry, topic) {
+  return models.map((m) => ({ task: m.model, solution: m.answer, type: m.focus, rule: entry?.ruleNames?.[0] || topic?.short || '', model: m }));
+}
+
+const splitGaps = (answer) => answer.split(/\s*(?:\.\.\.|…)\s*/).filter(Boolean);
+
+function modelItem(ex) {
+  const m = ex.model;
+  const gaps = (ex.task.match(/___/g) || []).length;
+  const type = m.type === 'Kommunikative Aufgabe' ? 'Satzbau' : m.type;
+  if (gaps) {
+    const fill = (words) => {
+      let i = 0;
+      return ex.task.replace(/___/g, () => words[i++] || '___').replace(/\s*\([^)]*\)/g, '').replace(/\s+([.!?])/g, '$1');
+    };
+    const parts = splitGaps(m.answer);
+    const altParts = m.alternatives.map(splitGaps);
+    const solved = fill(parts);
+    return { ex, type: 'Lückentext', parts, altParts, gaps, fill, solved, keys: [solved, ...altParts.map(fill)] };
+  }
+  return { ex, type, parts: [m.answer], altParts: [], gaps: 0, fill: () => ex.task, solved: m.answer, keys: [m.answer, ...m.alternatives] };
+}
+
 // ---------- small helpers ----------
 const norm = (s) => String(s || '').toLowerCase().replace(/ß/g, 'ss').replace(/[.,!?;:„“”"«»()…]/g, ' ').replace(/\s+/g, ' ').trim();
 // Swiss and German words count the same (Velo = Fahrrad), ss = ß (norm): lib/variants.js
@@ -96,6 +121,7 @@ const WRONG_FORM = { den: 'dem', dem: 'den', der: 'die', die: 'der', das: 'dem',
 
 function grammarItem(examples, n) {
   const ex = examples[(n - 1) % examples.length];
+  if (ex.model) return modelItem(ex);
   const parts = ex.solution.split(/\s+[–-]\s+/);
   const gaps = (ex.task.match(/___/g) || []).length;
   let type = 'Lückentext';
@@ -139,9 +165,11 @@ function checkGrammar(item, answer) {
     // only the missing word(s) (maybe with a neighbour word): put them into the sentence
     const taskWords = new Set(norm(item.ex.task.replace(/\([^)]*\)/g, '')).split(' '));
     const parts = item.parts.map(norm);
-    const given = words.filter((w) => w && (!taskWords.has(w) || parts.includes(w)) && w !== '___');
-    correct = given.length === parts.length && parts.every((p, i) => given[i] === p);
-    studentAnswer = item.fill(given);
+    // words of the solution (and of its alternatives) count even when they also stand in the task ("Seit wann" / "Seit Januar")
+    const allowed = new Set([...parts, ...(item.altParts || []).flat().map(norm)].flatMap((x) => [x, ...x.split(' ')]));
+    const given = words.filter((w) => w && (!taskWords.has(w) || allowed.has(w)) && w !== '___');
+    correct = [parts, ...(item.altParts || []).map((ps) => ps.map(norm))].some((ps) => given.join(' ') === ps.join(' '));
+    studentAnswer = item.fill(item.gaps === 1 ? [given.join(' ')] : given);
   }
   return { correct, studentAnswer, corrected: item.solved };
 }
@@ -392,7 +420,7 @@ function openGrammarItem(examples, n, line) {
 }
 
 // ---------- the demo tutor ----------
-export async function mockReply({ text, settings, session, progress, topic, topics = [], words = [] }) {
+export async function mockReply({ text, settings, session, progress, topic, topics = [], words = [], models = [] }) {
   const say = norm(text);
   if (/langsam|slow/.test(say)) await new Promise((r) => setTimeout(r, 4000));
   if (/kaputt|broken/.test(say)) return '{"message": "Das ist absichtlich kaputtes JSON, damit du die Fehlerbehandlung testen kannst", "feedback": {"forNumber": 2, "corr';
@@ -404,7 +432,7 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   const isVocab = Boolean(topic) && topic.type !== 'Grammatik' && topic.id !== 'free';
   const vocab = isVocab ? words.map((w) => mockWord(w, settings.variant)) : [];
   const entry = isVocab ? null : curriculumEntry(topicId);
-  const examples = entry ? curriculumExamples(entry) : getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
+  const examples = !isVocab && models.length ? modelRows(models, entry, topic) : entry ? curriculumExamples(entry) : getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
   const useVocab = isVocab && vocab.length > 0;
   const total = session.total;
   const open = session.openNumber;

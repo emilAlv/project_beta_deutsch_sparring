@@ -1,0 +1,74 @@
+[
+  {
+    "id": "pf-01",
+    "type": "Lückentext",
+    "model": "Gestern habe ich meine Schwester ___. (anrufen)",
+    "answer": "angerufen",
+    "alternatives": [],
+    "focus": "Partizip II of a separable verb (ge- between prefix and stem)"
+  },
+  {
+    "id": "pf-02",
+    "type": "Lückentext",
+    "model": "Wir sind um sieben Uhr ___. (aufstehen)",
+    "answer": "aufgestanden",
+    "alternatives": [],
+    "focus": "Partizip II of a separable irregular verb, sein as auxiliary"
+  },
+  {
+    "id": "pf-03",
+    "type": "Lückentext",
+    "model": "Mein Freund hat im Supermarkt ___. (einkaufen)",
+    "answer": "eingekauft",
+    "alternatives": [],
+    "focus": "Partizip II of a separable regular verb"
+  },
+  {
+    "id": "pf-04",
+    "type": "Lückentext",
+    "model": "Wann ___ du in Basel angekommen? (sein)",
+    "answer": "bist",
+    "alternatives": [],
+    "focus": "sein as auxiliary in a Perfekt question",
+    "trap": "ankommen (change of place) uses sein."
+  },
+  {
+    "id": "pf-05",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich habe um acht Uhr aufgestanden.",
+    "answer": "Ich bin um acht Uhr aufgestanden.",
+    "alternatives": [],
+    "focus": "find the mistake: auxiliary sein for aufstehen",
+    "trap": "Verbs of movement or change of state (aufstehen, gehen, fahren, ankommen) use sein."
+  },
+  {
+    "id": "pf-06",
+    "type": "Satzbau",
+    "model": "Bilde einen Satz im Perfekt: gestern / ich / abholen / meine Freundin",
+    "answer": "Ich habe gestern meine Freundin abgeholt.",
+    "alternatives": [
+      "Gestern habe ich meine Freundin abgeholt."
+    ],
+    "focus": "Perfekt sentence with a separable verb",
+    "trap": "abholen uses haben (there is an object): abgeholt."
+  },
+  {
+    "id": "pf-07",
+    "type": "Kommunikative Aufgabe",
+    "model": "Erzähle in zwei Sätzen, was du gestern zuerst und danach gemacht hast.",
+    "answer": "Zuerst bin ich aufgestanden. Danach habe ich gefrühstückt.",
+    "alternatives": [],
+    "focus": "telling a short sequence in the Perfekt",
+    "trap": "Auxiliary in position 2, Partizip II at the end; choose haben or sein for each verb."
+  },
+  {
+    "id": "pf-08",
+    "type": "Lückentext",
+    "model": "Wir sind gestern im Park ___. (spazieren gehen)",
+    "answer": "spazieren gegangen",
+    "alternatives": [
+      "spaziert"
+    ],
+    "focus": "Partizip II of gehen after spazieren, sein as auxiliary"
+  }
+]

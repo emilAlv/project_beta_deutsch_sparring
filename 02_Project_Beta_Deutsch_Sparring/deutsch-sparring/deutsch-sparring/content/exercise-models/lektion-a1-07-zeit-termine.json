@@ -1,0 +1,112 @@
+[
+  {
+    "id": "termin-01",
+    "type": "Lückentext",
+    "model": "___ beginnt dein neuer Kurs? - Am Montag.",
+    "answer": "Wann",
+    "alternatives": [],
+    "focus": "wann asks for a point in time",
+    "trap": "wann = a moment; seit wann = start of something that still goes on; wie lange = duration."
+  },
+  {
+    "id": "termin-02",
+    "type": "Lückentext",
+    "model": "___ dauert der Kurs? - Drei Monate.",
+    "answer": "Wie lange",
+    "alternatives": [],
+    "focus": "wie lange asks for a duration"
+  },
+  {
+    "id": "termin-03",
+    "type": "Lückentext",
+    "model": "___ arbeitest du hier? - Seit Januar.",
+    "answer": "Seit wann",
+    "alternatives": [
+      "Wie lange"
+    ],
+    "focus": "seit wann asks for the start of something that still goes on",
+    "trap": "\"Seit wann ...?\" and \"Wie lange ... schon?\" can both ask for this. Accept both."
+  },
+  {
+    "id": "termin-04",
+    "type": "Lückentext",
+    "model": "___ kennst du deinen Nachbarn schon? - Seit zwei Jahren.",
+    "answer": "Wie lange",
+    "alternatives": [
+      "Seit wann"
+    ],
+    "focus": "wie lange ... schon with seit in the answer",
+    "trap": "\"Wie lange ... schon?\" and \"Seit wann ...?\" are both natural here."
+  },
+  {
+    "id": "termin-05",
+    "type": "Lückentext",
+    "model": "___ hast du Lea zuletzt gesehen? - Vor einer Woche.",
+    "answer": "Wann",
+    "alternatives": [],
+    "focus": "wann for a finished event, answered with vor",
+    "trap": "Not \"Seit wann\" for a single finished event: the meeting is over."
+  },
+  {
+    "id": "termin-06",
+    "type": "Übersetzung",
+    "model": "Frage deinen Freund auf Deutsch: Since when have you been learning German?",
+    "answer": "Seit wann lernst du Deutsch?",
+    "alternatives": [
+      "Seit wann lernst du schon Deutsch?",
+      "Wie lange lernst du schon Deutsch?"
+    ],
+    "focus": "seit wann + present tense",
+    "trap": "Use the present tense: \"lernst\", not \"hast gelernt\"."
+  },
+  {
+    "id": "termin-07",
+    "type": "Kommunikative Aufgabe",
+    "model": "Ein Treffen beginnt abends um halb sieben. Schreibe die Uhrzeit in Ziffern.",
+    "answer": "18.30 Uhr",
+    "alternatives": [
+      "18:30 Uhr",
+      "18.30",
+      "18:30"
+    ],
+    "focus": "writing a clock time in digits",
+    "trap": "halb sieben = 6.30 (half WAY to seven), so 18.30 in the evening."
+  },
+  {
+    "id": "termin-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Deine Freundin schreibt: \"Ich kann erst um sieben Uhr.\" Schlage einen neuen Termin vor.",
+    "answer": "Dann treffen wir uns um sieben.",
+    "alternatives": [
+      "Okay, dann um sieben Uhr.",
+      "Wie wäre es am Samstag um sieben?",
+      "Gut, dann treffen wir uns um sieben Uhr."
+    ],
+    "focus": "proposing a new time with um / am",
+    "trap": "Many answers are right. Look for a clear time and a correct am / um / im."
+  },
+  {
+    "id": "termin-09",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du sagst: \"Ich habe Angie am Samstag getroffen.\" Wie fragst du jemanden nach der Zeit?",
+    "answer": "Wann hast du Angie getroffen?",
+    "alternatives": [
+      "Wann hast du sie getroffen?",
+      "Wann hast du Angie gesehen?"
+    ],
+    "focus": "forming a wann-question in the Perfekt",
+    "trap": "Perfekt: haben + Partizip at the end (getroffen)."
+  },
+  {
+    "id": "termin-10",
+    "type": "Kommunikative Aufgabe",
+    "model": "Beantworte die Frage und stelle sie zurück: \"Seit wann lernst du Deutsch?\"",
+    "answer": "Seit einem Jahr. Und du, seit wann lernst du Deutsch?",
+    "alternatives": [
+      "Seit sechs Monaten. Und du?",
+      "Seit Januar. Und seit wann lernst du Deutsch?"
+    ],
+    "focus": "answering with seit and asking back",
+    "trap": "seit + dative (einem Jahr); \"seit Januar\" has no article."
+  }
+]

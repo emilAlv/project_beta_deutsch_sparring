@@ -1,0 +1,159 @@
+[
+  {
+    "id": "vd-01",
+    "type": "Lückentext",
+    "model": "Die Schuhe ___ mir gut. (passen)",
+    "answer": "passen",
+    "alternatives": [],
+    "focus": "passen with the dative; verb agrees with the plural subject",
+    "trap": "The thing is the subject (die Schuhe passen), the person is in the dative (mir)."
+  },
+  {
+    "id": "vd-02",
+    "type": "Lückentext",
+    "model": "Das Kleid ___ meiner Schwester. (gefallen)",
+    "answer": "gefällt",
+    "alternatives": [],
+    "focus": "gefallen + dative; verb agrees with the singular subject",
+    "trap": "gefallen: the person is dative, the thing is the subject. Das Kleid gefällt (singular), die Kleider gefallen (plural)."
+  },
+  {
+    "id": "vd-03",
+    "type": "Lückentext",
+    "model": "Kannst du ___ bitte helfen? (ich)",
+    "answer": "mir",
+    "alternatives": [],
+    "focus": "helfen + dative pronoun",
+    "trap": "helfen takes the dative: mir, not mich."
+  },
+  {
+    "id": "vd-04",
+    "type": "Lückentext",
+    "model": "Wem ___ das Velo? (gehören)",
+    "answer": "gehört",
+    "alternatives": [],
+    "focus": "gehören + dative; question word wem",
+    "trap": "The question word for a dative object is \"wem\"."
+  },
+  {
+    "id": "vd-05",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Diese Hose gefällt mich.",
+    "answer": "Diese Hose gefällt mir.",
+    "alternatives": [],
+    "focus": "find the mistake: dative pronoun after gefallen",
+    "trap": "gefallen + dative: mir, dir, ihm ... (not mich, dich, ihn)."
+  },
+  {
+    "id": "vd-06",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: The soup tastes good to me.",
+    "answer": "Die Suppe schmeckt mir.",
+    "alternatives": [
+      "Die Suppe schmeckt mir gut.",
+      "Mir schmeckt die Suppe."
+    ],
+    "focus": "schmecken + dative",
+    "trap": "schmecken takes the dative: \"mir\", the soup is the subject."
+  },
+  {
+    "id": "vd-07",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du probierst eine Jacke an. Sage, dass sie dir nicht passt.",
+    "answer": "Die Jacke passt mir nicht.",
+    "alternatives": [
+      "Sie passt mir nicht.",
+      "Die Jacke passt mir leider nicht."
+    ],
+    "focus": "passen + dative in a shop situation",
+    "trap": "passen: the jacket is the subject, \"mir\" is dative."
+  },
+  {
+    "id": "vd-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Dein Freund zeigt dir zwei Hemden. Frage ihn (du), welches Hemd ihm besser gefällt.",
+    "answer": "Welches Hemd gefällt dir besser?",
+    "alternatives": [
+      "Welches gefällt dir besser?",
+      "Welches von den Hemden gefällt dir besser?"
+    ],
+    "focus": "asking for an opinion with gefallen",
+    "trap": "Contrast: \"Ich finde das Hemd schön\" (finden + accusative) vs \"Das Hemd gefällt mir\" (gefallen + dative)."
+  },
+  {
+    "id": "vd-09",
+    "type": "Lückentext",
+    "model": "Ich kenne Paul. Ich kenne ___.",
+    "answer": "ihn",
+    "alternatives": [],
+    "focus": "accusative pronoun after kennen (masculine)",
+    "trap": "kennen takes the accusative (ihn); helfen takes the dative (ihm). Learn the verb with its case."
+  },
+  {
+    "id": "vd-10",
+    "type": "Lückentext",
+    "model": "Ich helfe Paul. Ich helfe ___.",
+    "answer": "ihm",
+    "alternatives": [],
+    "focus": "dative pronoun after helfen (masculine)",
+    "trap": "helfen + dative: ihm (not ihn)."
+  },
+  {
+    "id": "vd-11",
+    "type": "Lückentext",
+    "model": "Ich sehe Lena. Ich sehe ___.",
+    "answer": "sie",
+    "alternatives": [],
+    "focus": "accusative pronoun after sehen (feminine)"
+  },
+  {
+    "id": "vd-12",
+    "type": "Lückentext",
+    "model": "Ich helfe Lena. Ich helfe ___.",
+    "answer": "ihr",
+    "alternatives": [],
+    "focus": "dative pronoun after helfen (feminine)",
+    "trap": "Feminine: accusative sie, dative ihr."
+  },
+  {
+    "id": "vd-13",
+    "type": "Lückentext",
+    "model": "Kannst du ___ bitte anrufen? (wir)",
+    "answer": "uns",
+    "alternatives": [],
+    "focus": "pronoun uns after anrufen (accusative)",
+    "trap": "anrufen takes the accusative: \"Ruf mich an!\""
+  },
+  {
+    "id": "vd-14",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich danke dich.",
+    "answer": "Ich danke dir.",
+    "alternatives": [],
+    "focus": "find the mistake: dative after danken",
+    "trap": "danken takes the dative: dir."
+  },
+  {
+    "id": "vd-15",
+    "type": "Satzbau",
+    "model": "Bilde einen Satz: ihr (= der Frau, Dativ) / wir / helfen / heute",
+    "answer": "Wir helfen ihr heute.",
+    "alternatives": [
+      "Heute helfen wir ihr."
+    ],
+    "focus": "sentence with helfen + dative pronoun",
+    "trap": "helfen + dative: ihr."
+  },
+  {
+    "id": "vd-16",
+    "type": "Kommunikative Aufgabe",
+    "model": "Dein Freund fragt: \"Hilfst du deinem Bruder?\" Antworte mit Ja und dem richtigen Pronomen.",
+    "answer": "Ja, ich helfe ihm.",
+    "alternatives": [
+      "Ja, ich helfe ihm gern.",
+      "Ja, ich helfe ihm immer."
+    ],
+    "focus": "replacing a dative noun with a pronoun",
+    "trap": "der Bruder -> ihm (dative), not ihn."
+  }
+]

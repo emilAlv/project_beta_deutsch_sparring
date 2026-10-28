@@ -1,0 +1,90 @@
+[
+  {
+    "id": "imp-01",
+    "type": "Lückentext",
+    "model": "___ bitte die Tür zu. (du, machen)",
+    "answer": "Mach",
+    "alternatives": [],
+    "focus": "imperative, du-form: verb stem; separable verb zumachen",
+    "trap": "The prefix \"zu\" goes to the end of the sentence."
+  },
+  {
+    "id": "imp-02",
+    "type": "Lückentext",
+    "model": "___ bitte ruhig, Kinder! (ihr, sein)",
+    "answer": "Seid",
+    "alternatives": [],
+    "focus": "imperative, ihr-form of the irregular verb sein",
+    "trap": "sein is irregular: Sei! Seid! Seien Sie!"
+  },
+  {
+    "id": "imp-03",
+    "type": "Lückentext",
+    "model": "___ Sie bitte hier. (warten)",
+    "answer": "Warten",
+    "alternatives": [],
+    "focus": "imperative, Sie-form: infinitive first, then Sie"
+  },
+  {
+    "id": "imp-04",
+    "type": "Kommunikative Aufgabe",
+    "model": "Dein Freund spricht zu laut. Bitte ihn (du), leiser zu sprechen.",
+    "answer": "Sprich bitte leiser.",
+    "alternatives": [
+      "Bitte sprich leiser.",
+      "Sprich leiser, bitte.",
+      "Sprich doch bitte leiser."
+    ],
+    "focus": "polite request with the du-imperative of a verb that changes its vowel",
+    "trap": "sprechen changes e to i: Sprich! (not \"Sprech!\"). The du-imperative has no -st."
+  },
+  {
+    "id": "imp-05",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Lest du bitte diese Nachricht.",
+    "answer": "Lies bitte diese Nachricht.",
+    "alternatives": [
+      "Lies diese Nachricht bitte.",
+      "Lies doch bitte diese Nachricht."
+    ],
+    "focus": "find the mistake: wrong imperative form (ihr-form with du)",
+    "trap": "lesen: Lies! (not \"Lese!\"); \"Lest\" belongs to ihr."
+  },
+  {
+    "id": "imp-06",
+    "type": "Satzbau",
+    "model": "Bilde einen Satz: die Musik / bitte / ausmachen (du)",
+    "answer": "Mach bitte die Musik aus.",
+    "alternatives": [
+      "Mach die Musik bitte aus.",
+      "Bitte mach die Musik aus."
+    ],
+    "focus": "build an imperative sentence with a separable verb",
+    "trap": "Verb first, prefix \"aus\" at the very end."
+  },
+  {
+    "id": "imp-07",
+    "type": "Kommunikative Aufgabe",
+    "model": "Deine Freundin fragt, was sie am Wochenende tun kann. Gib ihr einen einfachen Tipp mit \"doch\".",
+    "answer": "Geh doch spazieren.",
+    "alternatives": [
+      "Geh doch ins Kino.",
+      "Komm doch zu mir.",
+      "Mach doch einen Ausflug."
+    ],
+    "focus": "friendly suggestion with imperative + doch",
+    "trap": "gehen: Geh! (no -e needed in everyday speech); \"doch\" makes the tip friendly."
+  },
+  {
+    "id": "imp-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Bitte zwei Freunde (ihr), pünktlich zu kommen.",
+    "answer": "Kommt bitte pünktlich.",
+    "alternatives": [
+      "Bitte kommt pünktlich.",
+      "Kommt bitte pünktlich!"
+    ],
+    "focus": "imperative, ihr-form in a request",
+    "trap": "ihr-form = the present form without \"ihr\": Kommt!"
+  }
+]

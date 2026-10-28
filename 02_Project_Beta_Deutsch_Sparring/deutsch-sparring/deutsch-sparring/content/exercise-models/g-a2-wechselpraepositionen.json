@@ -1,0 +1,101 @@
+[
+  {
+    "id": "wp-01",
+    "type": "Lückentext",
+    "model": "Das Buch liegt ___ Regal. (in, das Regal; Wo?)",
+    "answer": "im",
+    "alternatives": [
+      "in dem"
+    ],
+    "focus": "two-way preposition, Wo? = dative",
+    "trap": "Wo? (position) -> dative: im Regal."
+  },
+  {
+    "id": "wp-02",
+    "type": "Lückentext",
+    "model": "Ich lege das Buch ___ Regal. (in, das Regal; Wohin?)",
+    "answer": "ins",
+    "alternatives": [
+      "in das"
+    ],
+    "focus": "two-way preposition, Wohin? = accusative",
+    "trap": "Wohin? (movement) -> accusative: ins Regal."
+  },
+  {
+    "id": "wp-03",
+    "type": "Lückentext",
+    "model": "Die Katze sitzt ___ Sofa. (auf, das Sofa; Wo?)",
+    "answer": "auf dem",
+    "alternatives": [],
+    "focus": "two-way preposition, Wo? = dative"
+  },
+  {
+    "id": "wp-04",
+    "type": "Lückentext",
+    "model": "Die Katze springt ___ Sofa. (auf, das Sofa; Wohin?)",
+    "answer": "auf das",
+    "alternatives": [
+      "aufs"
+    ],
+    "focus": "two-way preposition, Wohin? = accusative",
+    "trap": "Wohin? -> accusative: auf das / aufs Sofa."
+  },
+  {
+    "id": "wp-05",
+    "type": "Lückentext",
+    "model": "Das Bild hängt ___ Wand. (an, die Wand; Wo?)",
+    "answer": "an der",
+    "alternatives": [],
+    "focus": "two-way preposition, feminine, Wo? = dative",
+    "trap": "hängen (the picture is already there) = Wo? + dative; \"ich hänge\" (I am putting it up) = Wohin? + accusative."
+  },
+  {
+    "id": "wp-06",
+    "type": "Lückentext",
+    "model": "Ich hänge das Bild ___ Wand. (an, die Wand; Wohin?)",
+    "answer": "an die",
+    "alternatives": [],
+    "focus": "two-way preposition, feminine, Wohin? = accusative"
+  },
+  {
+    "id": "wp-07",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich stelle die Flasche auf dem Tisch.",
+    "answer": "Ich stelle die Flasche auf den Tisch.",
+    "alternatives": [],
+    "focus": "find the mistake: stellen = movement, so accusative",
+    "trap": "stellen / legen / setzen / hängen (put) = Wohin? + accusative; stehen / liegen / sitzen / hängen (be) = Wo? + dative."
+  },
+  {
+    "id": "wp-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Erkläre den Unterschied: \"Ich laufe im Park.\" und \"Ich laufe in den Park.\"",
+    "answer": "Im Park: ich bin schon im Park und laufe dort herum (Wo? - Dativ). In den Park: der Park ist das Ziel, ich laufe dorthin (Wohin? - Akkusativ).",
+    "alternatives": [],
+    "focus": "explaining Wo? + dative vs Wohin? + accusative",
+    "trap": "The same verb can answer both questions; the case shows if there is a movement TO a place."
+  },
+  {
+    "id": "wp-09",
+    "type": "Lückentext",
+    "model": "Ich gehe ___ Bäckerei. (zu, die Bäckerei; Wohin?)",
+    "answer": "zur",
+    "alternatives": [
+      "zu der"
+    ],
+    "focus": "zu is NOT a two-way preposition",
+    "trap": "Wohin? does not always mean accusative: zu always takes the dative (zur Bäckerei). Wo/Wohin only decides the case for the nine two-way prepositions."
+  },
+  {
+    "id": "wp-10",
+    "type": "Auswahl",
+    "model": "Wo steht das Velo? Wähle die richtige Antwort: a) Das Velo steht in der Garage. b) Das Velo steht in die Garage.",
+    "answer": "a) Das Velo steht in der Garage.",
+    "alternatives": [
+      "Das Velo steht in der Garage.",
+      "a"
+    ],
+    "focus": "choosing the dative for Wo? (position)",
+    "trap": "stehen = position (Wo?): in der Garage. stellen = movement (Wohin?): in die Garage."
+  }
+]

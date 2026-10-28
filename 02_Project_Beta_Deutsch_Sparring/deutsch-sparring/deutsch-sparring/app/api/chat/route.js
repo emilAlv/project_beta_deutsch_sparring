@@ -12,6 +12,7 @@ import {
 } from '../../../lib/reply';
 import { checkCode, overDailyLimit } from '../../../lib/guard';
 import { draftWithNoveltyRetry } from '../../../lib/novelty';
+import { pickModels, cleanModelIds } from '../../../lib/exercise-models';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
 import { requireUser } from '../../../lib/auth';
 import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
@@ -162,6 +163,11 @@ async function handle(req) {
       if (!words.length) words = pickWords({ ...query, level: undefined });
     }
   }
+  // --- exercise models (grammar topics): 3–5 patterns the AI turns into NEW exercises (lib/exercise-models.js) ---
+  // The first request picks them (rotating: models from recent sessions come last); the browser sends the ids back every time.
+  const models = topicId && !filter ? pickModels(topicId, { keep: cleanModelIds(body.modelIds), seen: cleanModelIds(body.seenModels), total: session.total }) : [];
+  const modelIds = models.map((m) => m.id);
+
   // the parts the open question tests (Easy: the word · Medium: + article · Hard: + plural), so feedback.parts has exactly those
   const wordById = new Map(words.map((w) => [w.id, w]));
   const openChecks = session.openTask
@@ -173,12 +179,13 @@ async function handle(req) {
   let text;
   try {
     if (process.env.MOCK === '1') {
-      text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null });
+      text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null, models });
     } else {
       text = await draftWithNoveltyRetry({
         ask: askGemini,
         parse: parseModelJson,
         previous: [...asked, session.openLine, session.skippedLine],
+        copyOf: models,
         openLine: session.openLine,
         deadline,
       });
@@ -221,6 +228,7 @@ async function handle(req) {
     const system = buildSystemPrompt({
       name: String(name || 'du').slice(0, 40),
       lesson: filter ? null : (curriculumEntry(topicId) ? curriculumLesson(curriculumEntry(topicId)) : getLesson(topicId)),
+      models,
       words: filter ? { header: WORD_LINE_HEADER, lines: words.map(wordLine) } : null,
       knownGrammar: getKnownGrammar(),
       catalog,
@@ -242,7 +250,7 @@ async function handle(req) {
   if (!reply) {
     // invalid JSON: the browser shows the text as a normal message and keeps the panel as it is
     console.warn('Tutor answer was not valid JSON:', replyShape(text)); // never the text itself (a student's words may be in it)
-    return Response.json({ reply: null, text: toVariant(salvageMessage(text) || String(text).slice(0, 2000), settings.variant), words: wordInfo() });
+    return Response.json({ reply: null, text: toVariant(salvageMessage(text) || String(text).slice(0, 2000), settings.variant), words: wordInfo(), models: modelIds });
   }
   // modelText = what the browser sends back as this tutor turn next time (without the bulky parts)
   const { grammarFocus, options, ...essentials } = parsed;
@@ -252,7 +260,7 @@ async function handle(req) {
     essentials.exercise = { ...essentials.exercise };
     delete essentials.exercise.answer;
   }
-  return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo() });
+  return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo(), models: modelIds });
 
   // the picked words for the browser to keep: id + type + the word as shown on the summary screen (phrases have no grammar score)
   function wordInfo() {

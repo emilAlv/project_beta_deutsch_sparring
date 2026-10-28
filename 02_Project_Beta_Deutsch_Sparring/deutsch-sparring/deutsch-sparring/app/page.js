@@ -31,7 +31,7 @@ import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/s
 import { suggestionToSetup } from '../lib/coach';
 import { setupFromSession } from '../lib/home-plan';
 import { score, summaryOf } from '../lib/stats';
-import { mergeQuestions, recentQuestions, sessionQuestions } from '../lib/question-history';
+import { mergeQuestions, recentQuestions, sessionQuestions, seenModelIds } from '../lib/question-history';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
   recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount, clearAccountData,
@@ -63,6 +63,7 @@ function newSession(topic = null, settings = null) {
     grammarFocus: null,
     wordIds: [], // vocabulary: the words picked for this session (by the server, from the scores)
     words: [], // … with their type: [{ id, type }]
+    modelIds: [], // grammar: the exercise models picked for this session (by the server); the next session on this topic gets other ones
     started: false, // the first question has arrived
     finished: false,
     endedEarly: false,
@@ -342,6 +343,7 @@ export default function Home() {
       finished: Boolean(s.finished),
       updatedAt: Date.now(),
       questions: mergeQuestions(previous?.questions || [], sessionQuestions(s)),
+      modelIds: s.modelIds || previous?.modelIds || [],
       mistakes: s.answers.filter((a) => !a.correct && !a.skipped).slice(-5)
         .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule })),
     }));
@@ -686,6 +688,8 @@ export default function Home() {
       },
       // vocabulary: the words picked at the start stay the same; without them the server picks, using our scores
       wordIds: s.wordIds,
+      modelIds: s.modelIds || [],
+      seenModels: seenModelIds(s, historyRef.current.sessions),
       ...(isVocab(s) && !s.wordIds?.length ? { scores: loadScores(), source: st.source || 'both' } : {}),
       grammarFocus: s.grammarFocus || null, // so the server can hide it if it would give away the next card
       progress: score(s.answers),
@@ -729,8 +733,9 @@ export default function Home() {
         // not valid JSON: show the text, keep the session and the panel as they are
         add({ role: 'tutor', text: data.text || '…', modelText: data.text || '' });
         if (Array.isArray(data.words) && data.words.length) updateSession((x) => (x.wordIds?.length ? x : { ...x, wordIds: data.words.map((w) => w.id), words: data.words }));
+        if (Array.isArray(data.models) && data.models.length) updateSession((x) => (x.modelIds?.length ? x : { ...x, modelIds: data.models }));
       } else {
-        then = applyReply(data.reply, data.modelText, sent, data.words);
+        then = applyReply(data.reply, data.modelText, sent, data.words, data.models);
       }
     } catch (e) {
       if (request.cancelled) return;
@@ -751,7 +756,7 @@ export default function Home() {
 
   // The tutor's answer → chat message + session. Returns a follow-up action (or null).
   // The settings are fixed: a topic, level or difficulty the tutor sends back is ignored.
-  function applyReply(reply, modelText, sent, pickedWords) {
+  function applyReply(reply, modelText, sent, pickedWords, pickedModels) {
     const rs = reply.session;
     const before = convoRef.current.session;
     const s = { ...before };
@@ -761,6 +766,9 @@ export default function Home() {
       s.wordIds = pickedWords.map((w) => w.id);
       s.words = pickedWords;
     }
+
+    // the exercise models the server picked for this grammar session: kept for the whole session
+    if (Array.isArray(pickedModels) && pickedModels.length && !s.modelIds?.length && s.topicId && !s.finished) s.modelIds = pickedModels;
 
     // 1) feedback for the open question. (Also counted if the tutor asked its question only in
     //    the text, without a question card – but never twice for a question that was skipped.)

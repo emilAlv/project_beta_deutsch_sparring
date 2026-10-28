@@ -16,6 +16,7 @@
 //                 Single words only. Two marks in one sentence = two gaps.
 //   exerciseIdeas 2–3 short lines: which exercise types fit
 //   ruleNames     the names for feedback.rule (the stats group by them); reuse lib/grammar.js RULES where they fit
+//   traps         optional: 1–3 typical mistakes of learners (short German lines); the tutor mentions one when a student falls into it
 //   appNote       optional: one line of extra advice for the tutor
 import { RULES } from './grammar.js';
 
@@ -89,7 +90,7 @@ export const CURRICULUM = [
     id: 'g-a1-modalverben', level: 'A1',
     needs: [], role: 'productive',
     title: 'Modalverben: können, müssen, wollen, möchten', titleEn: 'Modal verbs',
-    rule: 'Modalverben sind können, müssen, wollen, möchten, dürfen und sollen. Das Modalverb steht auf Position 2, das zweite Verb steht als Infinitiv am Satzende: Ich kann gut schwimmen. Formen: ich kann, du kannst; ich muss, du musst; ich will, du willst; ich möchte, du möchtest.',
+    rule: 'Modalverben sind können, müssen, wollen, möchten, dürfen und sollen. Das Modalverb steht auf Position 2, das zweite Verb steht als Infinitiv am Satzende: Ich kann gut schwimmen. Formen: ich kann, du kannst; ich muss, du musst; ich will, du willst; ich möchte, du möchtest. Mit sollen sagst du, was eine andere Person verlangt (Du sollst mehr Wasser trinken); mit sollte gibst du einen Rat (Du solltest früh ins Bett gehen).',
     examples: [
       'Ich *kann|können* gut Klavier spielen.',
       'Du *musst|müssen* heute früh aufstehen.',
@@ -99,6 +100,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: das Modalverb in der richtigen Form.', 'Satzbau: Satz mit Modalverb und Infinitiv am Ende.', 'Übersetzung: «I have to work today.»'],
     ruleNames: ['Modalverben'],
+    traps: ['sollen = eine andere Person verlangt es (Du sollst mehr trinken). sollte = dein Rat (Du solltest früh ins Bett gehen).', 'Das zweite Verb steht als Infinitiv am Satzende, auch bei trennbaren Verben: Ihr sollt die Hefte mitbringen.'],
   },
   {
     id: 'g-a1-wortstellung', level: 'A1',
@@ -144,12 +146,13 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: Possessivartikel mit der richtigen Endung.', 'Auswahl: sein oder ihr?', 'Übersetzung: «This is my brother and his wife.»'],
     ruleNames: ['Possessivartikel'],
+    traps: ['Maskulin im Akkusativ: -en (Ich brauche meinen Pass, nicht «meine Pass»).', 'Plural: meine Augen, nicht «mein Augen».', 'Höflich: Ihr / Ihre wird gross geschrieben.'],
   },
   {
     id: 'g-a1-dativ-praepositionen', level: 'A1',
     needs: ['g-a1-akkusativ'], role: 'productive',
     title: 'Dativ nach mit, bei, von, zu, aus, nach', titleEn: 'Dative after mit, bei, von, zu …',
-    rule: 'Nach mit, bei, von, zu, aus, nach und seit steht immer der Dativ. Die Artikel im Dativ: dem (maskulin), der (feminin), dem (neutral), den + n (Plural). Mit ein-Wörtern: einem, einer, einem. Es gibt Kurzformen: zum (zu dem), zur (zu der), beim (bei dem), vom (von dem).',
+    rule: 'Nach mit, bei, von, zu, aus, nach und seit steht immer der Dativ. Die Artikel im Dativ: dem (maskulin), der (feminin), dem (neutral), den + n (Plural). Mit ein-Wörtern: einem, einer, einem. Es gibt Kurzformen: zum (zu dem), zur (zu der), beim (bei dem), vom (von dem). Auch bei einer Bewegung bleibt zu im Dativ: Ich gehe zum Arzt.',
     examples: [
       'Ich fahre mit *dem|der Bus* zur Arbeit.',
       'Sie wohnt bei *ihrer|ihr* Tante.',
@@ -159,6 +162,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: Artikel im Dativ nach der Präposition.', 'Auswahl: dem, der oder den?', 'Satzbau: Satz mit mit + Verkehrsmittel.'],
     ruleNames: [RULES.datMit, 'Dativ nach bei/von/zu', 'Dativ nach aus/nach'],
+    traps: ['zu steht immer mit Dativ, auch bei einer Bewegung: Ich gehe zum Arzt (nicht «in den Arzt»).', 'nach vor Städten und Ländern ohne Artikel (nach Luzern); mit Artikel: in die Schweiz.', 'von (Person, Ort) ist nicht aus (Land, Stadt, Material): Ich komme von der Post – ich komme aus Spanien.'],
   },
   {
     id: 'g-a1-perfekt', level: 'A1',
@@ -179,7 +183,7 @@ export const CURRICULUM = [
     id: 'g-a1-imperativ', level: 'A1',
     needs: [], role: 'productive',
     title: 'Imperativ: Komm! Kommt! Kommen Sie!', titleEn: 'Imperative',
-    rule: 'Mit dem Imperativ bittest du jemanden, etwas zu tun. Die du-Form ist der Verbstamm (Komm! Mach!), die ihr-Form wie im Präsens ohne ihr (Kommt!), die Sie-Form hat Sie nach dem Verb (Kommen Sie!). Einige Verben ändern den Vokal: Lies! Sprich! Nimm! Trennbare Verben trennen sich: Steh auf!',
+    rule: 'Mit dem Imperativ bittest du jemanden, etwas zu tun. Die du-Form ist der Verbstamm (Komm! Mach!), die ihr-Form wie im Präsens ohne ihr (Kommt!), die Sie-Form hat Sie nach dem Verb (Kommen Sie!). Einige Verben ändern den Vokal: Lies! Sprich! Nimm! Trennbare Verben trennen sich: Steh auf! Unregelmässig ist sein: Sei! Seid! Seien Sie!',
     examples: [
       '*Komm|kommen, du* bitte schnell!',
       '*Öffnen|Sie-Form* Sie bitte das Fenster!',
@@ -189,12 +193,13 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: den Imperativ in du-, ihr- oder Sie-Form.', 'Übersetzung: «Please open the door.»', 'Fehler finden: falsche Form (Lese! statt Lies!).'],
     ruleNames: ['Imperativ'],
+    traps: ['Vokalwechsel e → i bei der du-Form: Sprich! Lies! Nimm! (nicht «Sprech!»), und die du-Form hat kein -st.', 'Trennbare Verben: Mach die Tür zu! (das Präfix steht am Ende).', 'sein ist unregelmässig: Sei! Seid! Seien Sie!'],
   },
   {
     id: 'g-a1-zeit-ort', level: 'A1',
     needs: [], role: 'productive',
     title: 'Präpositionen: am, um, im, in, aus, nach', titleEn: 'Time and place prepositions',
-    rule: 'Zeit: am + Tag (am Montag), um + Uhrzeit (um acht Uhr), im + Monat oder Jahreszeit (im Mai, im Sommer). Ort: in + Stadt oder Land (in Bern), aus + Herkunft (aus Italien), nach + Stadt oder Land ohne Artikel (nach Zürich). Am, im und zum sind verkürzte Formen mit dem.',
+    rule: 'Zeit: am + Tag (am Montag), um + Uhrzeit (um acht Uhr), im + Monat oder Jahreszeit (im Mai, im Sommer), von … bis für Anfang und Ende (von neun bis zwölf Uhr). Seit + Dativ: es dauert noch (seit einem Jahr). Vor + Dativ: es ist vorbei (vor einer Woche). Ort: in + Stadt oder Land (in Bern), aus + Herkunft (aus Italien), nach + Stadt oder Land ohne Artikel (nach Zürich). Am, im und zum sind verkürzte Formen mit dem.',
     examples: [
       'Der Kurs beginnt *am* Montag.',
       'Wir essen *um* zwölf Uhr.',
@@ -204,6 +209,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: die richtige Präposition ergänzen.', 'Auswahl: am, um oder im?', 'Übersetzung: «The course starts on Monday at nine.»'],
     ruleNames: ['Zeitpräpositionen am/um/im', 'Ortspräpositionen in/aus/nach'],
+    traps: ['seit = es hat begonnen und dauert noch (Ich lerne seit einem Jahr Deutsch). vor = es ist passiert (Ich bin vor einer Woche umgezogen). nach / vor + Ereignis: nach dem Unterricht, vor dem Unterricht.', 'seit und vor stehen mit Dativ: seit einem Jahr, vor einer Woche, seit drei Jahren (nicht «seit drei Jahre»).', 'am + Tag, im + Monat, um + Uhrzeit: nicht «im Montag», nicht «am acht Uhr».'],
   },
 
   // ---------------------------------------------------------------- A2
@@ -221,6 +227,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: Dativ für die Person, Akkusativ für die Sache.', 'Satzbau: Satz mit geben/schenken/zeigen aus Wörtern bauen.', 'Übersetzung: «I show her the room.»'],
     ruleNames: ['Dativobjekt und Akkusativobjekt', RULES.verbDat, RULES.verbAkk],
+    traps: ['Die Person steht im Dativ, die Sache im Akkusativ: Ich gebe der Frau das Formular (nicht «den Frau»).', 'Dativ Plural bekommt -n: den Kindern.', 'Zwei Pronomen: erst der Akkusativ, dann der Dativ (Ich gebe ihn ihm).'],
   },
   {
     id: 'g-a2-verben-dativ', level: 'A2',
@@ -236,12 +243,13 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: Pronomen oder Artikel im Dativ.', 'Auswahl: Dativ oder Akkusativ (mir / mich)?', 'Fehler finden: Ich helfe ihn.'],
     ruleNames: [RULES.verbDat],
+    traps: ['gefallen, passen, schmecken, gehören: die Sache ist das Subjekt, die Person steht im Dativ. Die Hose gefällt mir. Die Schuhe gefallen mir.', 'gefallen (Dativ) ≠ finden (Akkusativ): Die Hose gefällt mir. Ich finde die Hose schön.', 'Dativ: helfen, danken, antworten. Akkusativ: kennen, sehen, anrufen, fragen (Ich helfe ihm. Ich kenne ihn.).'],
   },
   {
     id: 'g-a2-wechselpraepositionen', level: 'A2',
     needs: [], role: 'productive',
     title: 'Wechselpräpositionen: Wo? Wohin?', titleEn: 'Two-way prepositions',
-    rule: 'An, auf, hinter, in, neben, über, unter, vor und zwischen haben zwei Fälle. Wo? (Position) → Dativ: Das Buch liegt auf dem Tisch. Wohin? (Bewegung) → Akkusativ: Ich lege das Buch auf den Tisch. Position: liegen, stehen, hängen, sitzen. Bewegung: legen, stellen, hängen, setzen.',
+    rule: 'An, auf, hinter, in, neben, über, unter, vor und zwischen haben zwei Fälle. Wo? (Position) → Dativ: Das Buch liegt auf dem Tisch. Wohin? (Bewegung) → Akkusativ: Ich lege das Buch auf den Tisch. Position: liegen, stehen, hängen, sitzen. Bewegung: legen, stellen, hängen, setzen. Das gilt nur für diese neun Präpositionen: zu, mit, bei, von, aus und nach haben immer Dativ.',
     examples: [
       'Das Bild hängt an *der|die* Wand.',
       'Ich stelle die Vase auf *den|der* Tisch.',
@@ -251,6 +259,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: Artikel nach Wo? oder Wohin?', 'Auswahl: Dativ oder Akkusativ, mit liegen/legen.', 'Fehler finden: Ich gehe in dem Park.'],
     ruleNames: [RULES.datIn, RULES.akkIn],
+    traps: ['Wo? und Wohin? entscheiden den Fall nur bei den neun Wechselpräpositionen. zu, mit, bei, von, aus, nach haben immer Dativ: Ich gehe zur Bäckerei.', 'stellen, legen, setzen (Wohin?) + Akkusativ; stehen, liegen, sitzen (Wo?) + Dativ.', 'hängen: Das Bild hängt an der Wand (Wo?). Ich hänge das Bild an die Wand (Wohin?).'],
   },
   {
     id: 'g-a2-adjektivendungen', level: 'A2',
@@ -311,6 +320,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: Partizip II ergänzen.', 'Satzbau: Perfektsatz aus Pronomen + Infinitiv.', 'Fehler finden: gegefahren statt gefahren.'],
     ruleNames: [RULES.perfektHaben, RULES.perfektSein, 'Partizip II'],
+    traps: ['sein im Perfekt bei Bewegung und Zustandswechsel: Ich bin aufgestanden, wir sind angekommen (nicht «habe aufgestanden»).', 'Trennbare Verben: ge steht in der Mitte: angerufen, eingekauft, abgeholt.'],
   },
   {
     id: 'g-a2-reflexive-verben', level: 'A2',
@@ -326,6 +336,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: das Reflexivpronomen ergänzen.', 'Satzbau: Satz mit sich + Verb aus Wörtern bilden.', 'Fehler finden: falsches Reflexivpronomen (Ich freue dich).'],
     ruleNames: ['Reflexive Verben', 'Reflexivpronomen'],
+    traps: ['Das Reflexivpronomen ist meistens Akkusativ: Ich freue mich (nicht «mir»).', 'Im Perfekt steht haben: Ich habe mich gefreut.', 'Das Reflexivpronomen steht direkt nach dem Verb oder nach dem Subjekt: Wir treffen uns heute. Heute treffen wir uns.'],
   },
   {
     id: 'g-a2-weil', level: 'A2',
@@ -610,7 +621,7 @@ Correct example sentences (key words in **bold**; imitate them, but write new se
 ${entry.examples.map((x) => `- ${x.replace(MARK, (_, word) => `**${word}**`)}`).join('\n')}
 Exercise ideas:
 ${entry.exerciseIdeas.map((x) => `- ${x}`).join('\n')}
-feedback.rule: use EXACTLY one of these names (the stats group by them): ${entry.ruleNames.map((r) => `"${r}"`).join(', ')}.${entry.appNote ? `\nNote: ${entry.appNote}` : ''}`;
+${entry.traps?.length ? `Typical traps (mention the matching one briefly in the explanation when a student falls into it; never ask about it as a quiz):\n${entry.traps.map((x) => `- ${x}`).join('\n')}\n` : ''}feedback.rule: use EXACTLY one of these names (the stats group by them): ${entry.ruleNames.map((r) => `"${r}"`).join(', ')}.${entry.appNote ? `\nNote: ${entry.appNote}` : ''}`;
 }
 
 // The CURRICULUM text of the coach (lib/coach-prompt.js): the grammar topics of every level, from this list.

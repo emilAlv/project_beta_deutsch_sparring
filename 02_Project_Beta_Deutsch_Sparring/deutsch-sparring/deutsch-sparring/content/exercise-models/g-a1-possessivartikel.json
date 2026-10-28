@@ -1,0 +1,80 @@
+[
+  {
+    "id": "pos-01",
+    "type": "Lückentext",
+    "model": "Das ist ___ Schwester. (ich)",
+    "answer": "meine",
+    "alternatives": [],
+    "focus": "possessive article mein- before a feminine noun"
+  },
+  {
+    "id": "pos-02",
+    "type": "Lückentext",
+    "model": "Ist das ___ Vater? (du)",
+    "answer": "dein",
+    "alternatives": [],
+    "focus": "possessive article dein- before a masculine noun (nominative)"
+  },
+  {
+    "id": "pos-03",
+    "type": "Lückentext",
+    "model": "Sind das ___ Kinder? (Sie, höflich)",
+    "answer": "Ihre",
+    "alternatives": [],
+    "focus": "possessive article for the polite Sie, plural noun",
+    "trap": "Polite \"Ihr/Ihre\" is written with a capital letter."
+  },
+  {
+    "id": "pos-04",
+    "type": "Lückentext",
+    "model": "Wir besuchen ___ Freunde. (wir)",
+    "answer": "unsere",
+    "alternatives": [
+      "unsre"
+    ],
+    "focus": "possessive article unser- before a plural noun"
+  },
+  {
+    "id": "pos-05",
+    "type": "Lückentext",
+    "model": "Er sucht ___ Rucksack. (er)",
+    "answer": "seinen",
+    "alternatives": [],
+    "focus": "possessive article in the accusative, masculine noun",
+    "trap": "Only the masculine changes in the accusative: mein -> meinen, sein -> seinen."
+  },
+  {
+    "id": "pos-06",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich brauche meine Pass.",
+    "answer": "Ich brauche meinen Pass.",
+    "alternatives": [],
+    "focus": "find the mistake: accusative ending of a masculine noun",
+    "trap": "der Pass is masculine: accusative = meinen."
+  },
+  {
+    "id": "pos-07",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: This is our car.",
+    "answer": "Das ist unser Auto.",
+    "alternatives": [
+      "Dies ist unser Auto.",
+      "Das ist unser Wagen."
+    ],
+    "focus": "possessive article unser before a neuter noun, translation",
+    "trap": "unser: no ending before a neuter noun in the nominative (like ein)."
+  },
+  {
+    "id": "pos-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du duzt deine Nachbarin. Frage sie, ob der Schlüssel ihr gehört.",
+    "answer": "Ist das dein Schlüssel?",
+    "alternatives": [
+      "Ist das nicht dein Schlüssel?",
+      "Gehört der Schlüssel dir?",
+      "Ist das vielleicht dein Schlüssel?"
+    ],
+    "focus": "ask about ownership with a possessive article",
+    "trap": "Use \"dein\" (du), not \"Ihr\"."
+  }
+]

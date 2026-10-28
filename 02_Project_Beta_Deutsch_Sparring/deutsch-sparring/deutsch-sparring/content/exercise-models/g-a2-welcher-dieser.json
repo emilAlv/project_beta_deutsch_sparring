@@ -1,0 +1,76 @@
+[
+  {
+    "id": "wel-01",
+    "type": "Lückentext",
+    "model": "___ Mantel möchtest du anprobieren?",
+    "answer": "Welchen",
+    "alternatives": [],
+    "focus": "welcher in the accusative, masculine",
+    "trap": "welcher/dieser have the endings of the definite article: welcher (m), welche (f), welches (n), welche (pl); accusative masculine: welchen."
+  },
+  {
+    "id": "wel-02",
+    "type": "Lückentext",
+    "model": "Ich nehme ___ blauen Pullover. (dieser, Akkusativ)",
+    "answer": "diesen",
+    "alternatives": [],
+    "focus": "dieser in the accusative, masculine"
+  },
+  {
+    "id": "wel-03",
+    "type": "Lückentext",
+    "model": "___ Jacke findest du schön?",
+    "answer": "Welche",
+    "alternatives": [],
+    "focus": "welche before a feminine noun"
+  },
+  {
+    "id": "wel-04",
+    "type": "Lückentext",
+    "model": "___ Kleid passt dir besser: das grüne oder das rote?",
+    "answer": "Welches",
+    "alternatives": [],
+    "focus": "welches before a neuter noun"
+  },
+  {
+    "id": "wel-05",
+    "type": "Lückentext",
+    "model": "___ Schuhe sind bequemer? (welcher)",
+    "answer": "Welche",
+    "alternatives": [],
+    "focus": "welche before a plural noun"
+  },
+  {
+    "id": "wel-06",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Welcher Bluse gefällt dir?",
+    "answer": "Welche Bluse gefällt dir?",
+    "alternatives": [],
+    "focus": "find the mistake: welcher does not match die Bluse",
+    "trap": "Match the gender: die Bluse -> welche."
+  },
+  {
+    "id": "wel-07",
+    "type": "Übersetzung",
+    "model": "Du zeigst auf eine Tasche. Sage auf Deutsch: I want this one.",
+    "answer": "Ich möchte diese hier.",
+    "alternatives": [
+      "Ich möchte diese.",
+      "Diese hier, bitte."
+    ],
+    "focus": "dieser as a pronoun for a feminine noun",
+    "trap": "die Tasche -> diese."
+  },
+  {
+    "id": "wel-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Jemand fragt: \"Welcher Zug fährt nach Baden?\" Zeige auf einen Zug und sage: dieser hier, auf Gleis 3.",
+    "answer": "Dieser hier, auf Gleis 3.",
+    "alternatives": [
+      "Dieser da, auf Gleis 3.",
+      "Dieser hier. Er fährt auf Gleis 3."
+    ],
+    "focus": "answering welcher with dieser",
+    "trap": "der Zug -> dieser (nominative masculine)."
+  }
+]

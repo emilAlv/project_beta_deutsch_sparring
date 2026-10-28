@@ -1,0 +1,213 @@
+[
+  {
+    "id": "zeit-01",
+    "type": "Lückentext",
+    "model": "Ich habe ___ Freitag frei.",
+    "answer": "am",
+    "alternatives": [],
+    "focus": "am + weekday",
+    "trap": "am + day (am Montag), im + month or season (im Mai), um + clock time. Not \"im Montag\"."
+  },
+  {
+    "id": "zeit-02",
+    "type": "Lückentext",
+    "model": "Wir treffen uns ___ 18 Uhr.",
+    "answer": "um",
+    "alternatives": [],
+    "focus": "um + clock time"
+  },
+  {
+    "id": "zeit-03",
+    "type": "Lückentext",
+    "model": "___ November beginnt der Winterkurs.",
+    "answer": "Im",
+    "alternatives": [],
+    "focus": "im + month (capital letter at the start of the sentence)"
+  },
+  {
+    "id": "zeit-04",
+    "type": "Lückentext",
+    "model": "Der Laden ist ___ neun ___ zwölf Uhr geöffnet.",
+    "answer": "von ... bis",
+    "alternatives": [],
+    "focus": "von ... bis for the start and end of a period"
+  },
+  {
+    "id": "zeit-05",
+    "type": "Lückentext",
+    "model": "Ich lerne ___ Januar Deutsch. (it still goes on)",
+    "answer": "seit",
+    "alternatives": [],
+    "focus": "seit for something that started in the past and still goes on",
+    "trap": "seit = it started earlier and still goes on; vor = it happened (ago); vor dem/nach dem + event = before/after."
+  },
+  {
+    "id": "zeit-06",
+    "type": "Lückentext",
+    "model": "Ich bin ___ einer Woche umgezogen. (a week ago)",
+    "answer": "vor",
+    "alternatives": [],
+    "focus": "vor + dative for \"ago\"",
+    "trap": "seit = it started earlier and still goes on; vor = it happened (ago); vor dem/nach dem + event = before/after."
+  },
+  {
+    "id": "zeit-07",
+    "type": "Lückentext",
+    "model": "___ dem Unterricht gehe ich einkaufen. (afterwards)",
+    "answer": "Nach",
+    "alternatives": [],
+    "focus": "nach + dative for \"after\"",
+    "trap": "Contrast: vor dem Unterricht = before the class (an event, with article); vor einer Woche = a week ago (a time span); nach dem Unterricht = after the class."
+  },
+  {
+    "id": "zeit-08",
+    "type": "Lückentext",
+    "model": "Ich trinke einen Kaffee ___ dem Unterricht. (before the class starts)",
+    "answer": "vor",
+    "alternatives": [],
+    "focus": "vor + dative for \"before\" an event",
+    "trap": "Contrast: vor dem Unterricht = before the class; vor einer Woche = a week ago; nach dem Unterricht = after the class."
+  },
+  {
+    "id": "zeit-09",
+    "type": "Lückentext",
+    "model": "Der nächste Bus kommt ___ zehn Minuten. (in ten minutes)",
+    "answer": "in",
+    "alternatives": [],
+    "focus": "in + dative for a point in the future"
+  },
+  {
+    "id": "zeit-10",
+    "type": "Lückentext",
+    "model": "___ wann kannst du kommen? - Ab Montag.",
+    "answer": "Ab",
+    "alternatives": [],
+    "focus": "ab wann / ab = from a starting point on"
+  },
+  {
+    "id": "zeit-11",
+    "type": "Lückentext",
+    "model": "Ich habe ___ 17 Uhr Zeit. (not later)",
+    "answer": "bis",
+    "alternatives": [],
+    "focus": "bis = until (end point)"
+  },
+  {
+    "id": "zeit-12",
+    "type": "Lückentext",
+    "model": "Ich lerne seit ___ Deutsch. (ein Monat)",
+    "answer": "einem Monat",
+    "alternatives": [],
+    "focus": "seit + dative singular",
+    "trap": "seit and vor always take the dative: einem Monat, einer Woche, drei Tagen."
+  },
+  {
+    "id": "zeit-13",
+    "type": "Lückentext",
+    "model": "Wir sind vor ___ angekommen. (drei Tage)",
+    "answer": "drei Tagen",
+    "alternatives": [],
+    "focus": "vor + dative plural: add -n",
+    "trap": "Dative plural gets an -n: Tage -> Tagen, Jahre -> Jahren."
+  },
+  {
+    "id": "zeit-14",
+    "type": "Lückentext",
+    "model": "Ich bin seit ___ in der Schweiz. (sechs Wochen)",
+    "answer": "sechs Wochen",
+    "alternatives": [],
+    "focus": "dative plural when the plural already ends in -n",
+    "trap": "Wochen already ends in -n, so there is no second -n."
+  },
+  {
+    "id": "zeit-15",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich lerne vor drei Monaten Deutsch. (I am still learning.)",
+    "answer": "Ich lerne seit drei Monaten Deutsch.",
+    "alternatives": [
+      "Seit drei Monaten lerne ich Deutsch."
+    ],
+    "focus": "find the mistake: vor instead of seit",
+    "trap": "seit = it started earlier and still goes on; vor = it happened (ago); vor dem/nach dem + event = before/after."
+  },
+  {
+    "id": "zeit-16",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich habe seit zwei Monaten mit dem Kurs angefangen.",
+    "answer": "Ich habe vor zwei Monaten mit dem Kurs angefangen.",
+    "alternatives": [
+      "Vor zwei Monaten habe ich mit dem Kurs angefangen."
+    ],
+    "focus": "find the mistake: seit instead of vor",
+    "trap": "A finished event in the past (Perfekt) goes with vor, not seit."
+  },
+  {
+    "id": "zeit-17",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Der Kurs beginnt am acht Uhr.",
+    "answer": "Der Kurs beginnt um acht Uhr.",
+    "alternatives": [],
+    "focus": "find the mistake: am instead of um",
+    "trap": "um + clock time, am + day."
+  },
+  {
+    "id": "zeit-18",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Im Montag habe ich frei.",
+    "answer": "Am Montag habe ich frei.",
+    "alternatives": [],
+    "focus": "find the mistake: im instead of am",
+    "trap": "am + day, im + month or season."
+  },
+  {
+    "id": "zeit-19",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Seit drei Jahre wohne ich hier.",
+    "answer": "Seit drei Jahren wohne ich hier.",
+    "alternatives": [],
+    "focus": "find the mistake: dative plural after seit",
+    "trap": "seit + dative: Jahre -> Jahren."
+  },
+  {
+    "id": "zeit-20",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Vor eine Woche war ich im Kino.",
+    "answer": "Vor einer Woche war ich im Kino.",
+    "alternatives": [],
+    "focus": "find the mistake: dative feminine after vor",
+    "trap": "vor + dative: eine Woche -> einer Woche."
+  },
+  {
+    "id": "zeit-21",
+    "type": "Fehler finden",
+    "model": "Finde den Fehler: Ich arbeite von neun um fünf Uhr.",
+    "answer": "Ich arbeite von neun bis fünf Uhr.",
+    "alternatives": [],
+    "focus": "find the mistake: von ... bis",
+    "trap": "The pair is von ... bis."
+  },
+  {
+    "id": "zeit-22",
+    "type": "Kommunikative Aufgabe",
+    "model": "Wann hast du deinen Freund zuletzt gesehen? Antworte mit \"vor\" und \"zwei Wochen\".",
+    "answer": "Ich habe ihn vor zwei Wochen gesehen.",
+    "alternatives": [
+      "Vor zwei Wochen habe ich ihn gesehen.",
+      "Ich habe ihn vor zwei Wochen zuletzt gesehen."
+    ],
+    "focus": "answering a wann-question with vor + time span",
+    "trap": "vor + dative plural: zwei Wochen already ends in -n."
+  },
+  {
+    "id": "zeit-23",
+    "type": "Übersetzung",
+    "model": "Sag auf Deutsch: I have been learning German for six months.",
+    "answer": "Ich lerne seit sechs Monaten Deutsch.",
+    "alternatives": [
+      "Seit sechs Monaten lerne ich Deutsch.",
+      "Ich lerne schon seit sechs Monaten Deutsch."
+    ],
+    "focus": "seit + present tense for something that still goes on",
+    "trap": "German uses the PRESENT with seit (not \"Ich habe gelernt seit\")."
+  }
+]

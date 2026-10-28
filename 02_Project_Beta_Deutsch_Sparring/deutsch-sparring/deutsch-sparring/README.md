@@ -229,6 +229,24 @@ Rules: one file per topic.
 - The first line (`# Title`) is the topic name; the part before ` – ` is the short name on the chips.
 - Write "ss" not "ß" (the word list and lessons stay Swiss; the German variant is made when something is shown), own words, no scanned pages.
 
+## Exercise models (how to add more)
+
+An *exercise model* is a pattern, not a question: the AI writes a new exercise from it every session (new words, names,
+situation) and never asks the model sentence itself. The models live in `content/exercise-models/<topic id>.json`, one file
+per grammar topic (`g-a2-wechselpraepositionen`) or per lesson (`lektion-a1-08-unterwegs`). Each item:
+
+```json
+{ "id": "wp-01", "type": "Lückentext", "model": "Das Buch liegt ___ Regal. (in, das Regal; Wo?)",
+  "answer": "im", "alternatives": ["in dem"], "focus": "two-way preposition, Wo? = dative", "trap": "optional: the usual mistake" }
+```
+
+- `type`: Lückentext, Auswahl, Fehler finden, Satzbau, Übersetzung or Kommunikative Aufgabe (shown as Satzbau).
+- Gap fills: one `___` per gap; several gaps in `answer` are separated by `...` (`"von ... bis"`). `id` must be unique in all files.
+- Swiss spelling (ss) in `model` and `answer`; put the German variant (Füße) in `alternatives`.
+- A session gets 3–5 models of its topic (`lib/exercise-models.js`), rotating; the browser keeps their ids in the session record.
+- A file with no matching topic yet is listed in `WAITING_TOPICS` (same file) and ignored until the topic exists.
+- Run `npm test` (`scripts/check-exercise-models.mjs` checks the files). Curriculum topics can also have `traps` in `lib/curriculum.js`.
+
 ## A1–B1 communicative curriculum
 
 The app loads every ordered curriculum unit from `content/lektion-a1-*.md`, `lektion-a2-*.md` and

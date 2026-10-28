@@ -1,0 +1,91 @@
+[
+  {
+    "id": "hin-01",
+    "type": "Lückentext",
+    "model": "Ich bin im Zimmer, du stehst draussen. Die Tür ist offen. Komm bitte ___.",
+    "answer": "herein",
+    "alternatives": [
+      "rein"
+    ],
+    "focus": "her- = towards the speaker",
+    "trap": "her = towards the speaker; hin = away from the speaker. The speaker's position decides."
+  },
+  {
+    "id": "hin-02",
+    "type": "Lückentext",
+    "model": "Ich warte draussen, du bist im Zimmer. Komm bitte ___. Ich warte draussen.",
+    "answer": "heraus",
+    "alternatives": [
+      "raus"
+    ],
+    "focus": "her- = out of the room towards the speaker"
+  },
+  {
+    "id": "hin-03",
+    "type": "Lückentext",
+    "model": "Ich stehe unten. Komm die Treppe ___!",
+    "answer": "herunter",
+    "alternatives": [
+      "runter"
+    ],
+    "focus": "her- = towards the speaker, downwards"
+  },
+  {
+    "id": "hin-04",
+    "type": "Lückentext",
+    "model": "Ich stehe oben. Komm die Treppe ___!",
+    "answer": "herauf",
+    "alternatives": [
+      "rauf",
+      "hinauf"
+    ],
+    "focus": "her- = towards the speaker, upwards"
+  },
+  {
+    "id": "hin-05",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du bist drinnen und lädst eine Freundin zu dir ein. Bitte sie freundlich hereinzukommen.",
+    "answer": "Komm bitte herein!",
+    "alternatives": [
+      "Komm doch herein!",
+      "Komm bitte rein!"
+    ],
+    "focus": "inviting someone in: movement towards the speaker",
+    "trap": "You are inside, so the movement is towards you: herein."
+  },
+  {
+    "id": "hin-06",
+    "type": "Lückentext",
+    "model": "Du stehst vor einem Büro und gehst jetzt in das Büro. Sage: Ich gehe jetzt ___.",
+    "answer": "hinein",
+    "alternatives": [
+      "rein"
+    ],
+    "focus": "hin- = away from the speaker",
+    "trap": "You move away from where you speak: hinein (not herein)."
+  },
+  {
+    "id": "hin-07",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du bist im Erdgeschoss, dein Freund ist im ersten Stock. Bitte ihn, nach unten zu kommen.",
+    "answer": "Komm bitte herunter.",
+    "alternatives": [
+      "Komm bitte runter.",
+      "Komm doch herunter."
+    ],
+    "focus": "asking someone to come down to the speaker",
+    "trap": "He comes to you: herunter."
+  },
+  {
+    "id": "hin-08",
+    "type": "Kommunikative Aufgabe",
+    "model": "Du stehst drinnen und möchtest, dass jemand das Zimmer verlässt. Bitte ihn, hinauszugehen.",
+    "answer": "Geh bitte hinaus.",
+    "alternatives": [
+      "Geh bitte raus.",
+      "Bitte gehen Sie hinaus."
+    ],
+    "focus": "asking someone to leave: movement away from the speaker",
+    "trap": "Away from you: hinaus."
+  }
+]

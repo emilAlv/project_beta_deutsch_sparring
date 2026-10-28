@@ -64,6 +64,7 @@ export function cleanEntry(raw, fallbackTime = Date.now()) {
     skipped: int(e.skipped, 0, 99),
     endedEarly: e.endedEarly === true,
     updatedAt: int(e.updatedAt, 0, 8.64e15, fallbackTime),
+    modelIds: (Array.isArray(e.modelIds) ? e.modelIds : []).map((id) => text(id, 40)).filter(Boolean).slice(0, 8),
     questions: (Array.isArray(e.questions) ? e.questions : [])
       .map((question) => text(question, 500))
       .filter(Boolean)
