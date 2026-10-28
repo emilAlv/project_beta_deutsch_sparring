@@ -42,7 +42,7 @@ These tables are teacher-facing editorial source material. On integration, route
 | 5 | Er sucht ___ Rucksack. (er) | seinen | Lückentext |
 | 6 | Finde den Fehler: Ich brauche meine Pass. | Ich brauche meinen Pass. | Fehler finden |
 | 7 | Sag: This is our car. | Das ist unser Auto. | Übersetzung |
-| 8 | Frag deine Nachbarin, ob das ihr Schlüssel ist. | Ist das dein Schlüssel? | Kommunikative Aufgabe |
+| 8 | Du sprichst deine Nachbarin mit du an. Frage, ob der Schlüssel ihr gehört. | Ist das dein Schlüssel? | Kommunikative Aufgabe |
 
 **Interactive transfer:** Someone has picked up a phone in a café; ask whether it belongs to them and say where yours is.
 
@@ -118,7 +118,7 @@ These tables are teacher-facing editorial source material. On integration, route
 | 5 | Der Laden ist ___ neun ___ zwölf Uhr geöffnet. | von ... bis | Lückentext |
 | 6 | ___ lange dauert die Pause? Zehn Minuten. | Wie | Lückentext |
 | 7 | Frage deinen Freund: Since when have you been learning German? | Seit wann lernst du Deutsch? | Übersetzung |
-| 8 | Ein Treffpunkt ist um halb sieben. Schreibe die Uhrzeit in Ziffern. | 18.30 Uhr / 06.30 Uhr (je nach Kontext) | Freie Antwort |
+| 8 | Ein Treffen beginnt abends um halb sieben. Schreibe die Uhrzeit in Ziffern. | 18.30 Uhr | Freie Antwort |
 
 **Interactive transfer:** Suggest an evening meeting, negotiate a new time and confirm the weekday and time together.
 
@@ -289,7 +289,7 @@ These tables are teacher-facing editorial source material. On integration, route
 | 5 | Finde den Fehler: Ich habe um acht Uhr aufgestanden. | Ich bin um acht Uhr aufgestanden. | Fehler finden |
 | 6 | Bilde einen Satz: gestern / ich / abholen / meine Freundin | Ich habe gestern meine Freundin abgeholt. | Satzbau |
 | 7 | Erzähle in zwei Sätzen, was du gestern zuerst und danach gemacht hast. | Zuerst bin ich aufgestanden. Danach habe ich gefrühstückt. | Kommunikative Aufgabe |
-| 8 | Ergänze: Wir haben gestern im Park ___. (spazieren gehen) | spazieren gegangen | Lückentext |
+| 8 | Ergänze: Wir sind gestern im Park ___. (spazieren gehen) | spazieren gegangen | Lückentext |
 
 **Interactive transfer:** Give a two-step story about a delayed journey and answer a follow-up asking why.
 
@@ -305,7 +305,7 @@ These tables are teacher-facing editorial source material. On integration, route
 | 2 | Geh bitte ___. Ich warte draussen. (out of the room) | hinaus | Lückentext |
 | 3 | Ich stehe unten. Komm die Treppe ___! (towards the speaker) | herunter | Lückentext |
 | 4 | Ich stehe oben. Komm die Treppe ___! (towards the speaker) | herauf | Lückentext |
-| 5 | Finde den Fehler: Komm hinein! (speaker is inside and invites you) | Komm herein! | Fehler finden |
+| 5 | Du bist drinnen und lädst eine Freundin zu dir ein. Bitte sie freundlich hereinzukommen. | Komm bitte herein! | Kommunikative Aufgabe |
 | 6 | Eine Kollegin wartet draussen. Ruf sie zu dir ins Zimmer. | Komm bitte herein! | Kommunikative Aufgabe |
 | 7 | Du bist im Erdgeschoss; dein Freund ist im ersten Stock. Bitte ihn nach unten. | Komm bitte herunter. | Kommunikative Aufgabe |
 | 8 | Du bist an der Tür. Bitte jemanden, das Zimmer zu verlassen. | Geh bitte hinaus. | Kommunikative Aufgabe |
