@@ -16,16 +16,18 @@ import { Marked } from './Rich';
 const reasonText = (key) => (key.startsWith('case:') ? key.slice(5) : t(`sumReason_${key}`));
 
 // "Meaning 7 · Article 4": the word's scores after this session (vocabulary sessions)
-const partsText = (parts) => (parts || []).map((p) => `${t(`partsOf_${p.part}`)} ${p.s}`).join(' · ');
+const partsText = (parts) => (parts || []).map((p) => t('sumPartScore', { name: t(`partsOf_${p.part}`), s: p.s })).join(' · ');
+// a word's reason first: "wrong meaning", "wrong article", "skipped"; other reasons keep their normal text
+const wordReason = (key) => (t(`sumWordReason_${key}`) !== `sumWordReason_${key}` ? t(`sumWordReason_${key}`) : reasonText(key));
 
 // Pills: a word or a question that was right (wraps when the question is long) · words with their reason and scores
-function Tags({ items, kind }) {
+function Tags({ items, kind, words = false }) {
   return (
     <ul className={`sum-tags ${kind}`}>
       {items.map((x, i) => (
         <li key={`${i}-${x.label}`} className="sum-tag">
           {x.label}
-          {x.reason && <span className="sum-reason"> · {reasonText(x.reason)}</span>}
+          {x.reason && <span className="sum-reason"> · {words ? wordReason(x.reason) : reasonText(x.reason)}</span>}
           {x.parts?.length > 0 && <span className="sum-parts"> · {partsText(x.parts)}</span>}
         </li>
       ))}
@@ -171,7 +173,7 @@ export default function SessionSummary({ session, name, topicType, onHome, onAga
             </section>
             <section className="sum-box sum-repeat">
               <h2 className="sum-box-title">{vocabWords ? t('sumWordsRepeat') : t('sumQRepeat')}</h2>
-              {!repeat.length ? <p className="detail">{t('sumNoneRepeat')}</p> : vocabWords ? <Tags items={repeat} kind="repeat" /> : <RepeatList items={repeat} />}
+              {!repeat.length ? <p className="detail">{t('sumNoneRepeat')}</p> : vocabWords ? <Tags items={repeat} kind="repeat" words /> : <RepeatList items={repeat} />}
               {vocabWords && repeat.length > 0 && <p className="detail">{t('sumWordsRepeatNote')}</p>}
             </section>
             <section className="sum-box">

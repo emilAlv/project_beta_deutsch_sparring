@@ -292,8 +292,8 @@ function GrammarView({ session }) {
       <p className="grammar-rule">{g.rule}</p>
       {g.boxes.length > 0 && (
         <div className="rule-boxes">
-          {g.boxes.map((b) => (
-            <div key={b.label} className="rule-box">
+          {g.boxes.map((b, i) => (
+            <div key={`${i}-${b.label}`} className="rule-box">
               <p className="rule-box-label">{b.label}</p>
               <p className="rule-box-value">{b.value}</p>
               <p className="rule-box-note">{b.note}</p>

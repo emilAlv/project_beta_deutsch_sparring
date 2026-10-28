@@ -778,7 +778,10 @@ export default function Home() {
     const lastAnswer = s.answers[s.answers.length - 1];
     const forSkipped = lastAnswer?.skipped && !s.exercise && reply.feedback?.forNumber === lastAnswer.n;
     // the tutor sent the solution of the skipped question as feedback: keep it for the summary ("To repeat")
-    const skipSolution = forSkipped ? String(reply.feedback.corrected || '').trim() : '';
+    // (the prompt asks for the solution as one line in the message, so that line is the fallback)
+    const afterSkip = lastAnswer?.skipped && !s.exercise && !lastAnswer.corrected;
+    const skipSolution = forSkipped ? String(reply.feedback.corrected || '').trim()
+      : afterSkip ? String(reply.message || '').split('\n')[0].trim().slice(0, 200) : '';
     if (skipSolution) s.answers = s.answers.map((a) => (a.n === lastAnswer.n ? { ...a, corrected: skipSolution } : a));
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
       feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
