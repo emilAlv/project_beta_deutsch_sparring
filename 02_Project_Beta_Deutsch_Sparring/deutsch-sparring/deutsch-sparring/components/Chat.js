@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t, LOCALE, dirKey } from '../lib/ui-text';
+import { scoreLine } from '../lib/stats';
 import { compareAnswer } from '../lib/diff';
 import { partsView } from '../lib/card-parts';
 import Rich, { Marked } from './Rich';
@@ -209,7 +210,7 @@ function FeedbackCard({ f }) {
 function SummaryCard({ s, actions }) {
   return (
     <div className="summary-closing">
-      <p className="summary-caption">{t('sumClosing', { correct: s.correct, answered: s.answered })}</p>
+      <p className="summary-caption">{t('sumClosing', { line: scoreLine(s, t) })}</p>
       {actions?.length > 0 && (
         <div className="summary-actions">
           {actions.map((a) => (

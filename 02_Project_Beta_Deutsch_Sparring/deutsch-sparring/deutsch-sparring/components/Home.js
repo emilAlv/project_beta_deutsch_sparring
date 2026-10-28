@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { t } from '../lib/ui-text';
+import { scoreLine } from '../lib/stats';
 import { goalState, todayKey } from '../lib/goals';
 import { PLAN_VERSION } from '../lib/plan';
 import { fmtDay } from '../lib/dates';
@@ -402,7 +403,7 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
             <Tile
               label={t('tileQuestions')}
               value={tiles ? tiles.answered : '–'}
-              sub={tiles && tiles.answered ? `${t('tileRightOf', { ok: tiles.correct, n: tiles.answered })} · ${t('tilePeriod')}` : t('tilePeriod')}
+              sub={tiles && tiles.answered ? `${scoreLine(tiles, t)} · ${t('tilePeriod')}` : t('tilePeriod')}
             />
             <Tile label={t('tileWords')} value={tiles ? tiles.learnt : '–'} sub={tiles ? t('tileWordsOf', { total: tiles.wordsTotal }) : ''} />
             <Tile
@@ -421,7 +422,7 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
               <li key={r.id}>
                 <span className="recent-topic">{r.topicName || '—'}</span>
                 <span className="detail">{r.level || ''}</span>
-                <span className="recent-score">{t('recentScore', { correct: r.correct, answered: r.answered })}</span>
+                <span className="recent-score">{scoreLine(r, t)}</span>
                 {r.settings && <button type="button" className="button-outline small" onClick={() => onAgain(r.settings)}>{t('recentAgain')}</button>}
               </li>
             ))}

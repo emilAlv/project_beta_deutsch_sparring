@@ -3,22 +3,49 @@
 // The session summary screen (stage 'summary'): shown when a session ends. All numbers are worked out by the
 // app from the answers (lib/stats.js) and, for the goals, by the same logic as the Home page (/api/stats).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { t } from '../lib/ui-text';
-import { score, taskStates, headlineKey, summaryDetails } from '../lib/stats';
+import { score, scoreLine, taskStates, headlineKey, summaryDetails } from '../lib/stats';
+import { loadScores } from '../lib/storage';
 import { loadHome } from '../lib/home-client';
 import { milestoneSummary, findMilestone } from '../lib/milestone-session';
 import { fmtWeekday } from '../lib/dates';
 import { ProgressTrack } from './Chat';
+import { Marked } from './Rich';
 
 const reasonText = (key) => (key.startsWith('case:') ? key.slice(5) : t(`sumReason_${key}`));
 
+// "Meaning 7 · Article 4": the word's scores after this session (vocabulary sessions)
+const partsText = (parts) => (parts || []).map((p) => `${t(`partsOf_${p.part}`)} ${p.s}`).join(' · ');
+
+// Pills: a word or a question that was right (wraps when the question is long) · words with their reason and scores
 function Tags({ items, kind }) {
   return (
     <ul className={`sum-tags ${kind}`}>
       {items.map((x, i) => (
-        <li key={`${i}-${x.label}`} className="sum-tag" title={x.label}>
-          {x.label}{x.reason && <span className="sum-reason"> · {reasonText(x.reason)}</span>}
+        <li key={`${i}-${x.label}`} className="sum-tag">
+          {x.label}
+          {x.reason && <span className="sum-reason"> · {reasonText(x.reason)}</span>}
+          {x.parts?.length > 0 && <span className="sum-parts"> · {partsText(x.parts)}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// "To repeat" for grammar sessions: the whole question, then the corrected sentence with the changed word
+// highlighted – or, for a skipped question, its solution (or just "Skipped" when the app has none).
+function RepeatList({ items }) {
+  return (
+    <ul className="sum-repeat-list">
+      {items.map((x, i) => (
+        <li key={`${i}-${x.label}`}>
+          <p className="sum-q">{x.label}<span className="sum-reason"> · {reasonText(x.reason)}</span></p>
+          {x.skipped ? (
+            <p className="sum-fix">{x.solution ? <><span className="sum-fix-label">{t('sumSolution')}</span> <strong>{x.solution}</strong></> : <span className="sum-skipped-plain">{t('sumSkippedPlain')}</span>}</p>
+          ) : x.fix && (
+            <p className="sum-fix"><span className="sum-fix-label">{t('sumFixed')}</span> „<Marked segments={x.fix} as="strong" className="fixed" />“</p>
+          )}
         </li>
       ))}
     </ul>
@@ -83,7 +110,11 @@ function MilestoneBox({ state, data, onNext }) {
 
 export default function SessionSummary({ session, name, topicType, onHome, onAgain, onNew, onChat, onNextMilestone }) {
   const sc = score(session.answers);
-  const d = summaryDetails(session);
+  const d = useMemo(() => {
+    let scores = null;
+    try { scores = loadScores(); } catch { /* no stored scores: the words are listed without them */ }
+    return summaryDetails(session, scores);
+  }, [session]);
   const st = session.settings || {};
   const vocabWords = d.words;
   const [ms, setMs] = useState({ state: 'loading', data: null });
@@ -110,8 +141,7 @@ export default function SessionSummary({ session, name, topicType, onHome, onAga
     t('sumMeta', { type: t(`type_${topicType || 'Gemischt'}`), level: st.level || '', difficulty: t(`diff_${st.difficulty || 'medium'}`), n: sc.done }),
     d.minutes ? t('sumMinutes', { n: d.minutes }) : null,
   ].filter(Boolean).join(' · ');
-  const rightLine = [t('sumRight'), sc.skipped ? t('sumSkipped', { n: sc.skipped }) : null].filter(Boolean).join(' · ');
-  const known = vocabWords ? vocabWords.known.map((label) => ({ label })) : d.questions.right.map((label) => ({ label }));
+  const known = vocabWords ? vocabWords.known : d.questions.right;
   const repeat = vocabWords ? vocabWords.repeat : d.questions.repeat;
 
   return (
@@ -125,10 +155,10 @@ export default function SessionSummary({ session, name, topicType, onHome, onAga
               <p className="sum-meta">{meta}</p>
             </div>
             <div className="sum-score-block">
-              <p className="sum-score" aria-label={`${sc.correct} / ${sc.done}`}>
-                {sc.answered ? <>{sc.correct} <span className="sum-of">/ {sc.done}</span></> : '–'}
+              <p className="sum-score" aria-label={scoreLine(sc, t)}>
+                {sc.answered ? <>{sc.correct} <span className="sum-of">/ {sc.answered}</span></> : '–'}
               </p>
-              <p className="detail">{rightLine}</p>
+              <p className="detail">{scoreLine(sc, t)}</p>
             </div>
           </div>
 
@@ -141,7 +171,7 @@ export default function SessionSummary({ session, name, topicType, onHome, onAga
             </section>
             <section className="sum-box sum-repeat">
               <h2 className="sum-box-title">{vocabWords ? t('sumWordsRepeat') : t('sumQRepeat')}</h2>
-              {repeat.length ? <Tags items={repeat} kind="repeat" /> : <p className="detail">{t('sumNoneRepeat')}</p>}
+              {!repeat.length ? <p className="detail">{t('sumNoneRepeat')}</p> : vocabWords ? <Tags items={repeat} kind="repeat" /> : <RepeatList items={repeat} />}
               {vocabWords && repeat.length > 0 && <p className="detail">{t('sumWordsRepeatNote')}</p>}
             </section>
             <section className="sum-box">

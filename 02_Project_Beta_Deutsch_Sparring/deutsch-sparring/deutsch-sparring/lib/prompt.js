@@ -101,12 +101,15 @@ function wordGrammarRules(grammar, name) {
 // What the browser sends (earlier mistakes, app notes, earlier questions) goes into one clearly fenced block
 // at the end, so the model can tell it from the app's own instructions. The fence itself is removed from the text.
 const unfence = (x) => String(x).replace(/<\/?student-data>/gi, '').replace(/\s+/g, ' ').trim();
-export function dataBlock({ notes = [], mistakes = [], asked = [] }) {
+export function dataBlock({ notes = [], mistakes = [], asked = [], repeat = [] }) {
   return `<student-data>
 APP NOTES (settings the student just changed in the app; already applied)
 ${notes.length ? notes.map((n) => `- ${unfence(n)}`).join('\n') : '(none)'}
 
-RECENT MISTAKES (for "repeat my mistakes")
+${repeat.length ? `MISTAKES TO REPEAT NOW (this session; the student pressed "Repeat my mistakes": build the next questions from exactly these rules / words)
+${repeat.map((m) => `- ${m.word ? `${unfence(m.word)}: ` : ''}"${unfence(m.studentAnswer)}" → "${unfence(m.corrected)}"${m.rule ? ` (${unfence(m.rule)})` : ''}`).join('\n')}
+
+` : ''}RECENT MISTAKES (for "repeat my mistakes")
 ${mistakes.length ? mistakes.map((m) => `- "${unfence(m.studentAnswer)}" → "${unfence(m.corrected)}" (${unfence(m.rule)})`).join('\n') : '(none yet)'}
 
 ALREADY ASKED IN THIS SESSION (exclusion list: do not repeat or lightly paraphrase any prompt, scenario, main verb or sentence frame; recycle the target in a genuinely new context)
@@ -131,7 +134,7 @@ ${models.map(one).join('\n')}`;
 }
 
 export function buildSystemPrompt({
-  name, lesson, words = null, models = [], knownGrammar, catalog, settings, session, progress, mistakes, notes, guessed, asked = [],
+  name, lesson, words = null, models = [], knownGrammar, catalog, settings, session, progress, mistakes, repeat = [], notes, guessed, asked = [],
 }) {
   const grammar = settings.grammar || [];
   const level = DIFFICULTY[settings.difficulty] || 'medium';
@@ -213,7 +216,7 @@ WHAT ${name.toUpperCase()} MAY SAY (German or English)
 - "Erklär die Regel" / "Explain the rule": the rule in 2–4 short lines in message, fill grammarFocus, panelView = "grammar", repeat the open question.
 - "Überspringen" / "Skip": the app already counted it as skipped. Give the solution in message in one line, feedback = null, then the next question (or exercise = null if it was the last one).
 - Changing a setting ("Leichter" / "Easier", "Schwieriger" / "Harder", a level, the flashcard direction, the number of questions, another topic): the settings are FIXED until the session ends. Change nothing; message = one short sentence that the settings stay the same during the session and that ${name} can end the session to change them; feedback = null; exercise = the open question again (same number).
-- "Wiederhole meine Fehler" / "Repeat my mistakes": build the next questions from RECENT MISTAKES.
+- "Wiederhole meine Fehler" / "Repeat my mistakes": build the next questions from "MISTAKES TO REPEAT NOW" when that list is in the DATA block, otherwise from RECENT MISTAKES.
 
 ${topic && !session.openNumber && !progress.done && !session.finished ? `STARTING THE TOPIC
 ${guessed ? `The app guessed this topic from ${name}'s wish. If ${name} clearly wants another topic from the catalog, set session.topicId to that one and exercise = null; if the wish fits no lesson (e.g. "über meine Familie sprechen"), use topicId "free" and start exercises on that theme.\n` : ''}Start question 1 right away: one short welcome sentence in message, fill grammarFocus.
@@ -229,5 +232,5 @@ ${knownGrammar || '(not listed yet – assume A1–A2 of Schritte plus Neu 1–4
 
 ${words ? `WORDS FOR THIS SESSION (${words.length} words, one per line, in the order to use them: ${words.header})\n${words.lines.join('\n')}` : lesson ? `TOPIC (lesson)\n${lesson}${models.length && !words ? `\n\n${exerciseModelsBlock(models)}` : ''}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}
 
-${dataBlock({ notes, mistakes, asked })}`;
+${dataBlock({ notes, mistakes, asked, repeat })}`;
 }

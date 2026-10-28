@@ -30,7 +30,7 @@ import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
 import { suggestionToSetup } from '../lib/coach';
 import { setupFromSession } from '../lib/home-plan';
-import { score, summaryOf } from '../lib/stats';
+import { score, summaryOf, hasMistakes, isRepeatRequest, mistakeList } from '../lib/stats';
 import { mergeQuestions, recentQuestions, sessionQuestions, seenModelIds } from '../lib/question-history';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
@@ -697,6 +697,8 @@ export default function Home() {
       // Starting again should continue with fresh exercises, not reset the tutor's memory.
       asked: recentQuestions(s, historyRef.current.sessions),
       mistakes: recentMistakes(s.answers, historyRef.current.sessions),
+      // "Repeat my mistakes": the mistakes of this session (rule / word) go with the request, so the tutor knows what to repeat
+      ...(isRepeatRequest(text) ? { repeatMistakes: mistakeList(s.answers, s.words) } : {}),
       clientId: profileRef.current.clientId,
       notes: [], // (nothing changes during a session any more)
       messages: aiHistory(c),
@@ -775,6 +777,9 @@ export default function Home() {
     let feedback = null;
     const lastAnswer = s.answers[s.answers.length - 1];
     const forSkipped = lastAnswer?.skipped && !s.exercise && reply.feedback?.forNumber === lastAnswer.n;
+    // the tutor sent the solution of the skipped question as feedback: keep it for the summary ("To repeat")
+    const skipSolution = forSkipped ? String(reply.feedback.corrected || '').trim() : '';
+    if (skipSolution) s.answers = s.answers.map((a) => (a.n === lastAnswer.n ? { ...a, corrected: skipSolution } : a));
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
       feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
       // word scores: updated by the app from the tutor's verdict (correct, errorType), a hint and "Leicht"
@@ -820,7 +825,7 @@ export default function Home() {
     }));
 
     if (reply.panelView) changeView(reply.panelView);
-    if (feedback || justFinished) remember(s);
+    if (feedback || justFinished || skipSolution) remember(s);
     return null;
   }
 
@@ -836,7 +841,7 @@ export default function Home() {
       { text: t('chipHint') },
       isVocab(session) ? null : { text: t('chipRule') },
       { text: t('chipSkip') },
-      { text: t('chipRepeat') },
+      hasMistakes(session.answers) ? { text: t('chipRepeat') } : null, // only when there is something to repeat
     ];
     return list.filter((x) => x && x.text && !taken.has(x.text.toLowerCase()) && taken.add(x.text.toLowerCase()));
   }, [stage, session, modelOptions]);

@@ -177,7 +177,7 @@ export function computeHome({ goals, scores, agg }) {
   const gaps = items.filter((x) => x.n >= 2 && x.pct < STRONG_FROM).sort((a, b) => a.pct - b.pct || b.n - a.n).slice(0, SHOWN);
 
   return {
-    tiles: { sessions: agg.sessions, answered, correct: agg.correct, pctRight: pct(agg.correct, answered), learnt, wordsTotal: words.length },
+    tiles: { sessions: agg.sessions, answered, correct: agg.correct, skipped: agg.skipped, pctRight: pct(agg.correct, answered), learnt, wordsTotal: words.length },
     progress: Object.fromEntries(goals.map((g) => [g.id, goalProgress(g, scores, agg)])),
     strengths,
     gaps,
