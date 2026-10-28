@@ -122,6 +122,14 @@ async function postJson(url, body, timeoutMs, signal) {
   }
 }
 
+// The tutor's line after a skip, e.g. "Kein Problem. Die Lösung: Ich gehe zum Arzt." → "Ich gehe zum Arzt."
+// (only the part after "Lösung / richtig / Solution …:" when there is one; otherwise the whole first line)
+function skipLine(message) {
+  const line = String(message || '').split('\n')[0].trim();
+  const m = line.match(/(?:l(?:ö|oe)sung|richtig(?:e antwort)?|solution|answer)[^:]{0,20}:\s*(.+)$/i);
+  return (m ? m[1] : line).replace(/\*\*/g, '').trim().slice(0, 200);
+}
+
 export default function Home() {
   const [convo, setConvo] = useState(EMPTY_CONVO);
   const convoRef = useRef(EMPTY_CONVO);
@@ -781,7 +789,7 @@ export default function Home() {
     // (the prompt asks for the solution as one line in the message, so that line is the fallback)
     const afterSkip = lastAnswer?.skipped && !s.exercise && !lastAnswer.corrected;
     const skipSolution = forSkipped ? String(reply.feedback.corrected || '').trim()
-      : afterSkip ? String(reply.message || '').split('\n')[0].trim().slice(0, 200) : '';
+      : afterSkip ? skipLine(reply.message) : '';
     if (skipSolution) s.answers = s.answers.map((a) => (a.n === lastAnswer.n ? { ...a, corrected: skipSolution } : a));
     if (reply.feedback && s.topicId && !s.finished && !forSkipped) {
       feedback = { ...reply.feedback, kind: s.exercise?.type || null }; // kind: the type of question it answers
