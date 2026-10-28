@@ -18,7 +18,7 @@ const DIR = path.join(process.cwd(), 'content', 'exercise-models');
 export const MODEL_TYPES = ['Lückentext', 'Auswahl', 'Fehler finden', 'Satzbau', 'Übersetzung', 'Kommunikative Aufgabe'];
 // Data files whose topic does not exist in lib/curriculum.js or content/ yet (a later task creates the topics).
 // They are kept so the content is not lost; nothing asks for them until the topic exists.
-export const WAITING_TOPICS = ['g-a2-welcher-dieser', 'g-a2-hin-her'];
+export const WAITING_TOPICS = [];
 export const MODELS_MIN = 3;
 export const MODELS_MAX = 5;
 
