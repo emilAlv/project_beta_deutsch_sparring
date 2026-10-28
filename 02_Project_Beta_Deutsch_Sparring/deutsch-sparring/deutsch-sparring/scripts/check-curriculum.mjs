@@ -80,6 +80,18 @@ for (const t of topics.filter((x) => x.curriculum)) {
   check(`mock ${t.id}`, bad.length === 0, bad.join('; '));
 }
 
+// the two class topics (28 Oct 2026): welcher / dieser and hin / her
+{
+  const X = await import('../lib/exercise-models.js');
+  for (const id of ['g-a2-welcher-dieser', 'g-a2-hin-her']) {
+    const e = C.curriculumEntry(id);
+    check(`${id} exists at A2`, e?.level === 'A2');
+    check(`${id}: prerequisites exist`, Boolean(e) && e.needs.length > 0 && e.needs.every((n) => C.isCurriculumId(n)));
+    check(`${id}: in the A2 plan order`, C.planOrder('A2').includes(id));
+    check(`${id}: exercise models no longer waiting`, !X.WAITING_TOPICS.includes(id) && X.allModels().has(id));
+  }
+}
+
 // the tutor's lesson text
 const lesson = C.curriculumLesson(list[0]);
 check('lesson text has rule names, level and examples', lesson.includes(list[0].ruleNames[0]) && lesson.includes('Level: A1') && lesson.includes('**Der**'));

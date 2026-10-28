@@ -244,7 +244,7 @@ per grammar topic (`g-a2-wechselpraepositionen`) or per lesson (`lektion-a1-08-u
 - Gap fills: one `___` per gap; several gaps in `answer` are separated by `...` (`"von ... bis"`). `id` must be unique in all files.
 - Swiss spelling (ss) in `model` and `answer`; put the German variant (Füße) in `alternatives`.
 - A session gets 3–5 models of its topic (`lib/exercise-models.js`), rotating; the browser keeps their ids in the session record.
-- A file with no matching topic yet is listed in `WAITING_TOPICS` (same file) and ignored until the topic exists.
+- A file with no matching topic yet is listed in `WAITING_TOPICS` (same file) and ignored until the topic exists.  (Empty since the topics welcher / dieser and hin / her exist.)
 - Run `npm test` (`scripts/check-exercise-models.mjs` checks the files). Curriculum topics can also have `traps` in `lib/curriculum.js`.
 
 ## A1–B1 communicative curriculum
