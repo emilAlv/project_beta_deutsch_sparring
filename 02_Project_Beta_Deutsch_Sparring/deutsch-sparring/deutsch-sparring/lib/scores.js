@@ -304,8 +304,22 @@ export function matchesFilter(word, { level, sources, section, list } = {}) {
 // Order: due & weak first (lowest score first), then the checks (1–2 words with a 10), then new words.
 // Mix: about 60 % due or weak, 30 % new, 10 % checks. If a group runs out, the others fill up:
 // first more new words, then words not yet due (lowest score first), then more tens.
-export function pickWords({ words, scores = {}, level, sources, section, list, count, difficulty = 'easy', now = Date.now() }) {
-  const pool = (words || []).filter((w) => matchesFilter(w, { level, sources, section, list }));
+// Fisher–Yates shuffle (a copy; rand returns 0 ≤ x < 1)
+function shuffled(list, rand) {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// rand: random function (a parameter so the checks can be exact). Words that are equally urgent (e.g. all new words)
+// come in a new random order each session – otherwise the first word of the list would always open the session.
+export function pickWords({ words, scores = {}, level, sources, section, list, count, difficulty = 'easy', now = Date.now(), rand = Math.random }) {
+  const pool = shuffled((words || []).filter((w) => matchesFilter(w, { level, sources, section, list })), rand);
+  const place = new Map(pool.map((w, i) => [w.id, i]));
+  const tie = (a, b) => place.get(a.id) - place.get(b.id); // equal priority: the shuffled order decides
   const n = Math.min(Math.max(0, Math.floor(Number(count) || 0)), pool.length);
   if (!n) return [];
 
@@ -320,11 +334,11 @@ export function pickWords({ words, scores = {}, level, sources, section, list, c
     return Math.min(...ks.map((k) => kindOf(rec(w), k).due ?? 0));
   };
   const due = (w) => dueOf(w) <= now;
-  const byScore = (a, b) => score(a) - score(b) || dueOf(a) - dueOf(b) || a.id.localeCompare(b.id);
+  const byScore = (a, b) => score(a) - score(b) || dueOf(a) - dueOf(b) || tie(a, b);
   const fresh = pool.filter((w) => isNew(rec(w)));
   const isTenW = (w) => !isNew(rec(w)) && score(w) >= SCORE_MAX;
   const tens = pool.filter(isTenW)
-    .sort((a, b) => Number(due(b)) - Number(due(a)) || dueOf(a) - dueOf(b) || a.id.localeCompare(b.id));
+    .sort((a, b) => Number(due(b)) - Number(due(a)) || dueOf(a) - dueOf(b) || tie(a, b));
   const learning = pool.filter((w) => !isNew(rec(w)) && score(w) < SCORE_MAX);
   const dueWeak = learning.filter(due).sort(byScore);
   const notDue = learning.filter((w) => !due(w)).sort(byScore);
