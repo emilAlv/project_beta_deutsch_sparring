@@ -13,33 +13,22 @@ import {
 import { setupMatches } from '../lib/milestone-session';
 import { QUESTION_MIN } from '../lib/intents';
 import { Check } from './icons';
+import { arrowKeys, rovingTab } from './keys';
 
 const isGrammarTopic = (x) => x.type !== 'Wortschatz' && x.id !== 'free';
 // words of a vocabulary topic for the chosen level and source (older servers: the total)
 const countOf = (topic, level, source) => topic?.counts?.[level]?.[source] ?? topic?.count ?? 0;
 
-// Arrow keys move between the buttons of a radio group
-function arrowKeys(options, value, onChange) {
-  return (e) => {
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-    if (!step) return;
-    e.preventDefault();
-    const next = options[(options.indexOf(value) + step + options.length) % options.length];
-    onChange(next);
-    e.currentTarget.querySelectorAll('button')[options.indexOf(next)]?.focus();
-  };
-}
-
 function Segmented({ label, options, value, onChange, render }) {
   return (
     <div className="segmented" role="radiogroup" aria-label={label} onKeyDown={arrowKeys(options, value, onChange)}>
-      {options.map((o, i) => (
+      {options.map((o) => (
         <button
           key={o}
           type="button"
           role="radio"
           aria-checked={value === o}
-          tabIndex={value === o || (!options.includes(value) && i === 0) ? 0 : -1}
+          tabIndex={rovingTab(options, value, o)}
           className={value === o ? 'on' : ''}
           onClick={() => onChange(o)}
         >
@@ -52,14 +41,16 @@ function Segmented({ label, options, value, onChange, render }) {
 
 // a row of chips where exactly one is chosen (topic, section, list)
 function ChoiceChips({ label, items, value, onChange }) {
+  const ids = items.map((it) => it.id);
   return (
-    <div className="chips" role="radiogroup" aria-label={label}>
+    <div className="chips" role="radiogroup" aria-label={label} onKeyDown={arrowKeys(ids, value, onChange)}>
       {items.map((it) => (
         <button
           key={it.id ?? 'all'}
           type="button"
           role="radio"
           aria-checked={value === it.id}
+          tabIndex={rovingTab(ids, value, it.id)}
           className={`chip setup-chip${value === it.id ? ' on' : ''}`}
           title={it.title}
           onClick={() => onChange(it.id)}
@@ -157,7 +148,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
         {onCancel && (
           <button type="button" className="text-button setup-back" onClick={onCancel}>{t(cancelLabel || 'setupBack')}</button>
         )}
-        <h1 className="setup-title">{t('setupTitle')}</h1>
+        <h1 className="setup-title" tabIndex={-1} data-stage-heading>{t('setupTitle')}</h1>
         <p className="setup-sub">{t('setupSubtitle')}</p>
 
         {milestone && (
@@ -178,7 +169,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
                   type="button"
                   role="radio"
                   aria-checked={mode === k}
-                  tabIndex={mode === k ? 0 : -1}
+                  tabIndex={rovingTab(MODES, mode, k)}
                   className={`kind-option${mode === k ? ' on' : ''}`}
                   onClick={() => chooseMode(k)}
                 >

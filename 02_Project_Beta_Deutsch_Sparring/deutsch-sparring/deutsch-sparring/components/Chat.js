@@ -32,7 +32,7 @@ export default function Chat({ status, messages, busy, waiting, onCancel, slow, 
   }, [messages, busy, error, slow]);
 
   return (
-    <section className="card chat" aria-label="Chat">
+    <section className="card chat" aria-label={t('chatLabel')}>
       <header className="chat-head">
         <div>
           <h1 className="chat-title">{t('chatTitle')}</h1>
@@ -98,7 +98,7 @@ function Message({ m, actions }) {
   if (m.role === 'user') {
     return (
       <div className="msg-user">
-        <p className="bubble">{m.masked ? t('codeHidden') : m.text}</p>
+        <p className="bubble" lang="de">{m.masked ? t('codeHidden') : m.text}</p>
         <p className="meta">{t('you')} · {time(m.at)}</p>
       </div>
     );
@@ -114,7 +114,7 @@ function TutorMessage({ m, actions }) {
       <div className="avatar-w" aria-hidden="true">w</div>
       <div className="tutor-body">
         <p className="tutor-label"><strong>{t('tutorName')}</strong> · {t('tutorRole')}</p>
-        {text && <p className="tutor-text"><Rich text={text} /></p>}
+        {text && <p className="tutor-text" lang="de"><Rich text={text} /></p>}
         {r?.feedback && <FeedbackCard f={r.feedback} />}
         {r?.exercise && (r.feedback ? <NextLine ex={r.exercise} /> : <ExerciseCard ex={r.exercise} />)}
         {m.summary && <SummaryCard s={m.summary} actions={actions} />}
@@ -134,8 +134,8 @@ function ExerciseCard({ ex }) {
   return (
     <div className={`exercise-card${ex.type === 'flashcard' ? ' is-flashcard' : ''}`}>
       <p className="caps">{exLabel(ex)}</p>
-      <p className="exercise-line">{ex.line}</p>
-      {ex.hint && <p className="exercise-hint">{ex.hint}</p>}
+      <p className="exercise-line" lang="de">{ex.line}</p>
+      {ex.hint && <p className="exercise-hint" lang="de">{ex.hint}</p>}
     </div>
   );
 }
@@ -145,8 +145,8 @@ function NextLine({ ex }) {
   return (
     <div className={`next-line${ex.type === 'flashcard' ? ' is-flashcard' : ''}`}>
       <p className="caps">{exLabel(ex)}</p>
-      <p className="exercise-line">{ex.line}</p>
-      {ex.hint && <p className="exercise-hint"><span className="hint-accent">{ex.hint}</span></p>}
+      <p className="exercise-line" lang="de">{ex.line}</p>
+      {ex.hint && <p className="exercise-hint" lang="de"><span className="hint-accent">{ex.hint}</span></p>}
     </div>
   );
 }
@@ -174,9 +174,9 @@ function FeedbackCard({ f }) {
     return (
       <div className="feedback-card is-right">
         <p className="caps feedback-label"><Check size={15} strokeWidth={2.4} /> {label}</p>
-        <p className="feedback-sentence">{f.corrected}</p>
+        <p className="feedback-sentence" lang="de">{f.corrected}</p>
         <PartsLine f={f} />
-        {f.explanation && <p className="feedback-explain"><Rich text={f.explanation} /></p>}
+        {f.explanation && <p className="feedback-explain" lang="de"><Rich text={f.explanation} /></p>}
       </div>
     );
   }
@@ -190,9 +190,9 @@ function FeedbackCard({ f }) {
       </p>
       <dl className="feedback-compare">
         <dt>{t('feedbackYouWrote')}</dt>
-        <dd className="feedback-yours"><Marked segments={d.answer} as="s" className="wrong" /></dd>
+        <dd className="feedback-yours" lang="de"><Marked segments={d.answer} as="s" className="wrong" /></dd>
         <dt>{t('feedbackRight')}</dt>
-        <dd className="feedback-sentence"><Marked segments={d.corrected} as="strong" className="fixed" /></dd>
+        <dd className="feedback-sentence" lang="de"><Marked segments={d.corrected} as="strong" className="fixed" /></dd>
       </dl>
       <PartsLine f={f} />
       {steps.length > 0 && (
@@ -202,7 +202,7 @@ function FeedbackCard({ f }) {
           ))}
         </ol>
       )}
-      {f.explanation && <p className="feedback-explain">{steps.length > 0 && <strong>{t('feedbackTip')}: </strong>}<Rich text={f.explanation} /></p>}
+      {f.explanation && <p className="feedback-explain" lang="de">{steps.length > 0 && <strong>{t('feedbackTip')}: </strong>}<Rich text={f.explanation} /></p>}
     </div>
   );
 }
@@ -270,6 +270,7 @@ function Composer({ stage, busy, waiting, onCancel, onSend, inputRef }) {
         <label htmlFor="chat-input" className="sr-only">{t('inputLabel')}</label>
         <textarea
           id="chat-input"
+          lang="de"
           ref={inputRef}
           rows={1}
           value={text}

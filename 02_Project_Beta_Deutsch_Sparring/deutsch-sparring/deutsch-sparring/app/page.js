@@ -879,6 +879,16 @@ export default function Home() {
     if (!busy && stage !== 'setup' && stage !== 'home') inputRef.current?.focus({ preventScroll: true });
   }, [busy, stage]);
 
+  // a new screen (Home, Setup, Summary) starts at its heading, so keyboard and screen-reader users do not start again from the top
+  // of the page. Not on the first load, and not in the chat (there the cursor belongs in the input).
+  const prevStage = useRef(stage);
+  useEffect(() => {
+    const prev = prevStage.current;
+    prevStage.current = stage;
+    if (prev === stage || prev === 'loading' || !['home', 'setup', 'summary'].includes(stage)) return;
+    document.querySelector('[data-stage-heading]')?.focus({ preventScroll: true });
+  }, [stage]);
+
   return (
     <div className="app">
       <Header

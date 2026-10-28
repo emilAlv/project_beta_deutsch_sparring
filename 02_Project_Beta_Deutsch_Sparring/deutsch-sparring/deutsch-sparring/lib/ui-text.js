@@ -71,6 +71,8 @@ const en = {
   authErrBadCode: 'This class code is not right. Check capital and small letters.',
   authErrNoCode: 'Please enter the class code.',
   authErrMissing: 'Please enter your username and password.',
+  authErrNoUsername: 'Please enter your username.',
+  authErrNoPassword: 'Please enter your password.',
   authErrTaken: 'This username is already taken. Please choose another one.',
   authForgot: 'Forgot your password? Ask your teacher to reset it.',
   authErrTooMany: 'Too many tries. Please wait 15 minutes and try again.',
@@ -78,6 +80,7 @@ const en = {
   authErrNetwork: 'No connection. Please check your internet and try again.',
 
   // chat
+  chatLabel: 'Chat',
   chatTitle: "Let's talk German.",
   chatSubtitle: 'Answer in German. Ask for a hint, the rule or to skip – just say it here.',
   statusStarting: 'Getting started',
@@ -739,12 +742,15 @@ const de = {
   authErrBadCode: 'Dieser Klassen-Code stimmt nicht. Achte auf Gross- und Kleinschreibung.',
   authErrNoCode: 'Bitte gib den Klassen-Code ein.',
   authErrMissing: 'Bitte gib Benutzername und Passwort ein.',
+  authErrNoUsername: 'Bitte gib deinen Benutzernamen ein.',
+  authErrNoPassword: 'Bitte gib dein Passwort ein.',
   authErrTaken: 'Dieser Benutzername ist schon vergeben. Bitte wähle einen anderen.',
   authForgot: 'Passwort vergessen? Bitte deine Lehrperson, es zurückzusetzen.',
   authErrTooMany: 'Zu viele Versuche. Bitte warte 15 Minuten und versuch es dann nochmal.',
   authErrServer: 'Etwas ist schiefgelaufen. Bitte versuch es gleich nochmal.',
   authErrNetwork: 'Keine Verbindung. Bitte prüfe dein Internet und versuch es nochmal.',
 
+  chatLabel: 'Chat',
   chatTitle: 'Lass uns Deutsch reden.',
   chatSubtitle: 'Antworte auf Deutsch. Frag nach einem Tipp, der Regel oder überspringe – schreib es einfach hier.',
   statusStarting: 'Los geht’s',

@@ -153,7 +153,7 @@ export default function SessionSummary({ session, name, topicType, onHome, onAga
           <div className="sum-top">
             <div className="sum-title-block">
               <p className="caps brand">{t('sumFinished')} · {session.topicName || ''}</p>
-              <h1 className="sum-title">{t(`sumHead_${headlineKey(sc).slice(9)}`, { name })}</h1>
+              <h1 className="sum-title" tabIndex={-1} data-stage-heading>{t(`sumHead_${headlineKey(sc).slice(9)}`, { name })}</h1>
               <p className="sum-meta">{meta}</p>
             </div>
             <div className="sum-score-block">

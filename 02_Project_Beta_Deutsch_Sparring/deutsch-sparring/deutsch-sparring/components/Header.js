@@ -53,17 +53,16 @@ export default function Header({ name, streak, nav, onNav, onNewSession, onChang
               type="button"
               className="avatar"
               aria-label={t('accountMenu')}
-              aria-haspopup="menu"
               aria-expanded={open}
               onClick={() => setOpen((o) => !o)}
             >
               {initials(name)}
             </button>
             {open && (
-              <div className="menu" role="menu">
-                <button type="button" role="menuitem" onClick={() => { setOpen(false); onNewSession(); }}>{t('menuNewSession')}</button>
-                {onChangeName && <button type="button" role="menuitem" onClick={() => { setOpen(false); onChangeName(); }}>{t('menuChangeName')}</button>}
-                {onLogOut && <button type="button" role="menuitem" onClick={() => { setOpen(false); onLogOut(); }}>{t('menuLogOut')}</button>}
+              <div className="menu">
+                <button type="button" onClick={() => { setOpen(false); onNewSession(); }}>{t('menuNewSession')}</button>
+                {onChangeName && <button type="button" onClick={() => { setOpen(false); onChangeName(); }}>{t('menuChangeName')}</button>}
+                {onLogOut && <button type="button" onClick={() => { setOpen(false); onLogOut(); }}>{t('menuLogOut')}</button>}
               </div>
             )}
           </div>
