@@ -15,6 +15,9 @@ import { loadZoom, saveZoom } from '../lib/storage';
 import { setupFromSession, cleanZoom, isPlanGoal, milestoneForItem, milestoneView } from '../lib/home-plan';
 import Coach from './Coach';
 import PlanTimeline from './PlanTimeline';
+import { arrowKeys, rovingTab } from './keys';
+
+const PLAN_MODES = ['whole', 'still'];
 import { findMilestone } from '../lib/milestone-session';
 import { NextUpCard, PartRows, ZoomPlan, countText, dueText } from './HomePlan';
 
@@ -303,7 +306,7 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
       <div className="home-main">
         <section className="home-hero">
           <div>
-            <h1 className="home-greeting">{greeting(name)}</h1>
+            <h1 className="home-greeting" tabIndex={-1} data-stage-heading>{greeting(name)}</h1>
             <p className="home-summary">{data ? summary : failed ? t('homeError') : t('homeLoading')}</p>
           </div>
           <div className="home-cta">
@@ -368,9 +371,9 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
           <section className="card plan-card">
             <div className="section-head">
               <h2 className="section-title">{planGoals.length ? t('planOldTitle') : t('planTitle')}</h2>
-              <div className="segmented small plan-switch" role="radiogroup" aria-label={t('planSwitch')}>
-                {['whole', 'still'].map((k) => (
-                  <button key={k} type="button" role="radio" aria-checked={mode === k} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>
+              <div className="segmented small plan-switch" role="radiogroup" aria-label={t('planSwitch')} onKeyDown={arrowKeys(PLAN_MODES, mode, setMode)}>
+                {PLAN_MODES.map((k) => (
+                  <button key={k} type="button" role="radio" aria-checked={mode === k} tabIndex={rovingTab(PLAN_MODES, mode, k)} className={mode === k ? 'on' : ''} onClick={() => setMode(k)}>
                     {t(k === 'whole' ? 'planWhole' : 'planStill')}
                   </button>
                 ))}

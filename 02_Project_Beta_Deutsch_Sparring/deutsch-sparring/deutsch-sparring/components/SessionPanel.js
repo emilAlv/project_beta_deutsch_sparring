@@ -8,19 +8,7 @@ import { Marked } from './Rich';
 import SceneArt from './SceneArt';
 import { Check, MessageCircle, Sprout } from './icons';
 import { withSentences } from '../lib/session-settings';
-
-// Arrow keys move between the buttons of a group (radio buttons and tabs work like this).
-function arrowKeys(options, value, onChange) {
-  return (e) => {
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-    if (!step) return;
-    e.preventDefault();
-    const next = options[(options.indexOf(value) + step + options.length) % options.length];
-    onChange(next);
-    const buttons = e.currentTarget.querySelectorAll('button');
-    buttons[options.indexOf(next)]?.focus();
-  };
-}
+import { arrowKeys } from './keys';
 
 const VIEWS = ['glance', 'progress', 'grammar'];
 const isVocab = (session) => session.topicType === 'Wortschatz';

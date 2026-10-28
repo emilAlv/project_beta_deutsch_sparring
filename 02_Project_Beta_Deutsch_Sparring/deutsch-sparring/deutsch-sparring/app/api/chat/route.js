@@ -102,6 +102,7 @@ async function handle(req) {
     openWordId: String(ses.openWordId || '').slice(0, 120),
     openTask: ['flashcard', 'grammar'].includes(ses.openTask) ? ses.openTask : null,
     finished: ses.finished === true,
+    start: ses.start === true,
     skippedNumber: count(ses.skippedNumber, 60),
     skippedLine: String(ses.skippedLine || '').slice(0, 300),
     skippedWordId: String(ses.skippedWordId || '').slice(0, 120),

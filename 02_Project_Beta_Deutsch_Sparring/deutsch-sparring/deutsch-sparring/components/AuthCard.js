@@ -1,8 +1,11 @@
 'use client';
 
 // The "Log in" / "Create account" card (pages /login and /signup).
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { t } from '../lib/ui-text';
+import { arrowKeys } from './keys';
+
+const MODES = ['login', 'signup'];
 
 const ERRORS = {
   bad_login: 'authErrBadLogin',
@@ -21,12 +24,15 @@ export default function AuthCard({ initialMode = 'login' }) {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [badField, setBadField] = useState(''); // 'username' | 'password' | 'classCode': the field the error is about
+  const fields = useRef({});
   const signup = mode === 'signup';
 
   function switchTo(next) {
     if (next === mode) return;
     setMode(next);
     setError('');
+    setBadField('');
     try {
       window.history.replaceState(null, '', next === 'signup' ? '/signup' : '/login');
     } catch {}
@@ -36,13 +42,22 @@ export default function AuthCard({ initialMode = 'login' }) {
     e.preventDefault();
     if (busy) return;
     const name = username.trim();
-    // the same rules are checked again on the server
-    if (signup && !/^[A-Za-z0-9]{3,24}$/.test(name)) return setError(t('authUsernameHelp'));
-    if (signup && password.length < 8) return setError(t('authPasswordHelp'));
-    if (signup && !classCode.trim()) return setError(t('authErrNoCode'));
-    if (!name || !password) return setError(t('authErrMissing'));
+    // empty fields first (one clear message, focus on the field), then the rules (the server checks them again)
+    const problem = !name ? ['username', 'authErrNoUsername']
+      : !password ? ['password', 'authErrNoPassword']
+        : signup && !classCode.trim() ? ['classCode', 'authErrNoCode']
+          : signup && !/^[A-Za-z0-9]{3,24}$/.test(name) ? ['username', 'authUsernameHelp']
+            : signup && password.length < 8 ? ['password', 'authPasswordHelp']
+              : null;
+    if (problem) {
+      setBadField(problem[0]);
+      setError(t(problem[1]));
+      fields.current[problem[0]]?.focus();
+      return;
+    }
     setBusy(true);
     setError('');
+    setBadField('');
     try {
       const res = await fetch(signup ? '/api/auth/signup' : '/api/auth/login', {
         method: 'POST',
@@ -69,11 +84,11 @@ export default function AuthCard({ initialMode = 'login' }) {
           <p className="auth-tagline">{t('authTagline')}</p>
         </div>
 
-        <div className="segmented" role="tablist" aria-label={t('authSwitch')}>
-          <button type="button" role="tab" aria-selected={!signup} className={signup ? '' : 'on'} onClick={() => switchTo('login')}>
+        <div className="segmented" role="radiogroup" aria-label={t('authSwitch')} onKeyDown={arrowKeys(MODES, mode, switchTo)}>
+          <button type="button" role="radio" aria-checked={!signup} tabIndex={signup ? -1 : 0} className={signup ? '' : 'on'} onClick={() => switchTo('login')}>
             {t('authLogIn')}
           </button>
-          <button type="button" role="tab" aria-selected={signup} className={signup ? 'on' : ''} onClick={() => switchTo('signup')}>
+          <button type="button" role="radio" aria-checked={signup} tabIndex={signup ? 0 : -1} className={signup ? 'on' : ''} onClick={() => switchTo('signup')}>
             {t('authCreate')}
           </button>
         </div>
@@ -82,13 +97,16 @@ export default function AuthCard({ initialMode = 'login' }) {
           <span className="caps">{t('authUsername')}</span>
           <input
             name="username"
+            aria-required="true"
+            aria-invalid={badField === 'username' || undefined}
+            aria-describedby={badField === 'username' ? 'auth-error' : undefined}
+            ref={(el) => { fields.current.username = el; }}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
             autoCapitalize="none"
             spellCheck={false}
             maxLength={24}
-            required
           />
           {signup && <span className="detail">{t('authUsernameHelp')}</span>}
         </label>
@@ -98,13 +116,16 @@ export default function AuthCard({ initialMode = 'login' }) {
           <span className="auth-password">
             <input
               name="password"
+              aria-required="true"
+              aria-invalid={badField === 'password' || undefined}
+              aria-describedby={badField === 'password' ? 'auth-error' : undefined}
+              ref={(el) => { fields.current.password = el; }}
               type={show ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={signup ? 'new-password' : 'current-password'}
               maxLength={200}
-              required
-            />
+              />
             <button type="button" className="text-button" aria-pressed={show} onClick={() => setShow((s) => !s)}>
               {show ? t('authHide') : t('authShow')}
             </button>
@@ -117,17 +138,20 @@ export default function AuthCard({ initialMode = 'login' }) {
             <span className="caps">{t('authClassCode')}</span>
             <input
               name="classCode"
+              aria-required="true"
+              aria-invalid={badField === 'classCode' || undefined}
+              aria-describedby={badField === 'classCode' ? 'auth-error' : undefined}
+              ref={(el) => { fields.current.classCode = el; }}
               value={classCode}
               onChange={(e) => setClassCode(e.target.value)}
               autoComplete="off"
               spellCheck={false}
-              required
-            />
+              />
             <span className="detail">{t('authClassCodeHelp')}</span>
           </label>
         )}
 
-        <p className="auth-error" role="alert" aria-live="polite">{error}</p>
+        <p className="auth-error" id="auth-error" role="alert" aria-live="polite">{error}</p>
 
         <button type="submit" className="auth-submit" disabled={busy}>
           {busy ? t('authWorking') : signup ? t('authCreate') : t('authLogIn')}

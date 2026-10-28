@@ -11,34 +11,24 @@ import {
   withSentences, sessionSettings, DEFAULT_SETUP,
 } from '../lib/session-settings';
 import { setupMatches } from '../lib/milestone-session';
+import { QUESTION_MIN } from '../lib/intents';
 import { Check } from './icons';
+import { arrowKeys, rovingTab } from './keys';
 
 const isGrammarTopic = (x) => x.type !== 'Wortschatz' && x.id !== 'free';
 // words of a vocabulary topic for the chosen level and source (older servers: the total)
 const countOf = (topic, level, source) => topic?.counts?.[level]?.[source] ?? topic?.count ?? 0;
 
-// Arrow keys move between the buttons of a radio group
-function arrowKeys(options, value, onChange) {
-  return (e) => {
-    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-    if (!step) return;
-    e.preventDefault();
-    const next = options[(options.indexOf(value) + step + options.length) % options.length];
-    onChange(next);
-    e.currentTarget.querySelectorAll('button')[options.indexOf(next)]?.focus();
-  };
-}
-
 function Segmented({ label, options, value, onChange, render }) {
   return (
     <div className="segmented" role="radiogroup" aria-label={label} onKeyDown={arrowKeys(options, value, onChange)}>
-      {options.map((o, i) => (
+      {options.map((o) => (
         <button
           key={o}
           type="button"
           role="radio"
           aria-checked={value === o}
-          tabIndex={value === o || (!options.includes(value) && i === 0) ? 0 : -1}
+          tabIndex={rovingTab(options, value, o)}
           className={value === o ? 'on' : ''}
           onClick={() => onChange(o)}
         >
@@ -51,14 +41,16 @@ function Segmented({ label, options, value, onChange, render }) {
 
 // a row of chips where exactly one is chosen (topic, section, list)
 function ChoiceChips({ label, items, value, onChange }) {
+  const ids = items.map((it) => it.id);
   return (
-    <div className="chips" role="radiogroup" aria-label={label}>
+    <div className="chips" role="radiogroup" aria-label={label} onKeyDown={arrowKeys(ids, value, onChange)}>
       {items.map((it) => (
         <button
           key={it.id ?? 'all'}
           type="button"
           role="radio"
           aria-checked={value === it.id}
+          tabIndex={rovingTab(ids, value, it.id)}
           className={`chip setup-chip${value === it.id ? ' on' : ''}`}
           title={it.title}
           onClick={() => onChange(it.id)}
@@ -103,8 +95,17 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
   const topic = vocab ? vocabTopic : grammarTopic;
 
   const available = countOf(vocabTopic, form.level, form.source);
-  const needed = wordsNeeded(form.questions, withSentences(form));
-  const effective = { ...form, grammarTopic: grammarTopic?.id || null, section: section?.id || null, list: list?.id || null };
+  // a short list cannot fill the chosen number of questions without asking the same word again and again:
+  // fewer than half as many words as questions → fewer questions (never below the minimum), and the screen says so
+  const wordCap = vocab && vocabTopic && available > 0 ? available * 2 : Infinity;
+  const questions = wordCap < form.questions ? Math.max(QUESTION_MIN, wordCap) : form.questions;
+  const cut = questions < form.questions;
+  const repeats = wordCap < QUESTION_MIN; // even the minimum asks words more than twice
+  const shortNote = cut || repeats
+    ? repeats ? t('setupRepeat', { n: available }) : t('setupCut', { n: available, q: questions, asked: form.questions })
+    : null;
+  const needed = wordsNeeded(questions, withSentences(form));
+  const effective = { ...form, questions, grammarTopic: grammarTopic?.id || null, section: section?.id || null, list: list?.id || null };
   const topicLabel = !topic ? '' : vocab && list ? `${section.short} › ${list.short}` : topic.short;
 
   const summary = [
@@ -112,8 +113,10 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
     topicLabel || t('setupChooseTopic'),
     form.level,
     t(`diff_${form.difficulty}`),
-    t('questionsN', { n: form.questions }),
+    cut ? t('setupCutSummary', { n: available, q: questions }) : t('questionsN', { n: questions }),
+    vocab ? t(`source_${form.source}`) : null,
     vocab ? t(`dirShort_${dirKey(form.direction)}`) : null,
+    mode === 'vocab' ? GRAMMAR_POINTS.filter((g) => form.grammar.includes(g)).map((g) => t(`gp_${g}`)).join(' + ') : null,
     t(`variantShort_${form.variant}`),
   ].filter(Boolean).join(' · ');
 
@@ -145,7 +148,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
         {onCancel && (
           <button type="button" className="text-button setup-back" onClick={onCancel}>{t(cancelLabel || 'setupBack')}</button>
         )}
-        <h1 className="setup-title">{t('setupTitle')}</h1>
+        <h1 className="setup-title" tabIndex={-1} data-stage-heading>{t('setupTitle')}</h1>
         <p className="setup-sub">{t('setupSubtitle')}</p>
 
         {milestone && (
@@ -166,7 +169,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
                   type="button"
                   role="radio"
                   aria-checked={mode === k}
-                  tabIndex={mode === k ? 0 : -1}
+                  tabIndex={rovingTab(MODES, mode, k)}
                   className={`kind-option${mode === k ? ' on' : ''}`}
                   onClick={() => chooseMode(k)}
                 >
@@ -197,6 +200,12 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
             </div>
           </Section>
 
+          {vocab && (
+            <Section title={t('setupSource')}>
+              <Segmented label={t('setupSource')} options={SOURCES} value={form.source} onChange={(v) => set({ source: v })} render={(s) => t(`source_${s}`)} />
+            </Section>
+          )}
+
           <Section title={t('setupTopic')}>
             {vocab ? (
               sections.length ? (
@@ -222,9 +231,11 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
                       />
                     </>
                   )}
-                  <p className="setup-help">
-                    {available >= needed ? t('setupWordsNote', { n: needed, total: available }) : t('setupWordsFew', { total: available })}
-                  </p>
+                  {(available >= needed || !shortNote) && (
+                    <p className="setup-help">
+                      {available >= needed ? t('setupWordsNote', { n: needed, total: available }) : t('setupWordsFew', { n: available })}
+                    </p>
+                  )}
                 </>
               ) : <p className="setup-help">{t('setupNoWords')}</p>
             ) : grammarTopics.length ? (
@@ -255,11 +266,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
 
           {vocab && (
             <>
-              <Section title={t('setupSource')}>
-                <Segmented label={t('setupSource')} options={SOURCES} value={form.source} onChange={(v) => set({ source: v })} render={(s) => t(`source_${s}`)} />
-              </Section>
-
-              <Section title={t('setupFlashcards')} help={t('refLang')}>
+              <Section title={t('setupFlashcards')}>
                 <Segmented label={t('setupFlashcards')} options={DIRECTIONS} value={form.direction} onChange={(v) => set({ direction: v })} render={(d) => t(`dir_${dirKey(d)}`)} />
               </Section>
 
@@ -294,7 +301,8 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
         <div className="setup-bar-inner">
           <div className="setup-summary">
             <p className="caps">{t('setupBarLabel')}</p>
-            <p className="setup-summary-line" title={summary}>{summary}</p>
+            <p className="setup-summary-line">{summary}</p>
+            {shortNote && <p className="setup-note" data-testid="setup-note">{shortNote}</p>}
             {error && <p className="setup-error" role="alert">{error}</p>}
           </div>
           {onCancel && <button type="button" className="button-outline" onClick={onCancel}>{t('setupCancel')}</button>}

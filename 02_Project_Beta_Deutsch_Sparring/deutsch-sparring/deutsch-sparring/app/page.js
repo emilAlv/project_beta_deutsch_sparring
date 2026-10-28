@@ -293,7 +293,7 @@ export default function Home() {
       if (restored.stage !== 'practice') return;
       if (last?.role === 'user' && last.ai) {
         // the page was closed while the tutor was answering: offer to send it again
-        setError({ text: t('errorInterrupted'), retry: () => { setError(null); askTutor(last.text); } });
+        setError({ text: t('errorInterrupted'), retry: () => { setError(null); askTutor(last.text, { start: Boolean(last.hidden) }); } });
       } else if (longBreak && restored.session.started && !restored.session.finished) {
         tutorSay(t('tutorResume', { name: p.name }));
       }
@@ -365,9 +365,10 @@ export default function Home() {
   }
 
   // ---------- the panel view (the only thing the chat may still change) ----------
-  function changeView(view) {
+  // byHand: the student clicked a tab – nothing is written into the chat (only a change asked for in words or by the tutor is)
+  function changeView(view, byHand = false) {
     if (!VIEWS.includes(view)) return;
-    if (view !== prefsRef.current.view) addSystem('view', t('sysView', { value: t(`view_${view}`) }));
+    if (!byHand && view !== prefsRef.current.view) addSystem('view', t('sysView', { value: t(`view_${view}`) }));
     setPrefs({ view });
   }
 
@@ -500,7 +501,7 @@ export default function Home() {
     const fresh = { ...EMPTY_CONVO, stage: 'practice', session: s, messages: [start], historyFrom: start.at };
     convoRef.current = fresh;
     setConvo(fresh);
-    askTutor(start.text, { msg: start });
+    askTutor(start.text, { msg: start, start: true });
   }
 
   // "Same settings again"
@@ -658,7 +659,7 @@ export default function Home() {
       .slice(-40);
   }
 
-  async function askTutor(text, { msg } = {}) {
+  async function askTutor(text, { msg, start = false } = {}) {
     // mark the student's message as part of the AI conversation
     if (msg && !msg.ai) update((c) => ({ ...c, messages: c.messages.map((m) => (m.id === msg.id ? { ...m, ai: true } : m)) }));
 
@@ -689,6 +690,7 @@ export default function Home() {
         openWordId: s.exercise?.wordId || '',
         openTask: s.exercise?.task || null,
         finished: s.finished,
+        start, // the app's own opening message of the session (not something the student wrote)
         skippedNumber: lastSkipped && !s.exercise ? lastSkipped.n : 0,
         skippedLine: lastSkipped && !s.exercise ? lastSkipped.skippedLine : '',
         skippedWordId: lastSkipped && !s.exercise ? lastSkipped.wordId || '' : '',
@@ -753,7 +755,7 @@ export default function Home() {
       if (convoRef.current.session.id !== sent.sessionId) return;
       const text2 = e instanceof UiError ? e.message : e?.name === 'TimeoutError' ? t('errorTimeout') : t('errorNetwork');
       const canRetry = !(e instanceof UiError) || e.retry;
-      setError({ text: text2, retry: canRetry ? () => { setError(null); askTutor(text); } : null });
+      setError({ text: text2, retry: canRetry ? () => { setError(null); askTutor(text, { start }); } : null });
     } finally {
       if (requestRef.current === request) {
         requestRef.current = null;
@@ -877,6 +879,16 @@ export default function Home() {
     if (!busy && stage !== 'setup' && stage !== 'home') inputRef.current?.focus({ preventScroll: true });
   }, [busy, stage]);
 
+  // a new screen (Home, Setup, Summary) starts at its heading, so keyboard and screen-reader users do not start again from the top
+  // of the page. Not on the first load, and not in the chat (there the cursor belongs in the input).
+  const prevStage = useRef(stage);
+  useEffect(() => {
+    const prev = prevStage.current;
+    prevStage.current = stage;
+    if (prev === stage || prev === 'loading' || !['home', 'setup', 'summary'].includes(stage)) return;
+    document.querySelector('[data-stage-heading]')?.focus({ preventScroll: true });
+  }, [stage]);
+
   return (
     <div className="app">
       <Header
@@ -949,7 +961,7 @@ export default function Home() {
           />
           <SessionPanel
             view={prefs.view}
-            onView={changeView}
+            onView={(v) => changeView(v, true)}
             session={session}
             topic={topic}
             recent={recent}
