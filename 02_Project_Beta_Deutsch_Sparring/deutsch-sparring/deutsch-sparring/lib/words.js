@@ -140,54 +140,90 @@ export function wordLine(w) {
 const slug = (s) => String(s).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 let topicCache = null;
 
-// Word counts per level and word source, for the setup screen: { A1: { goethe, kurs, both }, … }
-function countsFor(section, list) {
+const CHOICES = ['goethe', 'kurs', 'both'];
+const blankCounts = () => ({ count: 0, levels: Object.fromEntries(LEVELS.map((lv) => [lv, { any: 0, goethe: 0, kurs: 0, both: 0 }])) });
+
+// One pass over the words: how many words each section and each list has, per level and per source choice.
+// A word counts once per section (and once per list), however many of its topics fall there.
+// Keys: the section name, or the section name + SEP + the list name. Same rules as matchesFilter (lib/scores.js).
+function countIndex() {
   const { words } = load();
-  const out = {};
-  for (const level of LEVELS) {
-    out[level] = {};
-    for (const choice of ['goethe', 'kurs', 'both']) {
-      out[level][choice] = words.filter((w) => matchesFilter(w, { level, sources: sourcesFor(choice), section, list })).length;
+  const bySection = new Map();
+  const byList = new Map();
+  const add = (map, key, w, hit) => {
+    if (!map.has(key)) map.set(key, blankCounts());
+    const c = map.get(key);
+    c.count += 1;
+    c.levels[w.level].any += 1;
+    for (const choice of CHOICES) if (hit[choice]) c.levels[w.level][choice] += 1;
+  };
+  for (const w of words) {
+    const hit = Object.fromEntries(CHOICES.map((choice) => [choice, (w.sources || []).some((s) => sourcesFor(choice).includes(s))]));
+    const sections = new Set();
+    const lists = new Set();
+    for (const t of w.topics) {
+      const [sec, lst] = String(t).split(SEP);
+      sections.add(sec);
+      if (lst !== undefined) lists.add(sec + SEP + lst);
     }
+    sections.forEach((sec) => add(bySection, sec, w, hit));
+    lists.forEach((key) => add(byList, key, w, hit));
   }
-  return out;
+  return { bySection, byList };
 }
+
+// Word counts per level and word source, for the setup screen: { A1: { goethe, kurs, both }, … }
+const countsShape = (entry) => Object.fromEntries(LEVELS.map((lv) => [lv, {
+  goethe: entry.levels[lv].goethe,
+  kurs: entry.levels[lv].kurs,
+  both: entry.levels[lv].both,
+}]));
+// the levels a section or list has words for (any source)
+const levelsOfEntry = (entry) => LEVELS.filter((lv) => entry.levels[lv].any > 0);
 
 export function wordTopics() {
   if (topicCache) return topicCache;
-  const all = listSections();
+  const { sections } = load();
+  const { bySection, byList } = countIndex();
+  const entryOf = (map, key) => map.get(key) || blankCounts();
   const out = [];
-  for (const s of all) {
+  for (const s of sections) {
+    const secEntry = entryOf(bySection, s.name);
+    // lists without words are left out (as listSections() does)
+    const lists = s.lists
+      .map((l) => ({ name: l.name, entry: entryOf(byList, s.name + SEP + l.name) }))
+      .filter((l) => l.entry.count > 0);
+    if (!(secEntry.count > 0)) continue;
     const sid = `w:${slug(s.name)}`;
-    const multi = s.lists.length > 1;
+    const multi = lists.length > 1;
     out.push({
       id: sid,
-      title: multi ? `${s.name} (all lists)` : `${s.name} › ${s.lists[0].name}`,
+      title: multi ? `${s.name} (all lists)` : `${s.name} › ${lists[0].name}`,
       short: s.name,
       type: 'Wortschatz',
-      levels: levelsOf({ section: s.name }),
+      levels: levelsOfEntry(secEntry),
       kind: 'words',
       section: s.name,
-      list: multi ? null : s.lists[0].name,
-      lists: multi ? s.lists.map((l) => l.name) : [],
-      count: s.count,
-      counts: countsFor(s.name, multi ? null : s.lists[0].name),
+      list: multi ? null : lists[0].name,
+      lists: multi ? lists.map((l) => l.name) : [],
+      count: secEntry.count,
+      counts: countsShape(multi ? secEntry : lists[0].entry),
     });
     if (!multi) continue;
-    for (const l of s.lists) {
+    for (const l of lists) {
       out.push({
         id: `${sid}:${slug(l.name)}`,
         title: `${s.name} › ${l.name}`,
         short: l.name,
         type: 'Wortschatz',
-        levels: levelsOf({ section: s.name, list: l.name }),
+        levels: levelsOfEntry(l.entry),
         kind: 'words',
         section: s.name,
         list: l.name,
         lists: [],
         parent: sid,
-        count: l.count,
-        counts: countsFor(s.name, l.name),
+        count: l.entry.count,
+        counts: countsShape(l.entry),
       });
     }
   }

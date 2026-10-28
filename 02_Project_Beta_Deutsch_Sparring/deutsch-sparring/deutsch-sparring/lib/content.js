@@ -49,14 +49,19 @@ export function topicsForLevel(items, level) {
 
 // Every .md file in /content (except the template) becomes a topic. Vocabulary lesson files
 // (Typ: Wortschatz) are no longer topics: vocabulary now comes from vocab/words.json (lib/words.js).
+// Read once on the server (like lib/words.js). In development it is read again each time, so lesson edits show without a restart.
+let lessonCache = null;
+const useCache = () => process.env.NODE_ENV !== 'development';
+
 export function listLessons() {
+  if (lessonCache && useCache()) return lessonCache;
   let files = [];
   try {
     files = fs.readdirSync(CONTENT_DIR);
   } catch {
     return [];
   }
-  return files
+  const lessons = files
     .filter((f) => f.endsWith('.md') && !SKIP.has(f))
     .sort()
     .map((file) => {
@@ -88,6 +93,8 @@ export function listLessons() {
       };
     })
     .filter((l) => l.type !== 'Wortschatz');
+  if (useCache()) lessonCache = lessons;
+  return lessons;
 }
 
 export function getLesson(id) {
