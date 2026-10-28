@@ -54,6 +54,13 @@ Small, contained fixes (a few files, clear cause) the main session does itself �
 4. reports to Emilio: what is live, what he will see, what was tested and NOT tested (e.g. no real Gemini call),
    the PR link, and anything still open on his side.
 
+**Trello board** "L Lab Active Projects" (https://trello.com/b/duySWPU7/l-lab-active-projects): the German Tutor cards
+sit below the orange "GERMAN TUTOR" separator card in every list (never above it, never touch the other projects' cards).
+Keep it current: a task moves Prioritized → In Progress when a builder starts → Under Review when it is live (with what
+Emilio should try and the PR number) → Done after he has tested it. New requests from Emilio become cards; things only he
+can do go to Challenges & Roadblocks, open decisions to Questions. Card colours are covers, which the connection cannot
+set – Emilio sets them by hand.
+
 **Requests that arrive while an agent works:** say in one line that it is noted, finish the current check, then
 handle it – several small requests may go into one PR.
 
