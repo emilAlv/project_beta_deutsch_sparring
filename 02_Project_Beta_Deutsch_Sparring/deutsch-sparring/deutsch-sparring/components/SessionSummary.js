@@ -5,8 +5,10 @@
 
 import { useEffect, useState } from 'react';
 import { t } from '../lib/ui-text';
-import { score, taskStates, headlineKey, summaryDetails, isGrammarAnswer } from '../lib/stats';
+import { score, taskStates, headlineKey, summaryDetails } from '../lib/stats';
 import { loadHome } from '../lib/home-client';
+import { milestoneSummary, findMilestone } from '../lib/milestone-session';
+import { fmtWeekday } from '../lib/dates';
 import { ProgressTrack } from './Chat';
 
 const reasonText = (key) => (key.startsWith('case:') ? key.slice(5) : t(`sumReason_${key}`));
@@ -23,38 +25,82 @@ function Tags({ items, kind }) {
   );
 }
 
-// one line per goal: how far it moved during this session
-function goalLines(goals, before, after, session) {
-  const learnt = Math.max(0, (after.tiles?.learnt ?? 0) - (before?.learnt ?? 0));
-  return goals.map((g) => {
-    const from = before?.progress?.[g.id] ?? after.progress?.[g.id] ?? 0;
-    const to = after.progress?.[g.id] ?? from;
-    let what;
-    if (g.type === 'grammar') {
-      const rules = g.scope?.rules || [];
-      const mine = session.answers.filter((a) => isGrammarAnswer(a) && (!rules.length || rules.includes(a.rule)));
-      what = mine.length ? t('sumGoalRules', { ok: mine.filter((a) => a.correct).length, n: mine.length }) : t('sumGoalNoRules');
-    } else {
-      what = learnt ? t('sumGoalWords', { n: learnt }) : t('sumGoalNoWords');
-    }
-    return { id: g.id, text: t('sumGoalLine', { title: g.title, what, from, to }) };
-  });
+// "1 more word" / "3 more words": the _one text is used for exactly 1
+const tn = (key, n, vars = {}) => t(n === 1 && t(`${key}_one`) !== `${key}_one` ? `${key}_one` : key, { n, ...vars });
+
+// the main line of the box: "12 → 15 of 16 words learnt", grammar in its own wording, then what is still missing
+function MilestoneLines({ p }) {
+  const same = p.from === p.to;
+  const half = (n) => String(Math.round(n * 2) / 2);
+  const key = p.unit === 'words' ? 'sumMsWords'
+    : p.unit === 'lessons' ? 'sumMsLessons'
+      : p.criterion?.target === 'introduced' ? 'sumMsAnswers' : 'sumMsRight';
+  const count = t(key, { from: half(p.from), to: half(p.to), total: p.total });
+  const togo = Math.max(0, p.need - p.to);
+  const left = p.reached || togo <= 0 ? null
+    : p.unit === 'words' ? tn('sumMsToGoWords', togo)
+      : p.unit === 'lessons' ? tn('sumMsToGoLessons', togo)
+        : p.criterion?.target === 'introduced' ? null : tn('sumMsToGoRight', Math.ceil(togo));
+  return (
+    <>
+      <p className="sum-ms-count">{count}{same && <span className="detail"> · {t('sumMsSame')}</span>}{p.date && <span className="detail"> · {t('sumMsDue', { date: fmtWeekday(p.date) })}</span>}</p>
+      {left && <p className="detail">{left}</p>}
+    </>
+  );
 }
 
-export default function SessionSummary({ session, name, topicType, onHome, onAgain, onNew, onChat }) {
+function alsoText(x) {
+  const key = x.unit === 'words' ? 'sumMsAlsoWords' : x.unit === 'lessons' ? 'sumMsAlsoLessons' : 'sumMsAlsoAnswers';
+  const what = x.plus > 0 ? tn(key, Math.round(x.plus * 2) / 2, { title: x.title }) : x.title;
+  return x.justReached ? t('sumMsAlsoReached', { what }) : what;
+}
+
+function MilestoneBox({ state, data, onNext }) {
+  if (state === 'loading') return <p className="detail">{t('sumMsLoading')}</p>;
+  if (state === 'error') return <p className="detail">{t('sumMsError')}</p>;
+  if (state === 'nogoal') return <p className="detail">{t('sumMsNoGoal')}</p>;
+  const { primary: p, also, next } = data;
+  return (
+    <>
+      {p && (
+        <>
+          <p className="caps">{p.partTitle}</p>
+          <p className="sum-ms-title">{p.justReached ? t('sumMsReached', { title: p.title }) : p.reached ? t('sumMsWasReached', { title: p.title }) : p.title}</p>
+          {!(p.reached && !p.justReached) && <MilestoneLines p={p} />}
+          {p.reached && next && (
+            <p className="sum-ms-next">
+              <span>{t('sumMsNext', { title: next.title })}</span>{' '}
+              <button type="button" className="button-outline small" onClick={() => onNext(next)}>{t('sumMsNextStart')}</button>
+            </p>
+          )}
+        </>
+      )}
+      {!p && !also.length && <><p className="sum-ms-title">{t('sumMsNone')}</p><p className="detail">{t('sumMsNoneHelp')}</p></>}
+      {also.length > 0 && <p className={p ? 'detail sum-ms-also' : 'sum-ms-title'}>{t('sumMsAlso', { list: also.map(alsoText).join(' · ') })}</p>}
+    </>
+  );
+}
+
+export default function SessionSummary({ session, name, topicType, onHome, onAgain, onNew, onChat, onNextMilestone }) {
   const sc = score(session.answers);
   const d = summaryDetails(session);
   const st = session.settings || {};
   const vocabWords = d.words;
-  const [goals, setGoals] = useState({ state: 'loading', lines: [] });
+  const [ms, setMs] = useState({ state: 'loading', data: null });
 
   useEffect(() => {
     let cancelled = false;
     loadHome().then((after) => {
       if (cancelled) return;
-      if (!after) setGoals({ state: 'error', lines: [] });
-      else if (!after.goals?.length) setGoals({ state: 'none', lines: [] });
-      else setGoals({ state: 'ok', lines: goalLines(after.goals, session.goalsBefore, after, session) });
+      if (!after) setMs({ state: 'error', data: null });
+      else if (!after.goals?.some((g) => g.version === 2)) setMs({ state: 'nogoal', data: null });
+      else {
+        const data = milestoneSummary(session.goalsBefore?.milestones, after, session.settings?.milestoneId);
+        const nu = after.nextUp && after.nextUp.milestoneId !== session.settings?.milestoneId ? after.nextUp : null;
+        const hit = nu ? findMilestone(after.goals, nu.milestoneId) : null;
+        const spec = nu ? after.sessions?.[nu.milestoneId] : null;
+        setMs({ state: 'ok', data: { ...data, next: hit && spec ? { id: nu.milestoneId, title: hit.title, spec } : null } });
+      }
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,12 +159,9 @@ export default function SessionSummary({ session, name, topicType, onHome, onAga
             </section>
           </div>
 
-          <section className="sum-goals">
-            <h2 className="sum-box-title">{t('sumGoals')}</h2>
-            {goals.state === 'loading' && <p className="detail">{t('sumGoalsLoading')}</p>}
-            {goals.state === 'error' && <p className="detail">{t('sumGoalsError')}</p>}
-            {goals.state === 'none' && <p className="detail">{t('sumGoalsNone')}</p>}
-            {goals.lines.map((l) => <p key={l.id} className="sum-goal-line">{l.text}</p>)}
+          <section className={`sum-goals sum-ms${ms.data?.primary?.justReached ? ' reached' : ''}`}>
+            <h2 className="sum-box-title">{t('sumMs')}</h2>
+            <MilestoneBox state={ms.state} data={ms.data} onNext={(n) => onNextMilestone?.(n.spec, n.id, n.title)} />
           </section>
 
           <div className="sum-actions">

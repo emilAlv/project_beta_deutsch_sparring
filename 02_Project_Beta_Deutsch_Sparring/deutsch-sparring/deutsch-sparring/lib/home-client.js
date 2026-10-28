@@ -9,6 +9,7 @@ import { postWithCode } from './progress-client';
 import { compactOf } from './scores';
 import { todayKey } from './goals';
 import { tickExam } from './home-plan';
+import { milestoneSnapshot } from './milestone-session';
 
 // Accounts off: the compact copy of the browser's own goals, word scores and answer log, from which the
 // server works out the numbers (nothing is stored there). The coach gets the same copy.
@@ -41,10 +42,10 @@ export async function loadHome() {
 }
 
 // A small copy of the goal progress, taken when a session starts: the summary screen compares it with the
-// numbers after the session. → { progress: { [goalId]: percent }, learnt } or null
+// numbers after the session. → { progress: { [goalId]: percent }, learnt, milestones: { [id]: { have, need, total, unit, reached } } } or null
 export async function goalSnapshot() {
   const d = await loadHome();
-  return d ? { progress: d.progress || {}, learnt: d.tiles?.learnt ?? 0 } : null;
+  return d ? { progress: d.progress || {}, learnt: d.tiles?.learnt ?? 0, milestones: milestoneSnapshot(d.plans) } : null;
 }
 
 // ---------- goals through the Coach (R12): the plan generator on the server, nothing is stored there ----------

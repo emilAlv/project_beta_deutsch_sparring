@@ -10,6 +10,7 @@ import {
   MODES, modeOf, LEVELS, DIFFICULTIES, QUESTION_STEPS, SOURCES, DIRECTIONS, VARIANTS, GRAMMAR_POINTS,
   withSentences, sessionSettings, DEFAULT_SETUP,
 } from '../lib/session-settings';
+import { setupMatches } from '../lib/milestone-session';
 import { Check } from './icons';
 
 const isGrammarTopic = (x) => x.type !== 'Wortschatz' && x.id !== 'free';
@@ -80,7 +81,8 @@ function Section({ title, children, help }) {
   );
 }
 
-export default function SetupScreen({ topics, initial, onStart, onCancel, cancelLabel, error }) {
+// milestone = { id, title, patch } when the screen was opened from a plan milestone (Next up, "Practise this", Coach); everything stays free
+export default function SetupScreen({ topics, initial, milestone = null, onStart, onCancel, cancelLabel, error }) {
   const [form, setForm] = useState(initial);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const vocab = form.kind === 'vocab';
@@ -128,9 +130,13 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
     if (withSentences({ kind: 'vocab', grammar })) set({ grammar });
   }
 
+  // the strip: still the milestone's own settings (colour) or changed (grey, "Back to milestone")
+  const msMatch = Boolean(milestone) && setupMatches(effective, milestone.patch);
+
   function start() {
     if (!topic) return;
-    onStart(effective, sessionSettings(effective, topicLabel));
+    const ms = msMatch ? { id: milestone.id, title: milestone.title } : null; // only a session that still fits counts for the milestone
+    onStart(effective, sessionSettings(effective, topicLabel, ms));
   }
 
   return (
@@ -141,6 +147,15 @@ export default function SetupScreen({ topics, initial, onStart, onCancel, cancel
         )}
         <h1 className="setup-title">{t('setupTitle')}</h1>
         <p className="setup-sub">{t('setupSubtitle')}</p>
+
+        {milestone && (
+          <div className={`ms-strip${msMatch ? '' : ' off'}`} role="status" data-testid="ms-strip">
+            {msMatch
+              ? <span>{t('msStripFor')} <strong>{milestone.title}</strong></span>
+              : <span>{t('msStripOff', { title: milestone.title })}</span>}
+            {!msMatch && <button type="button" className="button-outline small" onClick={() => set(milestone.patch)}>{t('msStripBack')}</button>}
+          </div>
+        )}
 
         <div className="card setup-card">
           <Section title={t('setupKind')}>

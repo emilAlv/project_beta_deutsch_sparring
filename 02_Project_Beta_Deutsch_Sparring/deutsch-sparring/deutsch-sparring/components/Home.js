@@ -14,6 +14,7 @@ import { loadZoom, saveZoom } from '../lib/storage';
 import { setupFromSession, cleanZoom, isPlanGoal, milestoneForItem, milestoneView } from '../lib/home-plan';
 import Coach from './Coach';
 import PlanTimeline from './PlanTimeline';
+import { findMilestone } from '../lib/milestone-session';
 import { NextUpCard, PartRows, ZoomPlan, countText, dueText } from './HomePlan';
 
 function greeting(name) {
@@ -238,7 +239,8 @@ export default function Home({ name, classCode, clientId, streak, sessions, topi
   // "Practise this": the setup screen opens with this milestone filled in (everything can still be changed)
   function practise(milestoneId) {
     const patch = setupFromSession(data?.sessions?.[milestoneId], topics);
-    onPractise(patch);
+    const hit = findMilestone(data?.goals, milestoneId);
+    onPractise(patch, hit ? { id: milestoneId, title: hit.title } : null);
   }
   async function tick(goal, milestoneId, points) {
     const ok = await tickMilestone(goal, milestoneId, points);

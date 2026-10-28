@@ -20,6 +20,7 @@ export default function SessionRibbon({ session, onEnd, disabled }) {
     vocab ? t(`dirShort_${dirKey(st.direction)}`) : null,
     vocab && st.source !== 'both' ? t(`source_${st.source}`) : null,
     t(`variantShort_${st.variant}`),
+    st.milestoneId && st.milestoneTitle ? t('ribbonFor', { title: st.milestoneTitle }) : null, // R14: the session belongs to a plan milestone
   ].filter(Boolean);
   const done = session.answers.length;
   const current = Math.min(session.total, done + (session.exercise && !session.finished ? 1 : 0)) || 1;
@@ -29,7 +30,7 @@ export default function SessionRibbon({ session, onEnd, disabled }) {
   return (
     <div className="ribbon" role="region" aria-label={t('ribbonLabel')}>
       <ul className="ribbon-tags">
-        {tags.map((x, i) => <li key={`${i}-${x}`} className={i === 1 ? 'tag tag-topic' : 'tag'} title={x}>{x}</li>)}
+        {tags.map((x, i) => <li key={`${i}-${x}`} className={i === 1 ? 'tag tag-topic' : x === tags.at(-1) && st.milestoneId ? 'tag tag-ms' : 'tag'} title={x}>{x}</li>)}
       </ul>
       <div className="ribbon-progress">
         <span className="ribbon-count">{label}</span>

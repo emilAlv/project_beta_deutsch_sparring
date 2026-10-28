@@ -3,6 +3,7 @@
 // Pure helpers, no React: used by the setup screen, the ribbon and app/page.js.
 
 import { QUESTION_MIN, QUESTION_MAX } from './intents.js';
+import { cleanMilestoneId, cleanMilestoneTitle } from './milestone-session.js';
 
 export const KINDS = ['grammar', 'vocab']; // what is stored: Grammar · a word session (with or without sentences)
 export const LEVELS = ['A1', 'A2', 'B1'];
@@ -67,7 +68,9 @@ export function topicIdOf(setup) {
 }
 
 // setup form → the fixed settings stored with the session (and sent to /api/chat)
-export function sessionSettings(setup, topicLabel) {
+// ms = { id, title } when the session belongs to a plan milestone (R14): only the id and the template title are kept
+export function sessionSettings(setup, topicLabel, ms = null) {
+  const milestoneId = cleanMilestoneId(ms?.id);
   return {
     kind: setup.kind,
     topicId: topicIdOf(setup),
@@ -79,6 +82,7 @@ export function sessionSettings(setup, topicLabel) {
     direction: setup.direction,
     grammar: setup.kind === 'vocab' ? [...setup.grammar] : [],
     variant: setup.variant,
+    ...(milestoneId ? { milestoneId, milestoneTitle: cleanMilestoneTitle(ms.title) || '' } : {}),
   };
 }
 
