@@ -2,8 +2,10 @@ import { authEnabled, cleanUsername, PASSWORD_MAX, sameOrigin, startSession } fr
 import { users } from '../../../../lib/users';
 import { verifyPassword } from '../../../../lib/password.mjs';
 import { tooManyLoginTries, countFailedLogin } from '../../../../lib/guard';
+import { readJsonBody } from '../../../../lib/route-guard';
 
 export const dynamic = 'force-dynamic';
+const MAX_BYTES = 2_000;
 
 const fail = (code, status) => Response.json({ ok: false, code }, { status });
 
@@ -13,7 +15,8 @@ export async function POST(req) {
   try {
     if (!authEnabled()) return fail('off', 404);
     if (!sameOrigin(req)) return fail('origin', 403);
-    const body = await req.json().catch(() => ({}));
+    const { body, response: bad } = await readJsonBody(req, MAX_BYTES); // a few fields: anything bigger is refused
+    if (bad) return bad;
     const username = cleanUsername(body?.username).slice(0, 40);
     const password = typeof body?.password === 'string' ? body.password : '';
     if (await tooManyLoginTries(req, username)) return fail('too_many', 429);
