@@ -151,6 +151,7 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 }
 .tag:first-child { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
 .tag-topic { flex: 0 1 auto; min-width: 60px; font-weight: 500; }
+.tag-ms { flex: 0 1 auto; min-width: 60px; background: var(--brand-tint); color: var(--brand); font-weight: 500; }
 .ribbon-progress { flex: none; display: flex; align-items: center; gap: 12px; }
 .ribbon-count { font-size: 13px; font-weight: 500; white-space: nowrap; }
 .ribbon-track { width: 140px; }
@@ -820,7 +821,15 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .sum-low { color: #b3402a; }
 
 .sum-goals { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: var(--radius-md); background: var(--surface-2); }
-.sum-goal-line { font-size: 14px; }
+.sum-ms-title { font-size: 16px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.sum-ms-count { font-size: 14px; }
+.sum-ms-next { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
+.sum-ms.reached { background: var(--brand-tint); border: 1px solid #c9d9c8; }
+.sum-ms.reached .sum-ms-title { color: var(--brand); }
+.ms-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 10px 14px; margin-bottom: 14px; border-radius: var(--radius-md); background: var(--brand-tint); color: var(--brand); font-size: 14px; line-height: 1.4; }
+.ms-strip strong { font-weight: 600; overflow-wrap: anywhere; }
+.ms-strip.off { background: var(--surface-2); color: var(--muted); }
+.ms-strip .button-outline { margin-left: auto; }
 .sum-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .sum-chat-link { margin-left: auto; font-size: 13px; font-weight: 500; }
 

@@ -41,6 +41,12 @@ export function cleanSettings(raw) {
     else if (typeof v === 'boolean' || v === null) out[k] = v;
     else if (Array.isArray(v)) out[k] = v.slice(0, 20).filter((x) => typeof x === 'string').map((x) => x.slice(0, 60));
   }
+  // the plan milestone a session belongs to (R14): only a plain id string, anything else is dropped
+  if ('milestoneId' in out) {
+    const id = cleanId(out.milestoneId);
+    if (id) out.milestoneId = id;
+    else { delete out.milestoneId; delete out.milestoneTitle; }
+  }
   return out;
 }
 

@@ -167,6 +167,7 @@ export default function Home() {
   const [slow, setSlow] = useState(false);
   const [error, setError] = useState(null); // { text, retry }
   const [setupError, setSetupError] = useState(null);
+  const [setupMs, setSetupMs] = useState(null); // { id, title, patch }: the plan milestone the setup screen was opened from (R14)
   const requestRef = useRef(null); // the AI request in flight: { controller, cancelled }
   const [waiting, setWaiting] = useState(false); // an AI request is in flight (it can be cancelled)
   const inputRef = useRef(null);
@@ -425,7 +426,9 @@ export default function Home() {
   // ---------- setup screen and starting a session ----------
   // The setup screen opens prefilled: the last setup, or the given session's settings. A running
   // session stays as it is until a new one starts, so "Cancel" goes back to it.
-  function openSetup(fromSettings = null) {
+  // ms = { id, title, patch } when it opens from a plan milestone (R14): the strip on the setup screen
+  function openSetup(fromSettings = null, ms = null) {
+    setSetupMs(ms);
     dropRequest();
     setError(null);
     setSetupError(null);
@@ -437,13 +440,13 @@ export default function Home() {
   function openSetupSuggested(suggestion) {
     const patch = suggestion.milestoneId ? setupFromSession(suggestion, topicsRef.current) : suggestionToSetup(suggestion, topicsRef.current);
     if (patch) setPrefs({ setup: sanitizeSetup({ ...prefsRef.current.setup, ...patch }) });
-    openSetup();
+    openSetup(null, patch && suggestion.milestoneId ? { id: suggestion.milestoneId, title: suggestion.title, patch } : null);
   }
 
   // "Practise this" on Home: the setup screen opens with the milestone's choices filled in; everything can still be changed
-  function openSetupPatch(patch) {
+  function openSetupPatch(patch, ms = null) {
     if (patch) setPrefs({ setup: sanitizeSetup({ ...prefsRef.current.setup, ...patch }) });
-    openSetup();
+    openSetup(null, patch && ms?.id ? { id: ms.id, title: ms.title, patch } : null);
   }
 
   // back from the setup screen to the session (only offered when there is one)
@@ -886,6 +889,7 @@ export default function Home() {
           onHome={goHome}
           onAgain={again}
           onNew={() => openSetup(session.settings)}
+          onNextMilestone={(spec, id, title) => openSetupPatch(setupFromSession(spec, topicsRef.current), { id, title })}
           onChat={() => update((c) => ({ ...c, stage: 'practice' }))}
         />
       ) : stage === 'setup' ? (
@@ -893,6 +897,7 @@ export default function Home() {
           key={JSON.stringify(prefs.setup)}
           topics={topics}
           initial={prefs.setup}
+          milestone={setupMs}
           error={setupError}
           onStart={(form, settings) => startSession(settings, form)}
           onCancel={cancelSetup}
