@@ -22,7 +22,7 @@ Name + sein/heissen/kommen/wohnen im Präsens. Ich heisse …; Woher kommst du? 
 - Freut mich.
 - Woher kommen Sie?
 - Ich komme aus …
-- Was machen Sie beruflich.
+- Was machen Sie beruflich?
 
 ## Didaktik
 - Beginne mit einer verständlichen Situation und einer bedeutungsvollen Frage, dann übe die Form.

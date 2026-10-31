@@ -504,11 +504,53 @@ function review() {
   console.log(`${words.length} correction(s) written to vocab/REVIEW.md`);
 }
 
+// ---------- flags: words whose level looks too high (review T7) ----------
+// A small built-in core list of everyday words that belong to A1 or A2 (Goethe A1/A2 and the course). Words in the
+// Word file with a HIGHER level than listed here are flagged – the script only reports, it never changes a level.
+// Emilio checks them in his Word file. Only the first German word counts (verbs, nouns without article).
+export const CORE_LEVELS = {
+  A1: ['dürfen', 'sollen', 'können', 'müssen', 'wollen', 'mögen', 'möchten', 'lernen', 'reisen', 'Urlaub', 'Büro', 'Hund', 'Katze', 'interessant',
+    'arbeiten', 'wohnen', 'kaufen', 'spielen', 'essen', 'trinken', 'fahren', 'gehen', 'kommen', 'machen', 'sprechen', 'lesen', 'schreiben',
+    'verstehen', 'fragen', 'antworten', 'brauchen', 'helfen', 'geben', 'nehmen', 'sehen', 'hören', 'warten', 'bezahlen', 'Haus', 'Schule',
+    'Arbeit', 'Auto', 'Freund', 'Familie', 'Kind', 'Bruder', 'Schwester', 'Wasser', 'Brot', 'Kaffee', 'Zimmer', 'Stadt', 'Geld', 'Preis',
+    'Telefon', 'Computer', 'Buch', 'Tisch', 'Stuhl', 'Bett', 'Küche', 'Wetter', 'Sommer', 'Winter', 'Tier', 'Reise', 'Hotel', 'Sport', 'Musik',
+    'Film', 'Garten', 'Wohnung', 'Kollege', 'Chef', 'Firma', 'Termin', 'neu', 'alt', 'schön', 'gut', 'schlecht', 'teuer', 'billig', 'müde',
+    'krank', 'wichtig', 'schwer', 'leicht', 'schwierig', 'einfach', 'Hunger', 'Durst'],
+  A2: ['Ferien', 'Fest', 'Supermarkt', 'Restaurant', 'gesund', 'Haustier', 'offen', 'geschlossen', 'frei'],
+};
+const LEVEL_RANK = { A1: 1, A2: 2, B1: 3 };
+// Words whose case differs between two files of the course material (review T20)
+export const CASE_CONFLICTS = { kündigen: 'Dat (Person) / Akk (Vertrag)' };
+
+export function levelFlags(words) {
+  const want = new Map();
+  for (const [lv, list] of Object.entries(CORE_LEVELS)) for (const x of list) want.set(x, lv);
+  const flags = [];
+  for (const w of words) {
+    if (w.removed) continue;
+    const key = String(w.src?.de || '').split(/[\s,→/]+/).filter((x) => x && x !== '(sich)' && !['der', 'die', 'das'].includes(x))[0];
+    const lv = want.get(key);
+    if (lv && (LEVEL_RANK[w.level] || 0) > LEVEL_RANK[lv]) flags.push({ word: w.src.de, now: w.level, suggested: lv, estimated: w.levelEstimated === true });
+  }
+  return flags;
+}
+
+function flagsCmd() {
+  const words = loadWords();
+  const flags = levelFlags(words);
+  console.log(`${flags.length} word(s) with a level above the built-in A1/A2 core list (nothing is changed):`);
+  for (const f of flags) console.log(`  ${f.word}: ${f.now} -> ${f.suggested}${f.estimated ? ' (level was estimated)' : ''}`);
+  for (const [word, note] of Object.entries(CASE_CONFLICTS)) {
+    const w = words.find((x) => !x.removed && x.src?.de === word);
+    if (w) console.log(`  ${word}: case in the list is "${w.enriched?.case || '—'}", other files differ -> ${note}`);
+  }
+}
+
 const [cmd, ...args] = process.argv.slice(2);
-const commands = { import: () => importDocx(args[0], args[1]), merge, status, review };
+const commands = { import: () => importDocx(args[0], args[1]), merge, status, review, flags: flagsCmd };
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (!commands[cmd]) {
-    console.log('Usage: node scripts/vocab.mjs import <file.docx> [vNN] | merge | status | review');
+    console.log('Usage: node scripts/vocab.mjs import <file.docx> [vNN] | merge | status | review | flags');
     process.exit(1);
   }
   try {

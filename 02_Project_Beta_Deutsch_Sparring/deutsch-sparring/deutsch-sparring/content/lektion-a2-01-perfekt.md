@@ -15,7 +15,7 @@ Ich kann erzählen, was ich gestern und am Wochenende gemacht habe.
 Du erzählst einer Kollegin, was am Wochenende passiert ist.
 
 ## Regel
-Perfekt im Gespräch: haben/sein auf Position 2, Partizip am Ende. Bewegung und Zustandswechsel oft mit sein; trennbare Verben: eingekauft, aufgestanden.
+Perfekt im Gespräch: haben/sein auf Position 2, Partizip am Ende. Bewegung und Zustandswechsel mit sein, dazu sein, bleiben, werden; trennbare Verben: eingekauft, aufgestanden.
 
 ## Redemittel im Kontext
 - Was hast du gemacht?

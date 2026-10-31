@@ -60,7 +60,7 @@ export const RESPONSE_SCHEMA = {
           required: ['mistake', 'rule', 'here'],
           propertyOrdering: ['mistake', 'rule', 'here'],
         },
-        rule: str('The grammar point in max 5 words, always the same wording for the same point, e.g. "Genitiv nach wegen", "Dativ nach in (Wo?)", "Perfekt mit sein". For a mistake in the word or its article: an empty string (the word is not a grammar rule).'),
+        rule: str('The grammar point in max 5 words, always the same wording for the same point, e.g. "Genitiv nach wegen", "Wechselpräposition Wo? (Dativ)", "Perfekt mit sein". For a mistake in the word or its article: an empty string (the word is not a grammar rule).'),
         errorType: enumOf(Object.keys(ERROR_TYPE), {
           nullable: true,
           description: 'null when correct. Artikel / Wortschatz = the word or its article was wrong (counts for the vocabulary score). Kasus / Adjektivendung / Verbform / Präposition / Wortstellung = a grammar mistake.',

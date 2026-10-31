@@ -34,9 +34,13 @@ export const RULES = {
   nounDat: 'Nomengruppe im Dativ',
   nounGen: 'Nomengruppe im Genitiv',
   akkBrauchen: 'Akkusativ nach brauchen',
+  // old names of the two-way preposition rules: no topic uses them any more (see wechselAkk / wechselDat); they stay
+  // here so that stats saved under these names are still recognised as grammar rules
   akkIn: 'Akkusativ nach in (Wohin?)',
   datMit: 'Dativ nach mit',
   datIn: 'Dativ nach in (Wo?)',
+  wechselDat: 'Wechselpräposition Wo? (Dativ)',
+  wechselAkk: 'Wechselpräposition Wohin? (Akkusativ)',
   praeteritumModal: 'Präteritum Modalverben',
   genWegen: 'Genitiv nach wegen',
   genTrotz: 'Genitiv nach trotz',
