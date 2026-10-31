@@ -134,6 +134,7 @@ const sDe = P.buildSystemPrompt({ ...base, settings: { ...set, variant: 'de' } }
 check('prompt (ch): Swiss rule only', /write "ss", never "ß"/.test(sCh) && !/use the German words, not the Swiss/.test(sCh));
 check('prompt (de): German rule only', /use "ß" after a long vowel/.test(sDe) && !/write "ss", never "ß"/.test(sDe));
 check('prompt: the other variant is always accepted', /OTHER variant is ALWAYS correct/.test(sCh) && /OTHER variant is ALWAYS correct/.test(sDe));
+check('prompt: Swiss Perfekt of stehen/liegen/sitzen/hängen with sein is accepted in both variants', /ich bin gestanden/.test(sCh) && /ich bin gestanden/.test(sDe) && /Accept both/.test(sCh) && /Accept both/.test(sDe));
 check('prompt: no variant = Swiss', /write "ss", never "ß"/.test(P.buildSystemPrompt({ ...base, settings: set })));
 check('cleanVariant', V.cleanVariant('de') === 'de' && V.cleanVariant('x') === 'ch' && V.cleanVariant(undefined) === 'ch');
 

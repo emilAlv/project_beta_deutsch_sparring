@@ -352,10 +352,12 @@ export function pickWords({ words, scores = {}, level, sources, section, list, c
   const fill = [...fresh, ...dueWeak, ...notDue, ...tens].filter((w) => !chosen.has(w.id));
   const extra = fill.slice(0, n - chosen.size);
 
-  // final order: due & weak (incl. weak fillers), checks, new
+  // final order: due & weak (incl. weak fillers), with the new words in the middle, checks last
   const all = [...takeDue, ...takeChecks, ...takeNew, ...extra];
   const first = all.filter((w) => !isNew(rec(w)) && !isTenW(w)).sort((a, b) => Number(due(b)) - Number(due(a)) || byScore(a, b));
   const checks = all.filter(isTenW);
   const news = all.filter((w) => isNew(rec(w)));
-  return [...first, ...checks, ...news];
+  // new words go in the MIDDLE: stopping early must not drop them all, and they are not the very first question
+  const half = Math.ceil(first.length / 2);
+  return [...first.slice(0, half), ...news, ...first.slice(half), ...checks];
 }

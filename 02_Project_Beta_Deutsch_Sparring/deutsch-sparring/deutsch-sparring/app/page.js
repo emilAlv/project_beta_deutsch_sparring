@@ -698,6 +698,7 @@ export default function Home() {
       },
       // vocabulary: the words picked at the start stay the same; without them the server picks, using our scores
       wordIds: s.wordIds,
+      newWordIds: (s.words || []).filter((w) => w.fresh).map((w) => w.id), // never practised before: the tutor shows them first
       modelIds: s.modelIds || [],
       seenModels: seenModelIds(s, historyRef.current.sessions),
       ...(isVocab(s) && !s.wordIds?.length ? { scores: loadScores(), source: st.source || 'both' } : {}),

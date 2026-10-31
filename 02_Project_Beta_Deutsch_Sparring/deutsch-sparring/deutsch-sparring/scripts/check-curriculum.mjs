@@ -96,5 +96,33 @@ for (const t of topics.filter((x) => x.curriculum)) {
 const lesson = C.curriculumLesson(list[0]);
 check('lesson text has rule names, level and examples', lesson.includes(list[0].ruleNames[0]) && lesson.includes('Level: A1') && lesson.includes('**Der**'));
 
+
+// ---- R26: known grammar comes from the curriculum; B1 is not asked at A1 level; difficulty has its own task types ----
+{
+  const PR = await import('../lib/prompt.js');
+  const kgA2 = C.knownGrammarText('A2');
+  const kgB1 = C.knownGrammarText('B1');
+  check('known grammar A1 lists only A1 topics', C.knownGrammarText('A1').split('\n').length === 1 && !C.knownGrammarText('A1').includes('Passiv'));
+  check('known grammar B1 has every curriculum topic title', C.CURRICULUM.every((e) => kgB1.includes(C.shortTitle(e))));
+  check('known grammar A2 has no B1 topic', !kgA2.includes('Plusquamperfekt') && kgA2.includes('Wechselpräpositionen'));
+  check('B1 lesson text asks for B1 sentences, A1/A2 stay simple', /natural B1 sentences/.test(C.curriculumLesson(C.curriculumEntry('g-b1-relativsaetze'))) && /simple, short sentences/.test(C.curriculumLesson(C.curriculumEntry('g-a2-weil'))));
+  const mk = (level, difficulty, knownGrammar, words = null, grammar = []) => PR.buildSystemPrompt({
+    name: 'Emilio', lesson: C.curriculumLesson(C.curriculumEntry('g-b1-relativsaetze')), words, models: [], knownGrammar,
+    catalog: [{ id: 'g-b1-relativsaetze', title: 'Relativsätze', type: 'Grammatik', levels: ['B1'] }],
+    settings: { level, difficulty, grammar, variant: 'ch', direction: 'en-de' }, session: { topicId: 'g-b1-relativsaetze', total: 10, openNumber: 0, openLine: '' },
+    progress: { done: 0, answered: 0, correct: 0, skipped: 0 }, mistakes: [], notes: [], guessed: false, asked: [],
+  });
+  const p = mk('B1', 'Schwer', kgB1);
+  check('prompt: KNOWN GRAMMAR is the curriculum list, no A1–A2 fallback', p.includes(kgB1) && !p.includes('assume A1–A2') && !p.includes('if empty: A1–A2'));
+  for (const [d, words] of [['Leicht', ['Auswahl', 'ONE gap']], ['Mittel', ['transformation', 'Aktiv → Passiv']], ['Schwer', ['translate a whole sentence', 'find the mistake', '12–20 words with a Nebensatz']]]) {
+    const pd = mk('B1', d, kgB1);
+    check(`prompt (${d}): its own grammar task types`, words.every((w) => pd.includes(w)));
+  }
+  check('prompt: case is not named on Mittel and Schwer (CASE CHOICE)', p.includes('CASE CHOICE') && /NEVER name the case/.test(p));
+  const v = mk('B1', 'Mittel', kgB1, { header: 'id | German', lines: ['w1 | Lampe'] }, ['akkusativ']);
+  check('prompt: NEW WORDS rule (show first, German → English), "new" and "extra" columns', v.includes('NEW WORDS') && v.includes('"de-en"') && v.includes('"extra"') && v.includes('"new"'));
+  check('prompt: repeated mistake gets a new memory aid', /NEW memory aid or a contrasting pair/.test(p));
+}
+
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nall checks passed');
 process.exit(failed ? 1 : 0);

@@ -26,7 +26,8 @@ const fits = rows.filter((x) => x.r.fits).length;
 check('rules are right for at least 80 % of the nouns they match', fits / rows.length >= 0.8, `${fits} of ${rows.length}`);
 
 const line = wordLine(nouns.find((w) => w.noun === 'Wohnung') || nouns[0]);
-check('the tutor\'s word list has a "gender rule" column', WORD_LINE_HEADER.endsWith('gender rule') && line.split(' | ').length === WORD_LINE_HEADER.split(' | ').length);
+check('the tutor\'s word list has a "gender rule" column', WORD_LINE_HEADER.includes('gender rule') && line.split(' | ').length === WORD_LINE_HEADER.split(' | ').length);
+check('the word list has "extra" and "new" columns; only a fresh word is marked', WORD_LINE_HEADER.endsWith('extra | new') && wordLine(nouns[0], true).endsWith(' | new') && !wordLine(nouns[0]).endsWith(' | new'));
 
 console.log(failed ? `\n${failed} check(s) failed.` : '\nAll gender checks passed.');
 process.exit(failed ? 1 : 0);
