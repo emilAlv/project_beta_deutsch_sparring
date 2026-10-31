@@ -14,7 +14,7 @@ export default function SessionRibbon({ session, onEnd, disabled }) {
   const vocab = st.kind === 'vocab';
   const tags = [
     t(`kind_${modeOf(st)}`),
-    st.topicLabel || session.topicName,
+    st.kind === 'mixed' ? null : st.topicLabel || session.topicName, // a mixed review shows "Mixed review" (the first tag), no topic
     st.level,
     t(`diff_${st.difficulty}`),
     vocab ? t(`dirShort_${dirKey(st.direction)}`) : null,
@@ -30,7 +30,7 @@ export default function SessionRibbon({ session, onEnd, disabled }) {
   return (
     <div className="ribbon" role="region" aria-label={t('ribbonLabel')}>
       <ul className="ribbon-tags">
-        {tags.map((x, i) => <li key={`${i}-${x}`} className={i === 1 ? 'tag tag-topic' : x === tags.at(-1) && st.milestoneId ? 'tag tag-ms' : 'tag'} title={x}>{x}</li>)}
+        {tags.map((x, i) => <li key={`${i}-${x}`} className={i === (st.kind === 'mixed' ? 0 : 1) ? 'tag tag-topic' : x === tags.at(-1) && st.milestoneId ? 'tag tag-ms' : 'tag'} title={x}>{x}</li>)}
       </ul>
       <div className="ribbon-progress">
         <span className="ribbon-count">{label}</span>

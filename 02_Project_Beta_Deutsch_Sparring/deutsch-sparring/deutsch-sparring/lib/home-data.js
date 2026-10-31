@@ -13,6 +13,10 @@ import { grammarStatsFromLog, slimStats } from './grammar-stats';
 import { computeHome, aggregateAnswers, answersFromLog, scoresFromCompact } from './home-stats';
 import { getWords, getWord, listSections } from './words';
 import { homeExtras } from './home-plan';
+import { cleanErrorLog, mistakesForTutor } from './error-log';
+
+// the coach reads the same error log as "Repeat my mistakes" and the Mixed review (lib/error-log.js): the newest few, 3 fields each
+const COACH_ERRORS = 6;
 
 // What the plan generator (lib/plan-templates.js) needs for one student: the word list, the word scores and the
 // per-topic grammar counts (review R10). Used by /api/plan and, from R12, by the Coach. Stores nothing.
@@ -67,8 +71,9 @@ export async function homeData(user, body) {
   const server = todayKey();
   const today = isDay(body?.today) && Math.abs(dayNum(body.today) - dayNum(server)) <= 1 ? body.today : server;
   if (user) {
-    const [goals, agg, scores, grammarStats] = await Promise.all([
+    const [goals, agg, scores, grammarStats, errorLog] = await Promise.all([
       goalsStore().list(user.id), progress().answerStats(user.id), progress().scores(user.id), progress().grammarStats(user.id),
+      progress().errorLog(user.id).catch(() => []),
     ]);
     const { plans, newlyReached } = plansFor(goals, { scores, grammarStats, today });
     // latching: a milestone that is reached for the first time is saved now and stays reached (a failure here must not break Home)
@@ -76,7 +81,7 @@ export async function homeData(user, body) {
       .catch((e) => console.error('markReached failed:', e?.message))));
     const upgrades = upgradesFor(goals, { words: getWords(), sections: listSections(), today, scores, grammarStats });
     const shown = goals.map((g) => applyReached(g, newlyReached[g.id], today));
-    return { goals: shown, ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades, ...extrasFor(shown, plans, today, grammarStats) };
+    return { goals: shown, errors: mistakesForTutor(errorLog, COACH_ERRORS), ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades, ...extrasFor(shown, plans, today, grammarStats) };
   }
   const goals = (Array.isArray(body?.goals) ? body.goals : []).slice(0, MAX_GOALS).map(cleanAnyGoal).filter(Boolean);
   const agg = aggregateAnswers(answersFromLog(body?.log));
@@ -86,5 +91,5 @@ export async function homeData(user, body) {
   const lastPractice = Math.max(0, ...(Array.isArray(body?.log) ? body.log : []).map((e) => Number(e?.t) || 0));
   const { plans, newlyReached } = plansFor(goals, { scores, grammarStats, today, lastPractice });
   const upgrades = upgradesFor(goals, { words: getWords(), sections: listSections(), today, scores, grammarStats });
-  return { goals, ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades, ...extrasFor(goals, plans, today, grammarStats) };
+  return { goals, errors: mistakesForTutor(cleanErrorLog(body?.errlog), COACH_ERRORS), ...computeHome({ goals, scores, agg }), grammarStats: slimStats(grammarStats), plans, newlyReached, upgrades, ...extrasFor(goals, plans, today, grammarStats) };
 }

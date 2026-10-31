@@ -546,7 +546,7 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 .setup-field .segmented button { min-height: 40px; font-size: 13px; padding: 4px 6px; }
 .setup-error { margin-top: 4px; font-size: 13px; color: var(--mistake); }
 
-.kind-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kind-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
 .kind-option {
   display: flex; flex-direction: column; gap: 6px;
   padding: 16px 18px; text-align: left;
