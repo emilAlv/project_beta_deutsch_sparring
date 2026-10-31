@@ -14,9 +14,14 @@ import { checkCode, overDailyLimit } from '../../../lib/guard';
 import { draftWithNoveltyRetry } from '../../../lib/novelty';
 import { pickModels, cleanModelIds } from '../../../lib/exercise-models';
 import { QUESTION_MIN, QUESTION_MAX } from '../../../lib/intents';
+import { MIXED_TOPIC, MIXED_TOPIC_ID } from '../../../lib/session-settings';
+import { buildReviewPlan, cleanReviewPlan } from '../../../lib/mixed-review';
+import { cleanErrorLog, mergeErrorLogs, mistakesForTutor } from '../../../lib/error-log';
+import { grammarStatsFromLog } from '../../../lib/grammar-stats';
+import { modelsFor } from '../../../lib/exercise-models';
 import { requireUser } from '../../../lib/auth';
 import { cleanVariant, replyToVariant, toVariant } from '../../../lib/variants';
-import { progress, cleanScores } from '../../../lib/progress';
+import { progress as progressStore, cleanScores } from '../../../lib/progress';
 import { fail, reasonCode, replyShape, readJsonBody, MAX_BYTES_CHAT } from '../../../lib/route-guard';
 
 export const dynamic = 'force-dynamic';
@@ -81,7 +86,7 @@ async function handle(req) {
   const lessons = allTopics();
   const selectableLessons = topicsForLevel(lessons, settings.level);
   // Keep every old id valid for a session already in progress, but only offer/guess topics for its CEFR level.
-  const allCatalog = [...lessons, FREE_TOPIC];
+  const allCatalog = [...lessons, FREE_TOPIC, MIXED_TOPIC];
   const topicIds = new Set(allCatalog.map((t) => t.id));
   const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.text || '';
   const count = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
@@ -119,11 +124,17 @@ async function handle(req) {
   const catalog = [...selectableLessons];
   if (currentTopic && currentTopic.id !== FREE_TOPIC.id && !catalog.some((t) => t.id === currentTopic.id)) catalog.push(currentTopic);
   catalog.push(FREE_TOPIC);
-  const mistakes = (Array.isArray(body.mistakes) ? body.mistakes : []).slice(0, 8).map((m) => ({
-    studentAnswer: String(m?.studentAnswer || '').slice(0, 200),
-    corrected: String(m?.corrected || '').slice(0, 200),
-    rule: String(m?.rule || '').slice(0, 80),
-  }));
+  // the error log (lib/error-log.js): this session's and the browser's mistakes first, then – logged in – the answers table.
+  // "Repeat my mistakes", the tutor's RECENT MISTAKES and the Mixed review all read from this one list.
+  let errorLog = cleanErrorLog(body.mistakes, 100);
+  if (user) {
+    try {
+      errorLog = mergeErrorLogs([errorLog, await progressStore().errorLog(user.id)], 100);
+    } catch (e) {
+      console.error('error log unavailable:', e?.message);
+    }
+  }
+  const mistakes = mistakesForTutor(errorLog, 8);
   // "Repeat my mistakes": the mistakes of THIS session that the app sends with the chip (rule / word, never trusted further than text)
   const repeat = (Array.isArray(body.repeatMistakes) ? body.repeatMistakes : []).slice(0, 8).map((m) => ({
     studentAnswer: String(m?.studentAnswer || '').slice(0, 200),
@@ -150,7 +161,7 @@ async function handle(req) {
       let scores;
       if (user) {
         try {
-          scores = await progress().scores(user.id, null);
+          scores = await progressStore().scores(user.id, null);
         } catch (e) {
           console.error('word scores unavailable:', e?.message);
           scores = {};
@@ -174,9 +185,49 @@ async function handle(req) {
       for (const w of words) if (isNew(scores[w.id])) fresh.add(w.id);
     }
   }
+  // --- Mixed review (lib/mixed-review.js): the plan is made once, at the first request, from the error log, the topic scores
+  // and the word scores; the browser keeps it and sends it back with every request ---
+  let reviewPlan = null;
+  let review = [];
+  if (topicId === MIXED_TOPIC_ID) {
+    const grammarTopics = lessons.filter((x) => x.type !== 'Wortschatz');
+    const known = new Set(grammarTopics.map((x) => x.id));
+    reviewPlan = cleanReviewPlan(body.reviewPlan).filter((it) => (it.kind === 'word' ? Boolean(getWord(it.wordId)) : !it.topicId || known.has(it.topicId)));
+    if (!reviewPlan.length) {
+      let grammarStats;
+      let scores;
+      try {
+        if (user) {
+          [grammarStats, scores] = await Promise.all([progressStore().grammarStats(user.id), progressStore().scores(user.id, null)]);
+        } else {
+          grammarStats = grammarStatsFromLog(body.review?.rulelog);
+          scores = cleanScores(body.review?.scores);
+        }
+      } catch (e) {
+        console.error('mixed review numbers unavailable:', e?.message);
+        grammarStats = {};
+        scores = {};
+      }
+      reviewPlan = buildReviewPlan({
+        grammarStats, scores, errors: errorLog, topics: grammarTopics, words: getWords(), level: settings.level,
+        sources: sourcesFor('both'), total: session.total, difficulty: settings.difficulty, now: Date.now(),
+      });
+    }
+    words = reviewPlan.filter((it) => it.kind === 'word').map((it) => getWord(it.wordId)).filter(Boolean);
+    const seenAt = new Map();
+    review = reviewPlan.map((it) => {
+      if (it.kind === 'word') return { kind: 'word', wordId: it.wordId };
+      const entry = it.topicId ? curriculumEntry(it.topicId) : null;
+      const title = entry?.title || grammarTopics.find((x) => x.id === it.topicId)?.title || '';
+      const at = seenAt.get(it.topicId) || 0; // the same topic twice: the next model
+      seenAt.set(it.topicId, at + 1);
+      const all = modelsFor(it.topicId);
+      return { ...it, title, rule: entry?.rule?.split(/(?<=[.!?])\s+/)[0] || '', ruleNames: entry?.ruleNames || [], model: all.length ? all[at % all.length] : null };
+    });
+  }
   // --- exercise models (grammar topics): 3–5 patterns the AI turns into NEW exercises (lib/exercise-models.js) ---
   // The first request picks them (rotating: models from recent sessions come last); the browser sends the ids back every time.
-  const models = topicId && !filter ? pickModels(topicId, { keep: cleanModelIds(body.modelIds), seen: cleanModelIds(body.seenModels), total: session.total }) : [];
+  const models = topicId && !filter && !reviewPlan ? pickModels(topicId, { keep: cleanModelIds(body.modelIds), seen: cleanModelIds(body.seenModels), total: session.total }) : [];
   const modelIds = models.map((m) => m.id);
 
   // the parts the open question tests (Easy: the word · Medium: + article · Hard: + plural), so feedback.parts has exactly those
@@ -190,7 +241,7 @@ async function handle(req) {
   let text;
   try {
     if (process.env.MOCK === '1') {
-      text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null, models });
+      text = await mockReply({ text: lastUser, settings, session, progress, words, topics: catalog, topic: catalog.find((t) => t.id === topicId) || null, models, reviewPlan });
     } else {
       text = await draftWithNoveltyRetry({
         ask: askGemini,
@@ -238,9 +289,9 @@ async function handle(req) {
 
     const system = buildSystemPrompt({
       name: String(name || 'du').slice(0, 40),
-      lesson: filter ? null : (curriculumEntry(topicId) ? curriculumLesson(curriculumEntry(topicId)) : getLesson(topicId)),
+      lesson: filter || reviewPlan ? null : (curriculumEntry(topicId) ? curriculumLesson(curriculumEntry(topicId)) : getLesson(topicId)),
       models,
-      words: filter ? { header: WORD_LINE_HEADER, lines: words.map((w) => wordLine(w, fresh.has(w.id))) } : null,
+      words: filter || reviewPlan ? { header: WORD_LINE_HEADER, lines: words.map((w) => wordLine(w, fresh.has(w.id))) } : null,
       knownGrammar: getKnownGrammar() || knownGrammarText(settings.level),
       catalog,
       settings: { ...settings, difficulty: DIFFICULTY_DE[settings.difficulty] },
@@ -251,6 +302,7 @@ async function handle(req) {
       notes,
       guessed,
       asked,
+      review,
     });
     return generate({ system: `${system}${extraInstruction}`, contents: recent, schema: RESPONSE_SCHEMA, deadline });
   }
@@ -262,7 +314,7 @@ async function handle(req) {
   if (!reply) {
     // invalid JSON: the browser shows the text as a normal message and keeps the panel as it is
     console.warn('Tutor answer was not valid JSON:', replyShape(text)); // never the text itself (a student's words may be in it)
-    return Response.json({ reply: null, text: toVariant(salvageMessage(text) || String(text).slice(0, 2000), settings.variant), words: wordInfo(), models: modelIds });
+    return Response.json({ reply: null, text: toVariant(salvageMessage(text) || String(text).slice(0, 2000), settings.variant), words: wordInfo(), models: modelIds, ...(reviewPlan ? { plan: reviewPlan } : {}) });
   }
   // modelText = what the browser sends back as this tutor turn next time (without the bulky parts)
   const { grammarFocus, options, ...essentials } = parsed;
@@ -272,10 +324,10 @@ async function handle(req) {
     essentials.exercise = { ...essentials.exercise };
     delete essentials.exercise.answer;
   }
-  return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo(), models: modelIds });
+  return Response.json({ reply, modelText: JSON.stringify(essentials), words: wordInfo(), models: modelIds, ...(reviewPlan ? { plan: reviewPlan } : {}) });
 
   // the picked words for the browser to keep: id + type + the word as shown on the summary screen (phrases have no grammar score)
   function wordInfo() {
-    return filter ? words.map((w) => ({ id: w.id, type: w.type, label: (w.noun ? `${w.article} ${w.noun}` : w.de || w.id).slice(0, 60), ...(fresh.has(w.id) ? { fresh: true } : {}) })) : undefined;
+    return filter || reviewPlan ? words.map((w) => ({ id: w.id, type: w.type, label: (w.noun ? `${w.article} ${w.noun}` : w.de || w.id).slice(0, 60), ...(fresh.has(w.id) ? { fresh: true } : {}) })) : undefined;
   }
 }

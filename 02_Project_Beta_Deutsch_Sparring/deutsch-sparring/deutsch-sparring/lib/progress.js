@@ -12,6 +12,7 @@ import { cleanRule, topicForRule } from './rules';
 import { isCurriculumId } from './curriculum';
 import { listLessons } from './content';
 import { grammarStatsFromAnswers, STATS_WINDOW } from './grammar-stats';
+import { errorLogFromAnswers, ERROR_LOG_MAX } from './error-log';
 import { aggregateAnswers, cleanRuleRows, WINDOW_DAYS } from './home-stats';
 
 const MAX_SCORE_ROWS = 2000;
@@ -294,6 +295,10 @@ const memoryStore = {
   async grammarStats(userId) {
     return grammarStatsFromAnswers(box(userId).answers.map((a) => ({ ...a, t: a.createdAt })));
   },
+  // the student's error log (lib/error-log.js): every wrong answer, newest first
+  async errorLog(userId) {
+    return errorLogFromAnswers(box(userId).answers.map((a) => ({ ...a, t: a.createdAt })));
+  },
   async hasData(userId) {
     const b = box(userId);
     return b.imported || b.sessions.size > 0 || b.scores.size > 0;
@@ -423,6 +428,19 @@ const dbStore = {
       [userId],
     );
     return grammarStatsFromAnswers(rows.map((r) => ({ topicId: r.topic_id, correct: r.correct, skipped: r.skipped, hinted: r.hinted, t: Number(r.t) })));
+  },
+  // the student's error log (lib/error-log.js): wrong answers (not skipped) that name a rule or have a corrected sentence
+  async errorLog(userId) {
+    await ensureSchema();
+    const rows = await sql().query(
+      `SELECT question, student_answer, corrected, rule, topic_id, word_id, extract(epoch FROM created_at) * 1000 AS t FROM answers
+       WHERE user_id = $1 AND correct = false AND skipped = false AND (COALESCE(rule, '') <> '' OR COALESCE(corrected, '') <> '')
+       ORDER BY created_at DESC, id DESC LIMIT $2`,
+      [userId, ERROR_LOG_MAX * 2],
+    );
+    return errorLogFromAnswers(rows.map((r) => ({
+      question: r.question, studentAnswer: r.student_answer, corrected: r.corrected, rule: r.rule, topicId: r.topic_id, wordId: r.word_id, t: Number(r.t),
+    })));
   },
   async hasData(userId) {
     await ensureSchema();

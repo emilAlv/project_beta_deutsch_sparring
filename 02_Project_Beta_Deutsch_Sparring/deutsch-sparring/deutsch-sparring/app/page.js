@@ -27,14 +27,15 @@ import SessionSummary from '../components/SessionSummary';
 import { goalSnapshot } from '../lib/home-client';
 import { t } from '../lib/ui-text';
 import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
-import { DEFAULT_SETUP, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
+import { DEFAULT_SETUP, MIXED_TOPIC, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
+import { cleanReviewPlan } from '../lib/mixed-review';
 import { suggestionToSetup } from '../lib/coach';
 import { setupFromSession } from '../lib/home-plan';
 import { score, summaryOf, hasMistakes, isRepeatRequest, mistakeList } from '../lib/stats';
 import { mergeQuestions, recentQuestions, sessionQuestions, seenModelIds } from '../lib/question-history';
 import {
   loadProfile, saveProfile, loadPrefs, savePrefs, loadChat, saveChat, loadHistory,
-  recordSession, recentMistakes, currentStreak, loadScores, recordWordAnswer, setStorageAccount, clearAccountData,
+  recordSession, recentMistakes, currentStreak, loadScores, loadRuleLog, recordWordAnswer, setStorageAccount, clearAccountData,
   initProgress, progressSaved, startSessionRecord,
 } from '../lib/storage';
 
@@ -63,6 +64,7 @@ function newSession(topic = null, settings = null) {
     grammarFocus: null,
     wordIds: [], // vocabulary: the words picked for this session (by the server, from the scores)
     words: [], // … with their type: [{ id, type }]
+    reviewPlan: [], // Mixed review: what each question is ({ kind: 'grammar'|'mistake'|'word', topicId, wordId … }), made by the server at the first request
     modelIds: [], // grammar: the exercise models picked for this session (by the server); the next session on this topic gets other ones
     started: false, // the first question has arrived
     finished: false,
@@ -165,6 +167,7 @@ export default function Home() {
   // with accounts: { username } of the logged-in student (their name in the app), else null
   const [account, setAccount] = useState(null);
   const topicById = (id) => topicsRef.current.find((x) => x.id === id)
+    || (id === MIXED_TOPIC.id ? MIXED_TOPIC : null)
     || (id === 'free' ? { id: 'free', short: 'Freies Üben', type: 'Gemischt' } : null);
 
   const [busy, setBusyState] = useState(false);
@@ -549,6 +552,14 @@ export default function Home() {
 
   // Word scores: the APP updates them (lib/scores.js), never the model. Called once per answer.
   // record = the answer's details, saved with it in the account (lib/storage.js)
+  // the topic and kind an answer is saved under. Mixed review: the topic of THAT question from the plan (a word question has none)
+  function answerTopic(session, n) {
+    const st = session.settings || {};
+    if (st.kind !== 'mixed') return { topicId: st.topicId || session.topicId || null, kind: st.kind || null };
+    const it = session.reviewPlan?.[n - 1];
+    return it?.kind === 'word' ? { topicId: null, kind: 'vocab' } : { topicId: it?.topicId || null, kind: 'grammar' };
+  }
+
   function scoreAnswer(session, exercise, { correct = false, errorType = null, skipped = false, parts = null } = {}, record = null) {
     const type = session.words?.find((w) => w.id === exercise?.wordId)?.type;
     recordWordAnswer(exercise?.wordId || '', {
@@ -558,7 +569,7 @@ export default function Home() {
       checks: exercise?.checks, parts, direction: exercise?.direction || '', rule: record?.rule || '',
       hinted: Boolean(exercise?.hinted) || session.settings?.difficulty === 'easy', // a hint, or "Leicht" (multiple choice)
       hasG: type !== 'phrase',
-    }, record && { ...record, sessionId: session.id, topicId: session.settings?.topicId || session.topicId || null, kind: session.settings?.kind || null, difficulty: session.settings?.difficulty || null });
+    }, record && { ...record, sessionId: session.id, ...answerTopic(session, record.n), difficulty: session.settings?.difficulty || null });
   }
 
   // stop waiting for the tutor (button in the input, or "Stopp" while it is writing)
@@ -702,6 +713,9 @@ export default function Home() {
       modelIds: s.modelIds || [],
       seenModels: seenModelIds(s, historyRef.current.sessions),
       ...(isVocab(s) && !s.wordIds?.length ? { scores: loadScores(), source: st.source || 'both' } : {}),
+      // Mixed review: the first request carries what the server cannot read itself (accounts off: the browser's scores and
+      // topic log); every later request carries the plan the server made
+      ...(st.kind === 'mixed' ? (s.reviewPlan?.length ? { reviewPlan: s.reviewPlan } : { review: { scores: loadScores(), rulelog: loadRuleLog() } }) : {}),
       grammarFocus: s.grammarFocus || null, // so the server can hide it if it would give away the next card
       progress: score(s.answers),
       // Recent questions from this session and earlier sessions with the same setup.
@@ -747,8 +761,9 @@ export default function Home() {
         add({ role: 'tutor', text: data.text || '…', modelText: data.text || '' });
         if (Array.isArray(data.words) && data.words.length) updateSession((x) => (x.wordIds?.length ? x : { ...x, wordIds: data.words.map((w) => w.id), words: data.words }));
         if (Array.isArray(data.models) && data.models.length) updateSession((x) => (x.modelIds?.length ? x : { ...x, modelIds: data.models }));
+        if (Array.isArray(data.plan) && data.plan.length) updateSession((x) => (x.reviewPlan?.length ? x : { ...x, reviewPlan: cleanReviewPlan(data.plan) }));
       } else {
-        then = applyReply(data.reply, data.modelText, sent, data.words, data.models);
+        then = applyReply(data.reply, data.modelText, sent, data.words, data.models, data.plan);
       }
     } catch (e) {
       if (request.cancelled) return;
@@ -769,7 +784,7 @@ export default function Home() {
 
   // The tutor's answer → chat message + session. Returns a follow-up action (or null).
   // The settings are fixed: a topic, level or difficulty the tutor sends back is ignored.
-  function applyReply(reply, modelText, sent, pickedWords, pickedModels) {
+  function applyReply(reply, modelText, sent, pickedWords, pickedModels, pickedPlan) {
     const rs = reply.session;
     const before = convoRef.current.session;
     const s = { ...before };
@@ -779,6 +794,9 @@ export default function Home() {
       s.wordIds = pickedWords.map((w) => w.id);
       s.words = pickedWords;
     }
+
+    // Mixed review: the plan the server made (what each question is) is kept for the whole session
+    if (Array.isArray(pickedPlan) && pickedPlan.length && !s.reviewPlan?.length && !s.finished) s.reviewPlan = cleanReviewPlan(pickedPlan);
 
     // the exercise models the server picked for this grammar session: kept for the whole session
     if (Array.isArray(pickedModels) && pickedModels.length && !s.modelIds?.length && s.topicId && !s.finished) s.modelIds = pickedModels;

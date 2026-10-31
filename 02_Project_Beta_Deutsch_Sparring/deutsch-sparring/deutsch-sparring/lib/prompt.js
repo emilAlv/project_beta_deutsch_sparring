@@ -101,7 +101,8 @@ function wordGrammarRules(grammar, name) {
 // What the browser sends (earlier mistakes, app notes, earlier questions) goes into one clearly fenced block
 // at the end, so the model can tell it from the app's own instructions. The fence itself is removed from the text.
 const unfence = (x) => String(x).replace(/<\/?student-data>/gi, '').replace(/\s+/g, ' ').trim();
-export function dataBlock({ notes = [], mistakes = [], asked = [], repeat = [] }) {
+export function dataBlock({ notes = [], mistakes = [], asked = [], repeat = [], review = [] }) {
+  const past = review.filter((r) => r.kind === 'mistake');
   return `<student-data>
 APP NOTES (settings the student just changed in the app; already applied)
 ${notes.length ? notes.map((n) => `- ${unfence(n)}`).join('\n') : '(none)'}
@@ -112,7 +113,10 @@ ${repeat.map((m) => `- ${m.word ? `${unfence(m.word)}: ` : ''}"${unfence(m.stude
 ` : ''}RECENT MISTAKES (for "repeat my mistakes")
 ${mistakes.length ? mistakes.map((m) => `- "${unfence(m.studentAnswer)}" → "${unfence(m.corrected)}" (${unfence(m.rule)})`).join('\n') : '(none yet)'}
 
-ALREADY ASKED IN THIS SESSION (exclusion list: do not repeat or lightly paraphrase any prompt, scenario, main verb or sentence frame; recycle the target in a genuinely new context)
+${past.length ? `PAST MISTAKES FOR THE MIXED REVIEW (the student's own earlier errors; "PAST MISTAKE #k" in the plan points here)
+${past.map((m, i) => `- #${i + 1}: "${unfence(m.studentAnswer)}" → "${unfence(m.corrected)}"${m.rule ? ` (${unfence(m.rule)})` : ''}${m.question ? ` | earlier task: ${unfence(m.question)}` : ''}`).join('\n')}
+
+` : ''}ALREADY ASKED IN THIS SESSION (exclusion list: do not repeat or lightly paraphrase any prompt, scenario, main verb or sentence frame; recycle the target in a genuinely new context)
 ${asked.length ? asked.map((a) => `- ${unfence(a)}`).join('\n') : '(none)'}
 </student-data>`;
 }
@@ -133,8 +137,32 @@ Base each new question on ONE of these models and go through them in turn (never
 ${models.map(one).join('\n')}`;
 }
 
+// The plan of a MIXED REVIEW session (lib/mixed-review.js) as lines for the system prompt. items = resolved plan items:
+// { kind: 'grammar'|'mistake'|'word', title, rule, ruleNames, model, wordId } in question order. '' without a plan.
+export function reviewBlock(items = [], name = 'the student', level = 'B1') {
+  if (!items.length) return '';
+  let k = 0;
+  const lines = items.map((it, i) => {
+    const q = `Question ${i + 1}`;
+    if (it.kind === 'word') return `- ${q}: FLASHCARD of the word with id "${it.wordId}" from the WORDS list (exercise.task "flashcard", exercise.wordId = that id).`;
+    const names = it.ruleNames?.length ? ` feedback.rule = one of ${it.ruleNames.map((r) => `"${r}"`).join(', ')}.` : '';
+    const model = it.model ? ` Pattern (do not copy): [${it.model.type}] "${unfence(it.model.model)}" | reference answer: "${unfence(it.model.answer)}".` : '';
+    if (it.kind === 'mistake') {
+      k += 1;
+      return `- ${q}: PAST MISTAKE #${k}${it.title ? ` (topic: ${it.title})` : ''}: write a NEW grammar question on the same point as that earlier error, with different content words and a new situation; never the old sentence.${names}${model}`;
+    }
+    return `- ${q}: GRAMMAR topic "${it.title}" (${it.rule || 'rule in the topic'}): one exercise on this topic.${names}${model}`;
+  });
+  return `MIXED REVIEW (this session has NO single topic: it repeats what ${name} should see again; this OVERRIDES "practise ONLY the chosen topic")
+- Question n follows plan line n exactly, in this order. Mix of: grammar topics that are due, ${name}'s own past mistakes, and due words.
+- Grammar and past-mistake questions: ordinary grammar tasks (exercise.task "grammar" is NOT used; leave exercise.wordId empty), task types by the DIFFICULTY above, at level ${level}. Do not tell ${name} which topic a question is from.
+- Word questions: ordinary flashcards by the VOCABULARY rules below, using only the WORDS list; no sentence task after the card.
+- Keep session.topicId = "mixed-review". Set feedback.rule for grammar questions; the app scores each answer for the right topic itself.
+${lines.join('\n')}`;
+}
+
 export function buildSystemPrompt({
-  name, lesson, words = null, models = [], knownGrammar, catalog, settings, session, progress, mistakes, repeat = [], notes, guessed, asked = [],
+  name, lesson, words = null, models = [], knownGrammar, catalog, settings, session, progress, mistakes, repeat = [], notes, guessed, asked = [], review = [],
 }) {
   const grammar = settings.grammar || [];
   const level = DIFFICULTY[settings.difficulty] || 'medium';
@@ -189,7 +217,7 @@ ${CARD_LEVELS[level].join('\n')}
 - Noun drill: use it when ${name} asks for it or as the safe fallback when no natural contextual noun sentence is available; practise the article, case and adjective ending without inventing an arbitrary predicate.
 - Phrases (and other word types without grammar task): English → German, a close answer is fine (same meaning, small differences in small words); errorType Wortschatz if wrong.
 
-${vocab ? wordGrammarRules(grammar, name) : ''}JSON FIELDS
+${vocab ? wordGrammarRules(grammar, name) : ''}${review.length ? `${reviewBlock(review, name, settings.level)}\n\n` : ''}JSON FIELDS
 - message: what you say, 1–2 short sentences in simple German at ${name}'s level, warm and encouraging. Do NOT repeat the exercise or the corrected sentence – they get their own cards. **bold** is allowed for one key word.
 - feedback: ONLY when ${name}'s message answers the open question, otherwise null.
   forNumber = the open question's number. Judge communication first: correct = true when the intended meaning is clear and the practised point is right. A different natural solution is not an error.
@@ -234,5 +262,5 @@ ${knownGrammar || '(not listed: use the grammar normal for the level)'}
 
 ${words ? `WORDS FOR THIS SESSION (${words.length} words, one per line, in the order to use them: ${words.header})\n${words.lines.join('\n')}` : lesson ? `TOPIC (lesson)\n${lesson}${models.length && !words ? `\n\n${exerciseModelsBlock(models)}` : ''}` : topic?.id === 'free' ? 'TOPIC: free practice, no lesson file.' : ''}
 
-${dataBlock({ notes, mistakes, asked, repeat })}`;
+${dataBlock({ notes, mistakes, asked, repeat, review })}`;
 }

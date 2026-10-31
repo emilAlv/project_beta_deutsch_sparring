@@ -8,7 +8,7 @@ import { t, dirKey } from '../lib/ui-text';
 import { wordsNeeded } from '../lib/scores';
 import {
   MODES, modeOf, LEVELS, DIFFICULTIES, QUESTION_STEPS, SOURCES, DIRECTIONS, VARIANTS, GRAMMAR_POINTS,
-  withSentences, sessionSettings, DEFAULT_SETUP,
+  withSentences, sessionSettings, DEFAULT_SETUP, MIXED_QUESTION_STEPS,
 } from '../lib/session-settings';
 import { setupMatches } from '../lib/milestone-session';
 import { QUESTION_MIN } from '../lib/intents';
@@ -78,6 +78,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
   const [form, setForm] = useState(initial);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const vocab = form.kind === 'vocab';
+  const mixed = form.kind === 'mixed';
   const mode = modeOf(form);
 
   const grammarTopics = useMemo(() => topics.filter((x) => isGrammarTopic(x) && (x.levels || []).includes(form.level)), [topics, form.level]);
@@ -92,7 +93,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
   const lists = section ? topics.filter((x) => x.parent === section.id && countOf(x, form.level, form.source) > 0) : [];
   const list = lists.find((x) => x.id === form.list) || null;
   const vocabTopic = list || section;
-  const topic = vocab ? vocabTopic : grammarTopic;
+  const topic = mixed ? { id: 'mixed-review', short: t('kind_mixed') } : vocab ? vocabTopic : grammarTopic;
 
   const available = countOf(vocabTopic, form.level, form.source);
   // a short list cannot fill the chosen number of questions without asking the same word again and again:
@@ -106,11 +107,11 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
     : null;
   const needed = wordsNeeded(questions, withSentences(form));
   const effective = { ...form, questions, grammarTopic: grammarTopic?.id || null, section: section?.id || null, list: list?.id || null };
-  const topicLabel = !topic ? '' : vocab && list ? `${section.short} › ${list.short}` : topic.short;
+  const topicLabel = mixed ? t('kind_mixed') : !topic ? '' : vocab && list ? `${section.short} › ${list.short}` : topic.short;
 
   const summary = [
     t(`kind_${mode}`),
-    topicLabel || t('setupChooseTopic'),
+    mixed ? null : topicLabel || t('setupChooseTopic'),
     form.level,
     t(`diff_${form.difficulty}`),
     cut ? t('setupCutSummary', { n: available, q: questions }) : t('questionsN', { n: questions }),
@@ -122,7 +123,8 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
 
   // Grammar · Vocabulary (flashcards only = the word session with the sentence tasks off) · Vocabulary + grammar
   function chooseMode(m) {
-    if (m === 'grammar') set({ kind: 'grammar' });
+    if (m === 'mixed') set({ kind: 'mixed', questions: form.questions > 20 ? 20 : form.questions });
+    else if (m === 'grammar') set({ kind: 'grammar' });
     else if (m === 'words') set({ kind: 'vocab', grammar: [] });
     else set({ kind: 'vocab', grammar: withSentences({ kind: 'vocab', grammar: form.grammar }) ? form.grammar : DEFAULT_SETUP.grammar });
   }
@@ -195,7 +197,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
               </div>
               <div className="setup-field wide">
                 <p className="caps">{t('setupQuestions')}</p>
-                <Segmented label={t('setupQuestions')} options={QUESTION_STEPS} value={form.questions} onChange={(v) => set({ questions: v })} />
+                <Segmented label={t('setupQuestions')} options={mixed ? MIXED_QUESTION_STEPS : QUESTION_STEPS} value={form.questions} onChange={(v) => set({ questions: v })} />
               </div>
             </div>
           </Section>
@@ -206,6 +208,9 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
             </Section>
           )}
 
+          {mixed ? (
+            <Section title={t('setupTopic')}><p className="setup-help" data-testid="mixed-info">{t('setupMixedInfo')}</p></Section>
+          ) : (
           <Section title={t('setupTopic')}>
             {vocab ? (
               sections.length ? (
@@ -263,6 +268,7 @@ export default function SetupScreen({ topics, initial, milestone = null, onStart
               </>
             ) : <p className="setup-help">{t('setupNoGrammar')}</p>}
           </Section>
+          )}
 
           {vocab && (
             <>

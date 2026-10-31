@@ -1,6 +1,7 @@
 import { cleanRule, topicForRule } from './rules';
 import { applyAnswer, migrateRecords } from './scores';
 import { addToRuleLog } from './grammar-stats';
+import { addToErrorLog, cleanErrorLog, mergeErrorLogs } from './error-log';
 import { applyReached } from './plan-progress';
 import { PLAN_VERSION, cleanPlanGoal } from './plan';
 import { MAX_GOALS } from './goals';
@@ -19,6 +20,7 @@ const KEYS = {
   chat: 'wort_chat', // the current conversation, so a reload doesn't lose it
   goals: 'wort_goals', // [goal, …] – the goals with their milestones (lib/goals.js); with an account they live on the server
   rulelog: 'wort_rulelog', // { [topicId]: [[ok, hinted, t], … last 40] } – how the student does per grammar topic (no 30-day cut; lib/grammar-stats.js)
+  errlog: 'wort_errlog', // [{ studentAnswer, corrected, rule, question, topicId, wordId, t }, …] newest first, last 100 mistakes (lib/error-log.js); with an account the server has them
   alog: 'wort_answerlog', // the last answers (compact) for the Home page's 30-day stats; with an account the server has them
   coach: 'wort_coach', // [message, …] – the last 30 coach messages (lib/coach.js); with an account they live on the server
   coachTry: 'wort_coachtry', // { day } – the day the coach was last asked to greet by itself (at most one automatic call a day)
@@ -29,7 +31,7 @@ const KEYS = {
 
 // With accounts, the conversation and the session history are kept per username, so two
 // students sharing a computer never see each other's work ("wort_history@anna"); the word scores too.
-const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'scoresV2', 'goals', 'alog', 'rulelog', 'coach', 'coachTry', 'zoom']);
+const PER_ACCOUNT = new Set(['history', 'chat', 'scores', 'scoresV2', 'goals', 'alog', 'rulelog', 'errlog', 'coach', 'coachTry', 'zoom']);
 let account = '';
 const storageKey = (key) => (account && PER_ACCOUNT.has(key) ? `${KEYS[key]}@${account}` : KEYS[key]);
 
@@ -193,6 +195,7 @@ export const loadRuleLog = () => {
   const l = read('rulelog', {});
   return l && !Array.isArray(l) ? l : {};
 };
+export const loadErrorLog = () => cleanErrorLog(read('errlog', []));
 export const loadAnswerLog = () => {
   const l = read('alog', []);
   return Array.isArray(l) ? l : [];
@@ -267,20 +270,13 @@ export function recordSession(entry) {
   return next;
 }
 
-// Mistakes for "Repeat my mistakes": the current session first, then older ones.
+// Mistakes for "Repeat my mistakes" and the tutor's list: this session first, then the error log (lib/error-log.js; the
+// browser's own log – with an account the server adds its answers table). Returns up to 30 full entries, newest first.
 export function recentMistakes(currentAnswers, sessions) {
-  const now = currentAnswers.filter((a) => !a.correct && !a.skipped);
+  const now = currentAnswers.filter((a) => !a.correct && !a.skipped).reverse()
+    .map((a) => ({ ...a, wordId: a.wordId || '', t: Date.now() }));
   const older = sessions.flatMap((s) => s.mistakes || []);
-  const seen = new Set();
-  return [...now.reverse(), ...older]
-    .filter((m) => {
-      const k = m.corrected;
-      if (!k || seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    .slice(0, 8)
-    .map(({ studentAnswer, corrected, rule }) => ({ studentAnswer, corrected, rule }));
+  return mergeErrorLogs([now, loadErrorLog(), older], 30);
 }
 
 // ---------- word scores (the rules are in lib/scores.js; this is the only place that stores them) ----------
@@ -323,6 +319,10 @@ export function recordWordAnswer(wordId, answer, extra = null, now = Date.now())
       g, h: answer.hinted === true, d: extra.difficulty || '',
     });
     // review R9: every answer with a grammar topic also goes into the per-topic log
+    // …and a wrong answer into the error log (Repeat my mistakes, Coach, Mixed review)
+    if (answer.correct !== true && answer.skipped !== true) {
+      write('errlog', addToErrorLog(loadErrorLog(), { studentAnswer: extra.studentAnswer, corrected: extra.corrected, rule, question: extra.question, topicId: g, wordId, t: now }));
+    }
     if (g) write('rulelog', addToRuleLog(loadRuleLog(), g, { ok: answer.correct === true && answer.skipped !== true, hinted: answer.hinted === true, difficulty: extra.difficulty, t: now }));
   }
   if (!wordId) return null;

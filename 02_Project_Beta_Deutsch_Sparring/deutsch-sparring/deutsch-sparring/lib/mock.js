@@ -423,7 +423,8 @@ function openGrammarItem(examples, n, line) {
 }
 
 // ---------- the demo tutor ----------
-export async function mockReply({ text, settings, session, progress, topic, topics = [], words = [], models = [] }) {
+export async function mockReply({ text, settings, session, progress, topic: topic0, topics = [], words = [], models = [], reviewPlan = null }) {
+  let topic = topic0;
   const say = norm(text);
   if (/langsam|slow/.test(say)) await new Promise((r) => setTimeout(r, 4000));
   if (/kaputt|broken/.test(say)) return '{"message": "Das ist absichtlich kaputtes JSON, damit du die Fehlerbehandlung testen kannst", "feedback": {"forNumber": 2, "corr';
@@ -431,12 +432,34 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   if (/absturz|crash/.test(say)) throw new ModelError('Simulierter Fehler (Demo-Modus)', 502);
 
   const lessons = topics;
+  const mixed = Array.isArray(reviewPlan) && reviewPlan.length > 0; // Mixed review: question n follows plan item n
   const topicId = topic?.id || DEFAULT_GRAMMAR;
-  const isVocab = Boolean(topic) && topic.type !== 'Grammatik' && topic.id !== 'free';
-  const vocab = isVocab ? words.map((w) => mockWord(w, settings.variant)) : [];
-  const entry = isVocab ? null : curriculumEntry(topicId);
-  const examples = !isVocab && models.length ? modelRows(models, entry, topic) : entry ? curriculumExamples(entry) : getExamples(isVocab || topicId === 'free' ? DEFAULT_GRAMMAR : topicId);
-  const useVocab = isVocab && vocab.length > 0;
+  let isVocab = !mixed && Boolean(topic) && topic.type !== 'Grammatik' && topic.id !== 'free';
+  const vocab = isVocab || mixed ? words.map((w) => mockWord(w, settings.variant)) : [];
+  let entry = isVocab ? null : curriculumEntry(topicId);
+  const examplesOf = (id, ent, tp) => {
+    if (!mixed && !isVocab && models.length) return modelRows(models, ent, tp);
+    return ent ? curriculumExamples(ent) : getExamples(isVocab || id === 'free' || id === 'mixed-review' ? DEFAULT_GRAMMAR : id);
+  };
+  let examples = examplesOf(topicId, entry, topic);
+  let useVocab = isVocab && vocab.length > 0;
+  let cardNo0 = 0; // mixed: how many word cards came before question n
+  // mixed: aim the demo at question k of the plan (a word card, or a grammar question of the item's topic)
+  const aim = (k) => {
+    if (!mixed) return;
+    const it = reviewPlan[(k - 1) % reviewPlan.length];
+    cardNo0 = reviewPlan.slice(0, (k - 1) % reviewPlan.length).filter((x) => x.kind === 'word').length;
+    if (it.kind === 'word' && vocab.length) {
+      useVocab = true;
+      return;
+    }
+    useVocab = false;
+    const id = it.topicId || DEFAULT_GRAMMAR;
+    entry = curriculumEntry(id);
+    topic = topics.find((x) => x.id === id) || { id, short: entry?.title || id, type: 'Grammatik' };
+    examples = examplesOf(id, entry, topic);
+    if (!examples.length) examples = getExamples(DEFAULT_GRAMMAR);
+  };
   const total = session.total;
   const open = session.openNumber;
 
@@ -456,15 +479,17 @@ export async function mockReply({ text, settings, session, progress, topic, topi
     },
   };
   // the open question as it was asked: asked again → same word; the sentence after a card → its word
+  aim(open || (session.skippedNumber ? session.skippedNumber : progress.done + 1));
   const openQ = useVocab && open && session.openLine ? openVocabQuestion(vocab, open, settings, session.openLine, session.openWordId, session.openTask) : null;
   const ask = (n, strongHint = false) => {
+    aim(n);
     let pin = null;
     if (openQ && n === open) pin = { word: openQ.word, kind: openQ.task ? 'sentence' : 'card', task: openQ.task };
     // grammar was switched on while a card was open: the card's own grammar task comes next
     else if (openQ && settings.sentences && !openQ.task && taskOf(openQ.word, settings, vocab.indexOf(openQ.word))) pin = { word: openQ.word, kind: 'sentence' };
     else if (openQ && !settings.sentences) pin = { kind: 'card' };
-    const q = useVocab ? vocabQuestion(vocab, n, settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint, topic);
-    out.exercise = q.exercise;
+    const q = useVocab ? vocabQuestion(vocab, mixed ? cardNo0 + 1 : n, mixed ? { ...settings, sentences: false } : settings, strongHint, pin) : grammarQuestion(examples, n, settings.difficulty, strongHint, topic);
+    out.exercise = { ...q.exercise, number: n };
     if (q.word?.id) {
       out.exercise.wordId = q.word.id;
       out.exercise.task = q.task ? 'grammar' : 'flashcard';
@@ -517,7 +542,9 @@ export async function mockReply({ text, settings, session, progress, topic, topi
   if (!open) {
     out.message = progress.done
       ? 'Weiter geht’s!'
-      : useVocab
+      : mixed
+        ? 'Los geht’s mit der gemischten Wiederholung: alte Fehler, fällige Themen und Wörter. (Demo-Modus)'
+        : useVocab
         ? `Los geht’s mit den Karteikarten zu «${topic.short}». (Demo-Modus)`
         : `Sehr gern! Wir üben «${topic?.short || 'Dativ oder Akkusativ'}». (Demo-Modus)`;
     ask(progress.done + 1);

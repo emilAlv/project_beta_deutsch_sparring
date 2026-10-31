@@ -171,6 +171,22 @@ export const isDue = (rec, now) => {
   return d != null && d <= now;
 };
 
+// ---------- grammar topics: the same score and due date (review R24) ----------
+// A topic has no streak, so its score is simple: the per-topic percentage of grammarStats (lib/grammar-stats.js) on the
+// 1–10 scale (80 % = 8). With fewer than TOPIC_FEW answers it stops at 6 (back after 3 days), because two lucky answers
+// prove little. The due date is the LAST answer + dueDays(score), the same 1 / 3 / 7 / 21 days as for words.
+// A topic never practised is not "due": there is nothing to review yet. stats = { n, pct, recent: [[ok, hinted, t], …] }.
+export const TOPIC_FEW = 5;
+export const TOPIC_FEW_CAP = 6;
+export function topicReview(stats, now = Date.now()) {
+  if (!stats || !(stats.n > 0) || !Array.isArray(stats.recent) || !stats.recent.length) return null;
+  const raw = clamp(Math.round((Number(stats.pct) || 0) / 10), SCORE_MIN, SCORE_MAX);
+  const score = stats.n < TOPIC_FEW ? Math.min(raw, TOPIC_FEW_CAP) : raw;
+  const last = Math.max(...stats.recent.map((r) => Number(r[2]) || 0));
+  const due = last + dueDays(score) * DAY_MS;
+  return { score, last, due, isDue: due <= now };
+}
+
 // ---------- updating a score ----------
 // One step for one score (v, a, p or g).
 //   delta  points to add (negative = taken away)

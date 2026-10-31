@@ -6,7 +6,12 @@ import { QUESTION_MIN, QUESTION_MAX } from './intents.js';
 import { cleanMilestoneId, cleanMilestoneTitle } from './milestone-session.js';
 
 export const KINDS = ['grammar', 'vocab']; // what is stored: Grammar · a word session (with or without sentences)
+export const SETUP_KINDS = [...KINDS, 'mixed']; // + the Mixed review (R24): no topic, the app picks what is due
+export const MIXED_TOPIC_ID = 'mixed-review';
+export const MIXED_QUESTION_STEPS = [10, 20]; // a mixed review has 10–20 questions
 export const LEVELS = ['A1', 'A2', 'B1'];
+// the topic entry of the Mixed review (shown in the ribbon as "Mixed review", never a real lesson)
+export const MIXED_TOPIC = { id: MIXED_TOPIC_ID, title: 'Gemischte Wiederholung', short: 'Mixed review', type: 'Gemischt', levels: LEVELS };
 export const DIFFICULTIES = ['easy', 'medium', 'hard'];
 export const QUESTION_STEPS = [10, 20, 30, 40, 50];
 export const SOURCES = ['goethe', 'kurs', 'both']; // Goethe list · From the course · Both
@@ -40,13 +45,13 @@ export function sanitizeSetup(raw, old = {}) {
     ? GRAMMAR_POINTS.filter((g) => p.grammar.includes(g))
     : old.sentences === false ? [] : DEFAULT_SETUP.grammar;
   return {
-    kind: KINDS.includes(p.kind) ? p.kind : DEFAULT_SETUP.kind,
+    kind: SETUP_KINDS.includes(p.kind) ? p.kind : DEFAULT_SETUP.kind,
     grammarTopic: str(p.grammarTopic),
     section: str(p.section),
     list: str(p.list),
     level: LEVELS.includes(p.level) ? p.level : DEFAULT_SETUP.level,
     difficulty: DIFFICULTIES.includes(p.difficulty) ? p.difficulty : DEFAULT_SETUP.difficulty,
-    questions: q >= QUESTION_MIN && q <= QUESTION_MAX ? q : DEFAULT_SETUP.questions,
+    questions: p.kind === 'mixed' ? (q >= QUESTION_MIN && q <= 20 ? q : 10) : q >= QUESTION_MIN && q <= QUESTION_MAX ? q : DEFAULT_SETUP.questions,
     source: SOURCES.includes(p.source) ? p.source : DEFAULT_SETUP.source,
     direction: DIRECTIONS.includes(p.direction) ? p.direction : DEFAULT_SETUP.direction,
     grammar,
@@ -59,11 +64,12 @@ export const withSentences = (settings) => settings.kind === 'vocab' && (setting
 
 // The three choices on the setup screen and the ribbon: Grammar · Vocabulary (flashcards only) · Vocabulary + grammar.
 // "Vocabulary" is the same word session with the sentence tasks off, so it is worked out from the settings.
-export const MODES = ['grammar', 'words', 'vocab'];
-export const modeOf = (settings) => (settings.kind !== 'vocab' ? 'grammar' : withSentences(settings) ? 'vocab' : 'words');
+export const MODES = ['grammar', 'words', 'vocab', 'mixed'];
+export const modeOf = (settings) => (settings.kind === 'mixed' ? 'mixed' : settings.kind !== 'vocab' ? 'grammar' : withSentences(settings) ? 'vocab' : 'words');
 
 // The topic id the session practises
 export function topicIdOf(setup) {
+  if (setup.kind === 'mixed') return MIXED_TOPIC_ID;
   return setup.kind === 'grammar' ? setup.grammarTopic : setup.list || setup.section;
 }
 
@@ -79,7 +85,7 @@ export function sessionSettings(setup, topicLabel, ms = null) {
     difficulty: setup.difficulty,
     questions: setup.questions,
     source: setup.source,
-    direction: setup.direction,
+    direction: setup.kind === 'mixed' ? 'mixed' : setup.direction,
     grammar: setup.kind === 'vocab' ? [...setup.grammar] : [],
     variant: setup.variant,
     ...(milestoneId ? { milestoneId, milestoneTitle: cleanMilestoneTitle(ms.title) || '' } : {}),
@@ -96,7 +102,7 @@ export function setupFrom(settings, topics = [], base = DEFAULT_SETUP) {
     ...base,
     ...settings,
     grammar: vocab ? settings.grammar : base.grammar,
-    grammarTopic: vocab ? base.grammarTopic : settings.topicId,
+    grammarTopic: vocab || settings.kind === 'mixed' ? base.grammarTopic : settings.topicId,
     section: vocab ? (topic?.parent || settings.topicId) : base.section,
     list: vocab ? (topic?.parent ? topic.id : null) : base.list,
   });
