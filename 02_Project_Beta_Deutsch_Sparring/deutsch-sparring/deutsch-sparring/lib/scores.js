@@ -9,9 +9,10 @@
 //   g = Sentence (the word used in grammar: cases + adjective endings, Perfekt, verb + case)
 // A word that was never practised is "new" and counts as score 1.
 //
-// A word's record:  { v: { s, k, due }, a: {…}, p: {…}, g: { s, k, due }, last }
+// A word's record:  { v: { s, k, due, iv, up }, a: {…}, p: {…}, g: { s, k, due }, last }
 //   v = the MEANING score (the key keeps its old name "v"; it is also the database column `v`)
 //   s = score 1–10 · k = right answers in a row (the streak) · due = when it comes back (ms) · last = last practised (ms)
+//   iv = the gap in days of a 10 (21, then doubling, see TEN_GAP_*) · up = when Meaning last rose (ms; Meaning only)
 // Old records (from before Meaning / Article / Plural) only have v and g. "v" used to mean article + word, so it is
 // copied into a once (migrateRecord). Plural starts empty.
 
@@ -43,6 +44,10 @@ export const WORD_ERRORS = [...ARTICLE_ERRORS, ...MEANING_ERRORS];
 export const DUE_DAYS = [[3, 1], [6, 3], [9, 7], [10, 21]];
 export const DAY_MS = 86_400_000;
 export const DUE_TEN_WRONG_TO = 7; // a 10 answered wrong drops to 7
+export const DUE_WRONG_DAYS = 1; // ANY wrong answer: that part is due tomorrow, whatever its new score (a skip is not a wrong answer)
+// a 10: the first gap is 21 days; each further right check (no hint) doubles it: 21 -> 42 -> 84 -> 168 -> 180 (cap)
+export const TEN_GAP_FIRST = 21;
+export const TEN_GAP_MAX = 180;
 
 // how a session's words are mixed (shares of the session's word count)
 export const SHARE_NEW = 0.3;
@@ -53,6 +58,7 @@ export const CHECKS_FROM_COUNT = 5; // fewer words than this: no checks
 export const SPARE_WORDS = 3; // extra words for skips
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const dayOf = (ms) => Math.floor(ms / DAY_MS); // the calendar day (UTC) of a time
 
 // ---------- what a question tests, by level (Easy / Medium / Hard) ----------
 // Parts: 'meaning' (score v) · 'article' (a, nouns only) · 'plural' (p, nouns only).
@@ -86,7 +92,11 @@ export function cleanChecks(checks) {
 // ---------- reading a record ----------
 const kindOf = (rec, kind) => {
   const x = rec && rec[kind];
-  return x && Number.isFinite(x.s) ? { s: clamp(Math.round(x.s), SCORE_MIN, SCORE_MAX), k: Math.max(0, Math.floor(x.k) || 0), due: Number.isFinite(x.due) ? x.due : null } : null;
+  if (!x || !Number.isFinite(x.s)) return null;
+  const out = { s: clamp(Math.round(x.s), SCORE_MIN, SCORE_MAX), k: Math.max(0, Math.floor(x.k) || 0), due: Number.isFinite(x.due) ? x.due : null };
+  if (Number.isFinite(x.iv) && x.iv > 0) out.iv = clamp(Math.round(x.iv), 1, TEN_GAP_MAX);
+  if (Number.isFinite(x.up)) out.up = x.up;
+  return out;
 };
 
 export const isNew = (rec) => !KINDS.some((k) => kindOf(rec, k));
@@ -191,8 +201,11 @@ export function topicReview(stats, now = Date.now()) {
 // One step for one score (v, a, p or g).
 //   delta  points to add (negative = taken away)
 //   streak 'up' (counts as right in a row) | 'reset' | 'keep' (hint answers)
-function step(cur, { delta, streak, now }) {
+//   wrong  a wrong answer (not a skip): the part is due tomorrow
+//   daily  Meaning only: it can rise at most once per calendar day (a second right answer the same day changes nothing)
+function step(cur, { delta, streak, now, wrong = false, daily = false }) {
   const before = cur || { s: SCORE_NEW, k: 0, due: null };
+  if (daily && delta > 0 && before.up != null && dayOf(before.up) === dayOf(now)) return { ...before };
   const k = streak === 'up' ? before.k + 1 : streak === 'reset' ? 0 : before.k;
   let s = before.s + delta;
   if (delta < 0) {
@@ -207,7 +220,18 @@ function step(cur, { delta, streak, now }) {
     s = tenEarned ? SCORE_MAX : Math.min(s, CAP_WITHOUT_STREAK);
   }
   s = clamp(s, SCORE_MIN, SCORE_MAX);
-  return { s, k, due: dueAt(s, now) };
+  const out = { s, k, due: dueAt(s, now) };
+  if (s >= SCORE_MAX) {
+    // a 10: the gap grows with each further right check; a hint answer keeps it; a fresh 10 starts at 21 days
+    const kept = before.s >= SCORE_MAX && delta > 0;
+    const gap = kept ? (before.iv ?? TEN_GAP_FIRST) : TEN_GAP_FIRST;
+    out.iv = kept && streak === 'up' ? Math.min(TEN_GAP_MAX, gap * 2) : gap;
+    out.due = now + out.iv * DAY_MS;
+  }
+  if (wrong) out.due = now + DUE_WRONG_DAYS * DAY_MS;
+  if (before.up != null) out.up = before.up;
+  if (daily && delta > 0) out.up = now;
+  return out;
 }
 
 // Which parts of a flashcard were right? → { meaning, article, plural } with true | false | null (null = not known, not touched)
@@ -245,11 +269,11 @@ export function applyAnswer(rec, answer, now = Date.now()) {
   const grammar = answer.task === 'grammar' && answer.hasG !== false;
   const plan = {}; // kind → { delta, streak }
   const up = (kind, table) => { plan[kind] = hinted ? { delta: HINT_RIGHT[kind], streak: 'keep' } : { delta: table[kind], streak: 'up' }; };
-  const down = (kind, table) => { plan[kind] = { delta: table[kind], streak: 'reset' }; };
+  const down = (kind, table, wrong = true) => { plan[kind] = { delta: table[kind], streak: 'reset', wrong }; };
 
   if (skipped) {
-    for (const k of ['v', 'a', 'p']) if (k === 'v' || has(k)) down(k, SKIPPED);
-    if (grammar) down('g', SKIPPED);
+    for (const k of ['v', 'a', 'p']) if (k === 'v' || has(k)) down(k, SKIPPED, false);
+    if (grammar) down('g', SKIPPED, false);
   } else if (answer.task === 'grammar') {
     if (correct) {
       for (const k of ['v', 'a']) if (k === 'v' || has(k)) up(k, GRAMMAR_RIGHT);
@@ -274,7 +298,7 @@ export function applyAnswer(rec, answer, now = Date.now()) {
 
   const out = { ...(rec || {}), last: now };
   for (const kind of KINDS) {
-    if (plan[kind]) out[kind] = step(kindOf(rec, kind), { ...plan[kind], now });
+    if (plan[kind]) out[kind] = step(kindOf(rec, kind), { ...plan[kind], now, daily: kind === 'v' });
     else if (kindOf(rec, kind)) out[kind] = kindOf(rec, kind);
   }
   return out;
@@ -317,6 +341,8 @@ export function matchesFilter(word, { level, sources, section, list } = {}) {
 //               Easy: Meaning · Medium: the weaker of Meaning and Article · Hard: Meaning, Article and Plural
 //               (Article / Plural only for nouns). A score the word does not have yet counts as 1 and as due.
 //               The Sentence score counts too, once the word has one.
+//   grammar     true in "Vocabulary + grammar" sessions: then a word without a Sentence score counts as weak (score 1,
+//               due now) – except phrases, which have no Sentence score.
 // Order: due & weak first (lowest score first), then the checks (1–2 words with a 10), then new words.
 // Mix: about 60 % due or weak, 30 % new, 10 % checks. If a group runs out, the others fill up:
 // first more new words, then words not yet due (lowest score first), then more tens.
@@ -332,7 +358,7 @@ function shuffled(list, rand) {
 
 // rand: random function (a parameter so the checks can be exact). Words that are equally urgent (e.g. all new words)
 // come in a new random order each session – otherwise the first word of the list would always open the session.
-export function pickWords({ words, scores = {}, level, sources, section, list, count, difficulty = 'easy', now = Date.now(), rand = Math.random }) {
+export function pickWords({ words, scores = {}, level, sources, section, list, count, difficulty = 'easy', grammar = false, now = Date.now(), rand = Math.random }) {
   const pool = shuffled((words || []).filter((w) => matchesFilter(w, { level, sources, section, list })), rand);
   const place = new Map(pool.map((w, i) => [w.id, i]));
   const tie = (a, b) => place.get(a.id) - place.get(b.id); // equal priority: the shuffled order decides
@@ -341,7 +367,7 @@ export function pickWords({ words, scores = {}, level, sources, section, list, c
 
   const rec = (w) => scores[w.id];
   // the scores of this word that matter at this level (+ Sentence if it has one)
-  const kindsOf = (w) => [...levelKinds(w, difficulty), ...(kindOf(rec(w), 'g') ? ['g'] : [])];
+  const kindsOf = (w) => [...levelKinds(w, difficulty), ...(kindOf(rec(w), 'g') || (grammar && w.type !== 'phrase') ? ['g'] : [])];
   const score = (w) => Math.min(...kindsOf(w).map((k) => kindOf(rec(w), k)?.s ?? SCORE_NEW));
   // when it comes back: a score it still lacks is due now; otherwise the earliest due date of the scores that matter
   const dueOf = (w) => {
@@ -361,9 +387,14 @@ export function pickWords({ words, scores = {}, level, sources, section, list, c
   const nChecks = n >= CHECKS_FROM_COUNT ? clamp(Math.round(n * SHARE_CHECKS), CHECKS_MIN, CHECKS_MAX) : 0;
   const nNew = Math.round(n * SHARE_NEW);
 
-  const takeDue = dueWeak.slice(0, Math.max(0, n - nChecks - nNew));
-  const takeChecks = tens.slice(0, nChecks);
-  const takeNew = fresh.slice(0, nNew);
+  // Overdue 10s are always in (they are due like any other word); they are not limited by CHECKS_MAX and they use up the
+  // check places first. Only when there are more of them than the session has words, the rest wait for the next one.
+  const overdueTens = tens.filter(due).slice(0, n);
+  const room = n - overdueTens.length;
+  const moreChecks = Math.max(0, nChecks - overdueTens.length);
+  const takeChecks = [...overdueTens, ...tens.filter((w) => !due(w)).slice(0, moreChecks)];
+  const takeNew = fresh.slice(0, Math.min(nNew, room));
+  const takeDue = dueWeak.slice(0, Math.max(0, room - moreChecks - takeNew.length));
   const chosen = new Set([...takeDue, ...takeChecks, ...takeNew].map((w) => w.id));
   const fill = [...fresh, ...dueWeak, ...notDue, ...tens].filter((w) => !chosen.has(w.id));
   const extra = fill.slice(0, n - chosen.size);
