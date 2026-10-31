@@ -18,7 +18,10 @@ const ids = list.map((e) => e.id);
 check('ids unique', new Set(ids).size === ids.length);
 for (const lv of C.CURRICULUM_LEVELS) {
   const n = list.filter((e) => e.level === lv).length;
-  check(`level ${lv} has 8–13 entries`, n >= 8 && n <= 13, String(n));
+  // Cap per level (31 Oct 2026): 10 topics were added (A1 14, A2 15, B1 17), so the old cap of 13 was raised to the
+  // current size plus a little room. Raise it again only on purpose, when a level really gets more topics.
+  const cap = { A1: 14, A2: 15, B1: 17 }[lv] ?? 13;
+  check(`level ${lv} has 8–${cap} entries`, n >= 8 && n <= cap, String(n));
 }
 for (const e of list) {
   const bad = [];
@@ -89,6 +92,22 @@ for (const t of topics.filter((x) => x.curriculum)) {
     check(`${id}: prerequisites exist`, Boolean(e) && e.needs.length > 0 && e.needs.every((n) => C.isCurriculumId(n)));
     check(`${id}: in the A2 plan order`, C.planOrder('A2').includes(id));
     check(`${id}: exercise models no longer waiting`, !X.WAITING_TOPICS.includes(id) && X.allModels().has(id));
+  }
+}
+
+// the ten topics added on 31 Oct 2026 (R26 point 4 + the plural topic)
+{
+  const NEW = { A1: ['g-a1-pluralformen', 'g-a1-praep-akkusativ'], A2: ['g-a2-deshalb-trotzdem-denn', 'g-a2-indirekte-fragen'],
+    B1: ['g-b1-als-wenn', 'g-b1-futur1', 'g-b1-adj-ohne-artikel', 'g-b1-konjunktiv2-vergangenheit', 'g-b1-relativsaetze-praep', 'g-b1-lassen'] };
+  for (const [lv, newIds] of Object.entries(NEW)) {
+    for (const id of newIds) {
+      const e = C.curriculumEntry(id);
+      check(`${id} exists at ${lv}`, e?.level === lv);
+      check(`${id}: 5 examples, rule, role, traps, no ß`, Boolean(e) && e.examples.length === 5 && e.rule.length > 100 && ['productive', 'receptive'].includes(e.role) && e.traps?.length > 0 && !JSON.stringify(e).includes('ß'));
+      check(`${id}: needs exist and are not itself`, Boolean(e) && e.needs.every((n) => C.isCurriculumId(n) && n !== id));
+      check(`${id}: in the ${lv} plan order`, C.planOrder(lv).includes(id));
+      check(`${id}: hints do not give the answer`, Boolean(e) && e.examples.every((x) => { const g = C.gapExample(x); return !x.includes('|') || [...x.matchAll(/\*([^*|]+)\|([^*]+)\*/g)].every((m) => m[1].trim().toLowerCase() !== m[2].trim().toLowerCase()); }));
+    }
   }
 }
 

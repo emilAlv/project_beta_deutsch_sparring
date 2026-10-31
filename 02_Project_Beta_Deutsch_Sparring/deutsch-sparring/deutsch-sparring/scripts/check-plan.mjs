@@ -132,11 +132,14 @@ eq('every situation lesson file has a name in the templates (16 per level)', Obj
 check('lesson needs are curriculum ids', Object.values(PT.LESSONS).every(([, ...needs]) => needs.every((n) => ids.has(n))));
 eq('LEARNT_FROM is the same as the Home tile', PT.LEARNT_FROM, H.LEARNT_FROM);
 
-// ---- the B1 example: "Pass Goethe B1", 20 Oct 2026 → 24 Apr 2027, 20 min a day ----
+// ---- the B1 example: "Pass Goethe B1", 20 Oct 2026 → 22 May 2027 (24 Apr until 31 Oct 2026, see EXAM), 20 min a day ----
 const words = W.getWords();
 const sections = W.listSections();
 const TODAY = '2026-10-20';
-const EXAM = '2027-04-24';
+// The fixture exam date moved from 24 Apr to 22 May 2027 on 31 Oct 2026: ten grammar topics were added to the curriculum
+// (8 of them are not solid for this student), and the plan lets only one new topic reach "solid" per week, so
+// A2 + B1 grammar (32 topics) no longer fit into 26 weeks. The real plan does not change, only the fixture's date.
+const EXAM = '2027-05-22';
 const ctxFresh = { words, sections, today: TODAY };
 // a student like Emilio: A1 and A2 done in class (start level B1); most A1 words and many A2 words learnt; A1 grammar solid
 const T1 = Date.parse('2026-10-01');
@@ -225,7 +228,8 @@ check('word chunks with ≥ 90 % learnt are already solid', goal.subPlans.find((
 // exam part (§2.7): mocks in about weeks 8, 16, 23; weekly Schreiben/Sprechen from the halfway point
 const week = (d) => Math.floor((dn(d) - dn(TODAY)) / 7) + 1;
 const exam = goal.subPlans.find((p) => p.id === 'exam').milestones;
-eq('mock exams in weeks 8, 16 and 23', exam.filter((m) => m.criterion.part === 'mock').map((m) => week(m.date)), [8, 16, 23]);
+// the weeks scale with the plan length: 26 weeks gave 8, 16, 23; the 30-week fixture gives 9, 18, 27
+eq('mock exams in weeks 9, 18 and 27 (about 1/3, 2/3 and 90 % of the plan)', exam.filter((m) => m.criterion.part === 'mock').map((m) => week(m.date)), [9, 18, 27]);
 const tasks = exam.filter((m) => m.criterion.part !== 'mock');
 check('a Schreiben or Sprechen task every week from the halfway point, using the §2.7 lessons',
   tasks.length >= 8 && week(tasks[0].date) >= 13 && tasks.every((m) => ['schreiben', 'sprechen'].includes(m.criterion.part) && PT.EXAM_TASK_LESSONS.B1[m.criterion.part].includes(m.criterion.lessonId)));
@@ -303,6 +307,11 @@ const keepReached = (g) => JSON.stringify(PL.allMilestones(g).filter(({ m }) => 
 let rp = PT.replan(marked, ctx, day1, { minutesPerDay: 30 });
 check('re-plan with 30 min: ok, the reached milestones are exactly as they were', rp.ok && keepReached(rp.goal));
 check('re-plan: the exam date stays', rp.goal.endDate === EXAM && rp.goal.startDate === TODAY);
+// saved plans never get new topics (31 Oct 2026: ten topics were added to the curriculum)
+{
+  const topicsOf = (g) => PL.allMilestones(g).map(({ m }) => m.criterion.topicId).filter(Boolean).sort().join(',');
+  check('re-plan never adds or removes a grammar topic of a saved plan', topicsOf(rp.goal) === topicsOf(goal));
+}
 check('re-plan: open milestones are re-dated from today to the end', PL.allMilestones(rp.goal)
   .filter(({ m }) => !m.reachedAt && m.status === 'open' && m.criterion.kind !== 'exam').every(({ m }) => m.date > day1 && m.date <= planEnd));
 check('re-plan: the changes are listed (pace + moved milestones)', rp.changes.some((c) => c.type === 'pace' && c.to === 30) && rp.changes.some((c) => c.type === 'move'));
