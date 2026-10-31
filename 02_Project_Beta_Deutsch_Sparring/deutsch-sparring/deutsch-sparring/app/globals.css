@@ -960,3 +960,5 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 
 /* headings that receive focus when a screen opens (see app/page.js) need no ring: they are not controls */
 [data-stage-heading]:focus { outline: none; }
+
+.exercise-do { margin: 6px 0 0; font-size: 14px; font-weight: 600; color: var(--ink); }

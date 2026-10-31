@@ -1,5 +1,6 @@
 'use client';
 
+import { instructionFor } from '../lib/instructions';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t, LOCALE, dirKey } from '../lib/ui-text';
 import { scoreLine } from '../lib/stats';
@@ -130,11 +131,18 @@ function exLabel(ex) {
     : `${t(`ex_${ex.type}`)} · ${t('questionOf', { n: ex.number, total: ex.total })}`;
 }
 
+// what to type, written by the app (lib/instructions.js) – the student guesses the German, never the task
+function DoLine({ ex }) {
+  const d = instructionFor(ex);
+  return d ? <p className="exercise-do">{t(d.key)}</p> : null;
+}
+
 function ExerciseCard({ ex }) {
   return (
     <div className={`exercise-card${ex.type === 'flashcard' ? ' is-flashcard' : ''}`}>
       <p className="caps">{exLabel(ex)}</p>
       <p className="exercise-line" lang="de">{ex.line}</p>
+      <DoLine ex={ex} />
       {ex.hint && <p className="exercise-hint" lang="de">{ex.hint}</p>}
     </div>
   );
@@ -146,6 +154,7 @@ function NextLine({ ex }) {
     <div className={`next-line${ex.type === 'flashcard' ? ' is-flashcard' : ''}`}>
       <p className="caps">{exLabel(ex)}</p>
       <p className="exercise-line" lang="de">{ex.line}</p>
+      <DoLine ex={ex} />
       {ex.hint && <p className="exercise-hint" lang="de"><span className="hint-accent">{ex.hint}</span></p>}
     </div>
   );
