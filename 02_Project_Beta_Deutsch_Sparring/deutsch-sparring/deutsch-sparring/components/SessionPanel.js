@@ -107,7 +107,7 @@ function GlanceView({ session, topic, recent }) {
             <>
               <div className="scene">
                 <SceneArt subject={`${tl.name} ${topic?.title || ''}`} />
-                <p className="scene-name">{tl.name || tl.type}</p>
+                <p className="scene-name" title={tl.name || tl.type}>{String(tl.name || tl.type).split(" › ").pop()}</p>
               </div>
               <p className="detail">
                 {tl.type}{session.grammarFocus ? ` · ${t('grammarFocusLine', { rule: session.grammarFocus.title })}` : ''}
