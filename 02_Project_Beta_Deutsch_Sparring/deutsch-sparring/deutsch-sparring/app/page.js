@@ -264,12 +264,18 @@ export default function Home() {
     window.location.replace('/login');
   }
 
-  async function logOut() {
+  // everywhere = also every other device / copied cookie (R7): the server raises the account's session counter
+  async function logOut(everywhere = false) {
+    if (everywhere && typeof window !== 'undefined' && !window.confirm(t('confirmLogOutEverywhere'))) return;
     const username = account?.username || '';
     closeSession(false);
     dropRequest();
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      if (everywhere) {
+        await fetch('/api/auth/logout-everywhere', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      } else {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      }
     } catch {}
     // R7: this browser forgets the student's data and the class code before the login page
     clearAccountData(username);
@@ -917,7 +923,8 @@ export default function Home() {
         onNav={(k) => (k === 'home' ? goHome() : stage === 'practice' ? undefined : goSparring())}
         onNewSession={() => openSetup(session.settings)}
         onChangeName={account ? null : changeName}
-        onLogOut={account ? logOut : null}
+        onLogOut={account ? () => logOut() : null}
+        onLogOutEverywhere={account ? () => logOut(true) : null}
       />
       {stage === 'loading' ? (
         <main className="workspace" aria-busy="true" /> // nothing yet: don't flash the chat before Home

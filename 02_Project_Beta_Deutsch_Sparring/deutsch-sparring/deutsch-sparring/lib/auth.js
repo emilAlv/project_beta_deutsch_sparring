@@ -1,6 +1,6 @@
 // Accounts, for the API routes (server only). See lib/session.js for the on/off switch and the
 // cookie, docs/security-accounts.md for the plain-English overview.
-import { authEnabled, readSessionToken, passwordVersion, createSessionToken, sessionCookieOptions, SESSION_COOKIE } from './session';
+import { authEnabled, readSessionToken, passwordVersion, createSessionToken, sessionCookieOptions, sessionCounter, SESSION_COOKIE } from './session';
 import { users } from './users';
 import { sameOrigin } from './route-guard';
 
@@ -13,7 +13,8 @@ export const PASSWORD_MAX = 200; // a very long "password" would only cost serve
 export const cleanUsername = (u) => String(u ?? '').trim();
 
 // The logged-in user ({ id, username }) or null. Checks the signature AND that the account
-// still exists with the same password (a reset logs out old sessions).
+// still exists with the same password (a reset logs out old sessions) and that the cookie's session
+// counter is the account's current one ("Log out everywhere" raises it, so every older cookie stops working).
 export async function currentUser(req) {
   const session = readSessionToken(req.cookies?.get(SESSION_COOKIE)?.value);
   if (!session) return null;
@@ -21,6 +22,7 @@ export async function currentUser(req) {
   if (!user) return null;
   const a = passwordVersion(user.password_hash);
   if (a !== session.pv) return null;
+  if (session.sv !== sessionCounter(user.session_counter)) return null;
   return { id: user.id, username: user.username };
 }
 
@@ -48,7 +50,7 @@ function setCookie(res, value, maxAge) {
 }
 
 export function startSession(res, user) {
-  setCookie(res, createSessionToken(user.id, user.password_hash));
+  setCookie(res, createSessionToken(user.id, user.password_hash, user.session_counter));
 }
 
 export function clearSession(res) {

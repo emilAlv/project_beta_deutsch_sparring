@@ -52,6 +52,8 @@ const en = {
   menuChangeName: 'Change name',
   confirmChangeName: 'Start again with a different name? Your progress on this device will be kept.',
   menuLogOut: 'Log out',
+  menuLogOutEverywhere: 'Log out everywhere',
+  confirmLogOutEverywhere: 'Log out on every device and browser where you are logged in? You will need your password to log in again.',
 
   // log in / create account
   authTagline: 'Deutsch üben, Schritt für Schritt.',
@@ -727,6 +729,8 @@ const de = {
   menuChangeName: 'Namen ändern',
   confirmChangeName: 'Mit einem anderen Namen neu beginnen? Dein Fortschritt auf diesem Gerät bleibt gespeichert.',
   menuLogOut: 'Abmelden',
+  menuLogOutEverywhere: 'Überall abmelden',
+  confirmLogOutEverywhere: 'Auf allen Geräten und Browsern abmelden, auf denen du angemeldet bist? Danach brauchst du dein Passwort, um dich wieder anzumelden.',
 
   authTagline: 'Deutsch üben, Schritt für Schritt.',
   authSwitch: 'Anmelden oder Konto erstellen',

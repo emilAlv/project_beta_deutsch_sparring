@@ -5,7 +5,7 @@ import { t } from '../lib/ui-text';
 import { initials } from '../lib/intents';
 import { Flame } from './icons';
 
-export default function Header({ name, streak, nav, onNav, onNewSession, onChangeName, onLogOut }) {
+export default function Header({ name, streak, nav, onNav, onNewSession, onChangeName, onLogOut, onLogOutEverywhere }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -63,6 +63,7 @@ export default function Header({ name, streak, nav, onNav, onNewSession, onChang
                 <button type="button" onClick={() => { setOpen(false); onNewSession(); }}>{t('menuNewSession')}</button>
                 {onChangeName && <button type="button" onClick={() => { setOpen(false); onChangeName(); }}>{t('menuChangeName')}</button>}
                 {onLogOut && <button type="button" onClick={() => { setOpen(false); onLogOut(); }}>{t('menuLogOut')}</button>}
+                {onLogOutEverywhere && <button type="button" onClick={() => { setOpen(false); onLogOutEverywhere(); }}>{t('menuLogOutEverywhere')}</button>}
               </div>
             )}
           </div>
