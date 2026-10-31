@@ -17,7 +17,7 @@ const reasonText = (key) => (key.startsWith('case:') ? key.slice(5) : t(`sumReas
 
 // "Meaning 7 · Article 4": the word's scores after this session (vocabulary sessions)
 const partsText = (parts) => (parts || []).map((p) => t('sumPartScore', { name: t(`partsOf_${p.part}`), s: p.s })).join(' · ');
-// a word's reason first: "wrong meaning", "wrong article", "skipped"; other reasons keep their normal text
+// a word's reason first: "wrong word", "wrong article", "skipped"; other reasons keep their normal text
 const wordReason = (key) => (t(`sumWordReason_${key}`) !== `sumWordReason_${key}` ? t(`sumWordReason_${key}`) : reasonText(key));
 
 // Pills: a word or a question that was right (wraps when the question is long) · words with their reason and scores
