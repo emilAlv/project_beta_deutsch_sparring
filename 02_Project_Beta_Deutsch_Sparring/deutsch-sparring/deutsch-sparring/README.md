@@ -10,6 +10,11 @@ log in with a username and password, and their history is stored on the server. 
 
 ## What the student sees
 
+- **Retype the correction.** After a wrong answer the next question stays hidden until the student types
+  the correct answer (checked by the app, no AI call; `lib/retype.js`, `scripts/check-retype.mjs`).
+  Capitals, ss/ß, spaces and final punctuation do not matter. After 2 failed tries a Continue button appears;
+  "Skip this one" also continues. It never changes the score or the counts.
+
 - **Home.** After login (or name and class code) the student lands on Home. It shows the next
   milestone of their plan, their goals with progress, strengths and gaps, four tiles for the last
   30 days, and recent sessions. *Start Sparring* opens the setup screen.

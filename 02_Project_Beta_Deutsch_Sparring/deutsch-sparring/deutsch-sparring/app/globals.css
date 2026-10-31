@@ -962,3 +962,8 @@ hr { border: 0; height: 1px; width: 100%; margin: 0; background: var(--line); }
 [data-stage-heading]:focus { outline: none; }
 
 .exercise-do { margin: 6px 0 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+
+/* retype the correction: the held next question is replaced by this line */
+.chip-primary { background: var(--brand); border: 1px solid transparent; color: #fff; }
+.chip-primary:hover:not(:disabled) { background: var(--brand-hover); }
+.retype-line .retype-continue { align-self: flex-start; margin-top: 4px; }

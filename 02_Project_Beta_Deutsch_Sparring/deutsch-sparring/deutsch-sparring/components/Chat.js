@@ -17,7 +17,7 @@ const dayLabel = (at) => (sameDay(at, Date.now())
 
 // quick: chips above the input (answer choices, hint, skip …) – each one sends its text.
 // summaryActions: buttons under the last summary card (e.g. "Same settings again", "New session").
-export default function Chat({ status, messages, busy, waiting, onCancel, slow, error, onRetry, stage, onSend, inputRef, quick = [], summaryActions = null }) {
+export default function Chat({ status, messages, busy, waiting, onCancel, slow, error, onRetry, stage, onSend, inputRef, quick = [], summaryActions = null, retype = null, onContinue = null }) {
   const scrollRef = useRef(null);
   const stick = useRef(true);
 
@@ -47,7 +47,7 @@ export default function Chat({ status, messages, busy, waiting, onCancel, slow, 
             return (
               <div key={m.id} className="chat-item">
                 {marker && <DayMarker at={m.at} />}
-                <Message m={m} actions={lastSummary ? summaryActions : null} />
+                <Message m={m} actions={lastSummary ? summaryActions : null} retype={retype?.messageId === m.id ? retype : null} onContinue={onContinue} />
               </div>
             );
           })}
@@ -75,7 +75,7 @@ export default function Chat({ status, messages, busy, waiting, onCancel, slow, 
         </div>
       )}
 
-      <Composer stage={stage} busy={busy} waiting={waiting} onCancel={onCancel} onSend={onSend} inputRef={inputRef} />
+      <Composer retype={Boolean(retype)} stage={stage} busy={busy} waiting={waiting} onCancel={onCancel} onSend={onSend} inputRef={inputRef} />
     </section>
   );
 }
@@ -88,7 +88,7 @@ function DayMarker({ at }) {
   );
 }
 
-function Message({ m, actions }) {
+function Message({ m, actions, retype, onContinue }) {
   if (m.role === 'system') {
     return <p className="system-line"><span>{m.text}</span></p>;
   }
@@ -100,10 +100,10 @@ function Message({ m, actions }) {
       </div>
     );
   }
-  return <TutorMessage m={m} actions={actions} />;
+  return <TutorMessage m={m} actions={actions} retype={retype} onContinue={onContinue} />;
 }
 
-function TutorMessage({ m, actions }) {
+function TutorMessage({ m, actions, retype, onContinue }) {
   const r = m.reply;
   const text = r ? r.message : m.text;
   return (
@@ -113,8 +113,9 @@ function TutorMessage({ m, actions }) {
         <p className="tutor-label"><strong>{t('tutorName')}</strong> · {t('tutorRole')}</p>
         {text && <p className="tutor-text" lang="de"><Rich text={text} /></p>}
         {r?.feedback && <FeedbackCard f={r.feedback} />}
-        {r?.exercise && (r.feedback ? <NextLine ex={r.exercise} /> : <ExerciseCard ex={r.exercise} />)}
-        {m.summary && <SummaryCard s={m.summary} actions={actions} />}
+        {m.held && retype && <RetypeLine canContinue={retype.canContinue} onContinue={onContinue} />}
+        {!m.held && r?.exercise && (r.feedback ? <NextLine ex={r.exercise} /> : <ExerciseCard ex={r.exercise} />)}
+        {m.summary && !m.held && <SummaryCard s={m.summary} actions={actions} />}
       </div>
     </div>
   );
@@ -140,6 +141,16 @@ function ExerciseCard({ ex }) {
       <p className="exercise-line" lang="de">{ex.line}</p>
       <DoLine ex={ex} />
       {ex.hint && <p className="exercise-hint" lang="de">{ex.hint}</p>}
+    </div>
+  );
+}
+
+// after a wrong answer: the next question is held back until the correct answer has been typed (lib/retype.js)
+function RetypeLine({ canContinue, onContinue }) {
+  return (
+    <div className="next-line retype-line">
+      <p className="exercise-do">{t('retypeDo')}</p>
+      {canContinue && <button type="button" className="button-primary small retype-continue" onClick={onContinue}>{t('retypeContinue')}</button>}
     </div>
   );
 }
@@ -250,9 +261,9 @@ function Typing({ slow }) {
   );
 }
 
-function Composer({ stage, busy, waiting, onCancel, onSend, inputRef }) {
+function Composer({ retype, stage, busy, waiting, onCancel, onSend, inputRef }) {
   const [text, setText] = useState('');
-  const placeholder = stage === 'name' ? t('inputPlaceholderName') : stage === 'code' ? t('inputPlaceholderCode') : t('inputPlaceholder');
+  const placeholder = stage === 'name' ? t('inputPlaceholderName') : stage === 'code' ? t('inputPlaceholderCode') : retype ? t('inputPlaceholderRetype') : t('inputPlaceholder');
 
   // grow with the text, up to ~5 lines
   useEffect(() => {
