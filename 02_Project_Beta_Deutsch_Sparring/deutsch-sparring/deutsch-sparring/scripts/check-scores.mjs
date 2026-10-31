@@ -19,42 +19,44 @@ const DAY = 86_400_000;
 const flash = (rec, extra = {}, now = T0) => S.applyAnswer(rec, { task: 'flashcard', correct: true, ...extra }, now);
 const gram = (rec, extra = {}, now = T0) => S.applyAnswer(rec, { task: 'grammar', correct: true, ...extra }, now);
 
+// Meaning can rise once per calendar day, so a run of right answers is spread over days (day 0, 1, 2 …)
+const days = (n, rec = undefined, extra = {}, from = 0) => { let x = rec; for (let i = 0; i < n; i += 1) x = flash(x, extra, T0 + (from + i) * DAY); return x; };
+
 // ---- score table ----
 let r = undefined;
 const path = [];
 for (let i = 0; i < 4; i += 1) {
-  r = flash(r);
+  r = flash(r, {}, T0 + i * DAY);
   path.push(r.v.s);
 }
 eq('new word: 4 right in a row = 3, 5, 7, 10', path, [3, 5, 7, 10]);
 eq('streak after 4 right', r.v.k, 4);
 
-r = flash(flash(flash(undefined)));
-r = flash(r); // 4th
-r = flash(r, {}, T0 + DAY); // 5th: a 10 answered right stays 10
+r = days(4);
+r = flash(r, {}, T0 + 4 * DAY); // 5th: a 10 answered right stays 10
 eq('a 10 answered right stays 10', r.v.s, 10);
 
-r = flash(flash(flash(flash(undefined))));
-r = flash(r, { correct: false, errorType: 'Wortschatz' });
+r = days(4);
+r = flash(r, { correct: false, errorType: 'Wortschatz' }, T0 + 4 * DAY);
 eq('mistake at 10 -> 7', r.v.s, 7);
 eq('mistake resets the streak', r.v.k, 0);
 
 // score 9 without the streak stays at 9
 r = { v: { s: 8, k: 0, due: null } };
-r = flash(r);
+r = flash(r, {}, T0);
 eq('8 + 2 without a streak of 4 stops at 9', r.v.s, 9);
-r = flash(r);
+r = flash(r, {}, T0 + DAY);
 eq('still 9 with a streak of 2', r.v.s, 9);
-r = flash(flash(r));
+r = days(2, r, {}, 2);
 eq('the 4th right in a row gives 10', r.v.s, 10);
 
 // hint / Leicht answers: +1, never 10, no streak
 r = undefined;
-for (let i = 0; i < 12; i += 1) r = flash(r, { hinted: true });
+for (let i = 0; i < 12; i += 1) r = flash(r, { hinted: true }, T0 + i * DAY);
 eq('12 hint answers in a row never reach 10', r.v.s, 9);
 eq('hint answers do not count toward the streak', r.v.k, 0);
-r = flash(flash(flash(undefined)));
-r = flash(r, { hinted: true });
+r = days(3);
+r = flash(r, { hinted: true }, T0 + 3 * DAY);
 eq('hint answer keeps the streak (3) and adds 1', [r.v.s, r.v.k], [8, 3]);
 
 check('score never goes below 1', flash({ v: { s: 1, k: 0, due: null } }, { correct: false }).v.s === 1);
@@ -88,8 +90,8 @@ for (const [score, days] of [[1, 1], [3, 1], [4, 3], [6, 3], [7, 7], [9, 7], [10
 r = flash(undefined, {}, T0);
 eq('due date is set from the new score (3 -> 1 day)', r.v.due, T0 + DAY);
 const ten = { v: { s: 10, k: 4, due: T0 } };
-eq('a due 10 answered right stays 10 (due in 21 days)', [flash(ten, {}, T0 + DAY).v.s, flash(ten, {}, T0 + DAY).v.due], [10, T0 + DAY + 21 * DAY]);
-eq('a due 10 answered wrong drops to 7 (due in 7 days)', [flash(ten, { correct: false }, T0 + DAY).v.s, flash(ten, { correct: false }, T0 + DAY).v.due], [7, T0 + DAY + 7 * DAY]);
+eq('a due 10 (old record, no gap stored) answered right stays 10 and its gap doubles: 21 -> 42 days', [flash(ten, {}, T0 + DAY).v.s, flash(ten, {}, T0 + DAY).v.due], [10, T0 + DAY + 42 * DAY]);
+eq('a due 10 answered wrong drops to 7 and is due tomorrow (R21.1)', [flash(ten, { correct: false }, T0 + DAY).v.s, flash(ten, { correct: false }, T0 + DAY).v.due], [7, T0 + 2 * DAY]);
 
 // ---- how many words ----
 eq('wordsNeeded(20, true) = 13', S.wordsNeeded(20, true), 13);
@@ -146,9 +148,9 @@ const lamp = words.find((w) => w.id === 'die lampe');
 const verb = words.find((w) => w.type === 'verb');
 check('test words exist (a noun with plural, a verb)', lamp && lamp.plural && verb);
 const sc = (rec, k) => rec?.[k]?.s;
-const card = (rec, level, extra = {}, w = lamp, dir = 'en-de') => S.applyAnswer(rec, {
+const card = (rec, level, extra = {}, w = lamp, dir = 'en-de', now = T0) => S.applyAnswer(rec, {
   task: 'flashcard', correct: true, checks: S.testedChecks({ task: 'flashcard', word: w, difficulty: level, direction: dir }), ...extra,
-}, T0);
+}, now);
 
 // ---- what a card tests, by level ----
 eq('Easy noun card tests the word only', S.testedChecks({ word: lamp, difficulty: 'easy' }), ['meaning']);
@@ -196,11 +198,11 @@ q = card(undefined, 'hard', { hinted: true });
 eq('hinted right on Hard: +1 on each tested score, streaks stay 0', [sc(q, 'v'), sc(q, 'a'), sc(q, 'p'), q.v.k], [2, 2, 2, 0]);
 // the 4-in-a-row rule works for each score on its own
 let streak = undefined;
-for (let i = 0; i < 4; i += 1) streak = card(streak, 'medium');
+for (let i = 0; i < 4; i += 1) streak = card(streak, 'medium', {}, lamp, 'en-de', T0 + i * DAY);
 eq('4 right in a row on Medium: m and a reach 10, p still empty', [sc(streak, 'v'), sc(streak, 'a'), streak.p], [10, 10, undefined]);
-streak = card(streak, 'hard', { correct: false, parts: { meaning: true, article: true, plural: false } });
+streak = card(streak, 'hard', { correct: false, parts: { meaning: true, article: true, plural: false } }, lamp, 'en-de', T0 + 4 * DAY);
 eq('then a wrong plural on Hard: p starts at 1, m and a stay 10', [sc(streak, 'v'), sc(streak, 'a'), sc(streak, 'p')], [10, 10, 1]);
-eq('each part has its own due date', [streak.a.due, streak.p.due], [T0 + 21 * DAY, T0 + 1 * DAY]);
+eq('each part has its own due date', [streak.a.due, streak.p.due], [T0 + 4 * DAY + 42 * DAY, T0 + 5 * DAY]);
 
 // sentence tasks (word mistakes inside a sentence act as V did before)
 const gcheck = S.testedChecks({ task: 'grammar', word: lamp, difficulty: 'easy' });
@@ -371,12 +373,95 @@ eq('parts line: wrong plural shows the right plural', CP.partsView({ parts: { me
 eq('parts line: parts that were not judged (null) are left out', CP.partsView({ parts: { meaning: false, article: null }, corrected: 'die Lampe' }).length, 1);
 eq('parts line: nothing for sentence tasks', CP.partsView({ corrected: 'x' }), []);
 
+// ---- R21: Word score rules (31 Oct 2026) ----
+{
+  const D = (n) => T0 + n * DAY;
+  // 1. any wrong answer: that part is due tomorrow, whatever the new score
+  const wrongWord = flash({ v: { s: 8, k: 2, due: D(0) } }, { correct: false, errorType: 'Wortschatz' }, D(5));
+  eq('R21.1 a wrong answer at 8 -> score 5, due tomorrow (not in 3 days)', [wrongWord.v.s, wrongWord.v.due], [5, D(6)]);
+  eq('R21.1 a wrong answer at 10 -> 7, due tomorrow (not in 7 days)', [flash({ v: { s: 10, k: 6, due: D(0), iv: 42 } }, { correct: false }, D(5)).v.due, flash({ v: { s: 10, k: 6, due: D(0), iv: 42 } }, { correct: false }, D(5)).v.iv], [D(6), undefined]);
+  eq('R21.1 a wrong sentence (g -3) is due tomorrow, v is not touched', [gram({ v: { s: 9, k: 3, due: D(9) }, g: { s: 9, k: 3, due: D(9) } }, { correct: false, errorType: 'Kasus' }, D(5)).g.due, gram({ v: { s: 9, k: 3, due: D(9) }, g: { s: 9, k: 3, due: D(9) } }, { correct: false, errorType: 'Kasus' }, D(5)).v.due], [D(6), D(9)]);
+  const art = S.applyAnswer({ v: { s: 9, k: 3, due: D(9) }, a: { s: 9, k: 3, due: D(9) } }, { task: 'flashcard', correct: false, errorType: 'Artikel', checks: ['meaning', 'article'] }, D(5));
+  eq('R21.1 same for the Article part: a due tomorrow, Meaning (right) keeps its band', [art.a.due, art.v.s >= 9], [D(6), true]);
+  const plu = S.applyAnswer({ v: { s: 7, k: 3, due: D(9) }, a: { s: 7, k: 3, due: D(9) }, p: { s: 9, k: 3, due: D(9) } }, { task: 'flashcard', correct: false, rule: 'Plural', checks: ['meaning', 'article', 'plural'] }, D(5));
+  eq('R21.1 same for the Plural part', plu.p.due, D(6));
+  const skip = S.applyAnswer({ v: { s: 9, k: 3, due: D(9) } }, { task: 'flashcard', skipped: true }, D(5));
+  eq('R21.1 a skip is NOT a wrong answer: it keeps the band (9 -> 8, 7 days)', [skip.v.s, skip.v.due], [8, D(12)]);
+
+  // 2. a 10: each further right check doubles the gap, cap 180
+  let x = days(4); // day 3: the 10 is earned
+  eq('R21.2 the first 10 comes back after 21 days', [x.v.s, x.v.iv, x.v.due], [10, 21, D(3) + 21 * DAY]);
+  x = flash(x, {}, D(25));
+  eq('R21.2 right check -> 42 days', [x.v.iv, x.v.due], [42, D(25) + 42 * DAY]);
+  x = flash(x, {}, D(70));
+  eq('R21.2 right check -> 84 days', [x.v.iv, x.v.due], [84, D(70) + 84 * DAY]);
+  x = flash(flash(x, {}, D(160)), {}, D(330));
+  eq('R21.2 then 168, then the cap 180', x.v.iv, 180);
+  x = flash(x, {}, D(520));
+  eq('R21.2 the gap stays at 180', [x.v.iv, x.v.due], [180, D(520) + 180 * DAY]);
+  const afterWrong = flash(x, { correct: false }, D(700));
+  eq('R21.2 a wrong check drops to 7 and forgets the gap', [afterWrong.v.s, afterWrong.v.iv], [7, undefined]);
+  const hint = flash({ v: { s: 10, k: 6, due: D(0), iv: 42 } }, { hinted: true }, D(50));
+  eq('R21.2 a right check with a hint keeps the gap (42), no doubling', [hint.v.iv, hint.v.due], [42, D(50) + 42 * DAY]);
+  const skip10 = S.applyAnswer({ v: { s: 10, k: 6, due: D(0), iv: 42 } }, { task: 'flashcard', skipped: true }, D(50));
+  eq('R21.2 a skipped 10 -> 9 with the normal 7 days, no gap', [skip10.v.s, skip10.v.due, skip10.v.iv], [9, D(57), undefined]);
+  // every part has its own gap
+  let np = { v: { s: 10, k: 5, due: 0, iv: 21 }, a: { s: 10, k: 5, due: 0, iv: 21 }, p: { s: 10, k: 5, due: 0, iv: 84 } };
+  np = S.applyAnswer(np, { task: 'flashcard', correct: true, checks: ['meaning', 'article', 'plural'] }, D(30));
+  eq('R21.2 each part doubles its own gap (v, a, p)', [np.v.iv, np.a.iv, np.p.iv], [42, 42, 168]);
+  const g10 = gram({ g: { s: 10, k: 5, due: 0, iv: 21 }, v: { s: 9, k: 1, due: 0 } }, {}, D(30));
+  eq('R21.2 the Sentence part too', [g10.g.iv, g10.g.due], [42, D(30) + 42 * DAY]);
+
+  // 5. Meaning rises at most once per calendar day
+  const m1 = flash(undefined, {}, D(0) + 1000);
+  const m2 = flash(m1, {}, D(0) + 5 * 3_600_000);
+  eq('R21.5 second right answer on the same day: Meaning unchanged', [m2.v.s, m2.v.k, m2.v.due], [m1.v.s, m1.v.k, m1.v.due]);
+  eq('R21.5 …next day it rises again', flash(m2, {}, D(1) + 1000).v.s, 5);
+  const m3 = flash(m1, { correct: false, errorType: 'Wortschatz' }, D(0) + 6 * 3_600_000);
+  eq('R21.5 a wrong answer the same day still lowers it', m3.v.s, 1);
+  eq('R21.5 a grammar task that lifts Meaning counts as the day\'s rise', gram(m1, {}, D(0) + 7 * 3_600_000).v.s, m1.v.s);
+  eq('R21.5 …but the Sentence score still rises', gram(m1, {}, D(0) + 7 * 3_600_000).g.s, 3);
+  eq('R21.5 Article and Plural are not limited', [card(card(undefined, 'hard', {}), 'hard', {}).a.s], [5]);
+  eq('R21.5 a hint answer is a rise too (only once a day)', flash(flash(undefined, { hinted: true }, D(0)), { hinted: true }, D(0) + 1000).v.s, 2);
+  eq('R21.5 a 10 checked twice on one day: the gap doubles once', flash(flash(days(4), {}, D(20)), {}, D(20) + 1000).v.iv, 42);
+
+  // 3 + 4: the picker
+  const wl = Array.from({ length: 20 }, (_, i) => ({ id: `t${i}`, type: i === 19 ? 'phrase' : 'verb', level: 'A1', sources: ['goethe-a1'], topics: ['T › L'] }));
+  const fixed = () => 0.5;
+  const sx = {};
+  for (let i = 0; i < 6; i += 1) sx[`t${i}`] = { v: { s: 10, k: 5, due: D(-10 - i), iv: 21 }, g: { s: 10, k: 5, due: D(-10 - i), iv: 21 } }; // six overdue 10s
+  sx.t6 = { v: { s: 10, k: 5, due: D(40), iv: 21 }, g: { s: 10, k: 5, due: D(40), iv: 21 } }; // a 10 not due
+  const got = S.pickWords({ words: wl, scores: sx, count: 10, now: D(0), rand: fixed });
+  const ids = got.map((w) => w.id);
+  eq('R21.3 all six overdue 10s are in (CHECKS_MAX is 2)', [0, 1, 2, 3, 4, 5].every((i) => ids.includes(`t${i}`)), true);
+  eq('R21.3 the 10 that is not due is not used as a check while overdue ones fill the places', ids.includes('t6'), false);
+  eq('R21.3 the session still has the requested number of words', ids.length, 10);
+  const few = S.pickWords({ words: wl, scores: { t0: sx.t0, t6: sx.t6 }, count: 10, now: D(0), rand: fixed }).map((w) => w.id);
+  eq('R21.3 one overdue 10: normal behaviour (it is in; checks keep their share)', few.includes('t0'), true);
+  const all = {};
+  for (let i = 0; i < 20; i += 1) all[`t${i}`] = { v: { s: 10, k: 5, due: D(-30), iv: 21 }, g: { s: 10, k: 5, due: D(-30), iv: 21 } };
+  eq('R21.3 more overdue 10s than words: the session is not longer than asked', S.pickWords({ words: wl, scores: all, count: 5, now: D(0), rand: fixed }).length, 5);
+
+  // 4. grammar flag: a missing Sentence score is weak
+  const vs = { v: { s: 9, k: 2, due: D(9) } };
+  const withG = { v: { s: 9, k: 2, due: D(9) }, g: { s: 9, k: 2, due: D(9) } };
+  const wl2 = [{ id: 'a', type: 'verb', level: 'A1', sources: ['goethe-a1'], topics: ['T › L'] }, { id: 'b', type: 'verb', level: 'A1', sources: ['goethe-a1'], topics: ['T › L'] }, { id: 'ph', type: 'phrase', level: 'A1', sources: ['goethe-a1'], topics: ['T › L'] }];
+  const pick = (grammar, scores, count = 1) => S.pickWords({ words: wl2, scores, count, grammar, now: D(0), rand: fixed }).map((w) => w.id);
+  eq('R21.4 vocabulary only: both words are equal (not due), a missing Sentence score is ignored', pick(false, { a: vs, b: withG, ph: withG }, 3).length, 3);
+  eq('R21.4 with grammar: the word without a Sentence score comes first (weak, due now)', pick(true, { a: withG, b: vs, ph: withG }), ['b']);
+  eq('R21.4 with grammar: a phrase without a Sentence score is NOT weak', pick(true, { a: withG, b: withG, ph: vs }).includes('ph'), false);
+  eq('R21.4 without the flag nothing is weak', pick(false, { a: withG, b: vs, ph: withG }, 3).length, 3);
+}
+
 // ---- database side: the migration step (the SQL itself is run on a real Postgres by hand, see README) ----
 {
   const last = SCH.MIGRATIONS[SCH.MIGRATIONS.length - 1];
-  const stmts = last.statements.join('\n');
-  check('migration step 5 adds a, a_streak, a_due, p, p_streak, p_due (IF NOT EXISTS)', last.version === 5 && ['a smallint', 'a_streak int', 'a_due timestamptz', 'p smallint', 'p_streak int', 'p_due timestamptz'].every((c) => stmts.includes(`ADD COLUMN IF NOT EXISTS ${c}`)));
-  check('migration step 5 backfills a from v only where a is empty', /UPDATE word_scores SET a = v, a_streak = v_streak, a_due = v_due WHERE a IS NULL AND v IS NOT NULL/.test(stmts));
+  const step5 = SCH.MIGRATIONS.find((m) => m.version === 5);
+  const stmts5 = step5.statements.join('\n');
+  check('migration step 5 adds a, a_streak, a_due, p, p_streak, p_due (IF NOT EXISTS)', step5.version === 5 && ['a smallint', 'a_streak int', 'a_due timestamptz', 'p smallint', 'p_streak int', 'p_due timestamptz'].every((c) => stmts5.includes(`ADD COLUMN IF NOT EXISTS ${c}`)));
+  check('migration step 5 backfills a from v only where a is empty', /UPDATE word_scores SET a = v, a_streak = v_streak, a_due = v_due WHERE a IS NULL AND v IS NOT NULL/.test(stmts5));
+  const stmts6 = last.statements.join('\n');
+  check('migration step 6 (R21) adds v_iv, a_iv, p_iv, g_iv (smallint) and v_up (timestamptz), all IF NOT EXISTS', last.version === 6 && ['v_iv smallint', 'a_iv smallint', 'p_iv smallint', 'g_iv smallint', 'v_up timestamptz'].every((c) => stmts6.includes(`ADD COLUMN IF NOT EXISTS ${c}`)) && last.statements.every((x) => /IF NOT EXISTS/.test(x)));
 }
 
 // ---- equally urgent words come in a new order each session (the first word of a list must not always open it) ----

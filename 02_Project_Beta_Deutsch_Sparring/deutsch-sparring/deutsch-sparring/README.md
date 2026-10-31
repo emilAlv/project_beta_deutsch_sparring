@@ -31,6 +31,11 @@ log in with a username and password, and their history is stored on the server. 
 - **Word scores.** Each word has up to four scores from 1 to 10: *Meaning*, *Article* and *Plural*
   (nouns only), and *Sentence* (the word used in grammar). The app changes them, not the AI. A word
   comes back after 1, 3, 7 or 21 days, depending on its score. Rules and numbers: `lib/scores.js`.
+  Since R21 (31 Oct 2026): a wrong answer makes that part due tomorrow, whatever its score; a 10's gap
+  doubles with each further right check (21, 42, 84, 168, max 180 days; stored as `iv`); overdue 10s are
+  always part of a session; with grammar a word without a Sentence score counts as weak (not phrases);
+  Meaning can rise only once per calendar day (`up`). The database got migration step 6 for this
+  (`v_iv`, `a_iv`, `p_iv`, `g_iv`, `v_up`).
 - **Class exercises.** Exercise models are patterns for grammar topics. The AI writes a new exercise
   from a pattern each session, so students get fresh sentences but the same grammar.
 

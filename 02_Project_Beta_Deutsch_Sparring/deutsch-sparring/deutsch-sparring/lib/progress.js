@@ -155,7 +155,11 @@ export function cleanScores(raw) {
     const rec = {};
     for (const kind of ['v', 'g', 'a', 'p']) {
       const x = raw[id][kind];
-      if (x && num(x.s) != null) rec[kind] = { s: num(x.s), k: num(x.k) ?? 0, due: num(x.due) };
+      if (x && num(x.s) != null) {
+        rec[kind] = { s: num(x.s), k: num(x.k) ?? 0, due: num(x.due) };
+        if (num(x.iv) != null) rec[kind].iv = num(x.iv);
+        if (kind === 'v' && num(x.up) != null) rec[kind].up = num(x.up);
+      }
     }
     if (!rec.v && !rec.g && !rec.a && !rec.p) continue;
     if (num(raw[id].last) != null) rec.last = num(raw[id].last);
@@ -202,15 +206,16 @@ const iso = (x) => (x == null || !Number.isFinite(x) ? null : new Date(x).toISOS
 
 function rowToRec(r) {
   const rec = {};
-  if (r.v != null) rec.v = { s: Number(r.v), k: Number(r.v_streak) || 0, due: ms(r.v_due) };
-  if (r.g != null) rec.g = { s: Number(r.g), k: Number(r.g_streak) || 0, due: ms(r.g_due) };
-  if (r.a != null) rec.a = { s: Number(r.a), k: Number(r.a_streak) || 0, due: ms(r.a_due) };
-  if (r.p != null) rec.p = { s: Number(r.p), k: Number(r.p_streak) || 0, due: ms(r.p_due) };
+  const extra = (kind) => ({ ...(r[`${kind}_iv`] != null ? { iv: Number(r[`${kind}_iv`]) } : {}), ...(kind === 'v' && r.v_up != null ? { up: ms(r.v_up) } : {}) });
+  if (r.v != null) rec.v = { s: Number(r.v), k: Number(r.v_streak) || 0, due: ms(r.v_due), ...extra('v') };
+  if (r.g != null) rec.g = { s: Number(r.g), k: Number(r.g_streak) || 0, due: ms(r.g_due), ...extra('g') };
+  if (r.a != null) rec.a = { s: Number(r.a), k: Number(r.a_streak) || 0, due: ms(r.a_due), ...extra('a') };
+  if (r.p != null) rec.p = { s: Number(r.p), k: Number(r.p_streak) || 0, due: ms(r.p_due), ...extra('p') };
   if (r.last_practised) rec.last = ms(r.last_practised);
   return rec;
 }
 
-const SCORE_COLUMNS = 'user_id, word_id, v, v_streak, v_due, g, g_streak, g_due, a, a_streak, a_due, p, p_streak, p_due, last_practised';
+const SCORE_COLUMNS = 'user_id, word_id, v, v_streak, v_due, g, g_streak, g_due, a, a_streak, a_due, p, p_streak, p_due, last_practised, v_up, v_iv, a_iv, p_iv, g_iv';
 const scoreParams = (userId, wordId, rec) => [
   userId, wordId,
   rec.v?.s ?? null, rec.v?.k ?? null, iso(rec.v?.due),
@@ -218,10 +223,11 @@ const scoreParams = (userId, wordId, rec) => [
   rec.a?.s ?? null, rec.a?.k ?? null, iso(rec.a?.due),
   rec.p?.s ?? null, rec.p?.k ?? null, iso(rec.p?.due),
   iso(rec.last),
+  iso(rec.v?.up), rec.v?.iv ?? null, rec.a?.iv ?? null, rec.p?.iv ?? null, rec.g?.iv ?? null,
 ];
 
 // One statement: save the answer (only if the word's score row is still as we read it: $16 = that row as text, $17 = word id)
-// and, if the answer was saved, the new score ($18–$30, same order as scoreParams after user and word).
+// and, if the answer was saved, the new score ($18–$35, same order as scoreParams after user and word).
 export const SAVE_ANSWER_AND_SCORE = `WITH ins AS (
     INSERT INTO answers (session_id, user_id, n, task, word_id, question, student_answer, corrected, rule, error_type, correct, skipped, hinted, difficulty, topic_id)
     SELECT $1::text, $2::uuid, $3::int, $4::text, $5::text, $6::text, $7::text, $8::text, $9::text, $10::text, $11::boolean, $12::boolean, $13::boolean, $14::text, $15::text
@@ -231,12 +237,14 @@ export const SAVE_ANSWER_AND_SCORE = `WITH ins AS (
   ), up AS (
     INSERT INTO word_scores (${SCORE_COLUMNS})
     SELECT $2::uuid, $17::text, $18::smallint, $19::int, $20::timestamptz, $21::smallint, $22::int, $23::timestamptz,
-           $24::smallint, $25::int, $26::timestamptz, $27::smallint, $28::int, $29::timestamptz, $30::timestamptz
+           $24::smallint, $25::int, $26::timestamptz, $27::smallint, $28::int, $29::timestamptz, $30::timestamptz,
+           $31::timestamptz, $32::smallint, $33::smallint, $34::smallint, $35::smallint
     WHERE $17::text IS NOT NULL AND EXISTS (SELECT 1 FROM ins)
     ON CONFLICT (user_id, word_id) DO UPDATE SET v = EXCLUDED.v, v_streak = EXCLUDED.v_streak, v_due = EXCLUDED.v_due,
       g = EXCLUDED.g, g_streak = EXCLUDED.g_streak, g_due = EXCLUDED.g_due,
       a = EXCLUDED.a, a_streak = EXCLUDED.a_streak, a_due = EXCLUDED.a_due,
-      p = EXCLUDED.p, p_streak = EXCLUDED.p_streak, p_due = EXCLUDED.p_due, last_practised = EXCLUDED.last_practised
+      p = EXCLUDED.p, p_streak = EXCLUDED.p_streak, p_due = EXCLUDED.p_due, last_practised = EXCLUDED.last_practised,
+      v_up = EXCLUDED.v_up, v_iv = EXCLUDED.v_iv, a_iv = EXCLUDED.a_iv, p_iv = EXCLUDED.p_iv, g_iv = EXCLUDED.g_iv
     RETURNING 1
   )
   SELECT (SELECT count(*) FROM ins)::int AS inserted`;
@@ -348,7 +356,7 @@ const dbStore = {
         rec = applyAnswer(rows[0] ? rowToRec(rows[0]) : undefined, scoreInput, Date.now());
       }
       const answerParams = [a.sessionId, userId, a.n, a.task, a.wordId, a.question, a.studentAnswer, a.corrected, a.rule, a.errorType, a.correct, a.skipped, a.hinted, a.difficulty, a.topicId];
-      const scoreValues = rec ? scoreParams(userId, a.wordId, rec).slice(2) : Array(13).fill(null);
+      const scoreValues = rec ? scoreParams(userId, a.wordId, rec).slice(2) : Array(18).fill(null);
       const results = await sql().transaction((t) => [
         t.query('INSERT INTO sessions (id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [a.sessionId, userId]),
         t.query(`SELECT pg_advisory_xact_lock(hashtextextended($1::text || ':' || COALESCE($2::text, ''), 0))`, [userId, a.wordId]),
@@ -474,9 +482,9 @@ const dbStore = {
       const params = [];
       const values = chunk.map(([id, rec], j) => {
         params.push(...scoreParams(userId, id, rec));
-        const p = j * 15;
-        const T = new Set([5, 8, 11, 14, 15]); // the timestamp columns
-        return `(${Array.from({ length: 15 }, (_, i) => `$${p + i + 1}${T.has(i + 1) ? '::timestamptz' : ''}`).join(', ')})`;
+        const p = j * 20;
+        const T = new Set([5, 8, 11, 14, 15, 16]); // the timestamp columns
+        return `(${Array.from({ length: 20 }, (_, i) => `$${p + i + 1}${T.has(i + 1) ? '::timestamptz' : ''}`).join(', ')})`;
       });
       queries.push([`INSERT INTO word_scores (${SCORE_COLUMNS}) VALUES ${values.join(', ')} ON CONFLICT DO NOTHING`, params]);
     }
