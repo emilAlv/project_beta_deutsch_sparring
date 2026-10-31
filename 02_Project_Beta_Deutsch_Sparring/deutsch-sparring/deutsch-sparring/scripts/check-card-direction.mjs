@@ -27,5 +27,12 @@ check('with sentence tasks: grammar tasks stay grammar tasks', ex.type === 'gapf
 
 ex = run({ type: 'Lückentext', line: 'Ich kaufe ___ Lampe.', answer: 'eine' }, {});
 check('grammar sessions are not touched', ex.type === 'gapfill' && ex.line === 'Ich kaufe ___ Lampe.');
+const { noGermanExample } = await import('../lib/reply.js');
+check('word-list examples lose their German part', noGermanExample('dark- (prefix for colours, e.g. dunkelblau = dark blue)') === 'dark- (prefix for colours, e.g. dark blue)'
+  && noGermanExample('to act, to trade; es handelt sich um = it is about') === 'to act, to trade' && noGermanExample('the (male) cousin') === 'the (male) cousin');
+const dunkel = { id: 'dunkel-', de: 'dunkel-', type: 'other', en: 'dark- (prefix for colours, e.g. dunkelblau = dark blue)', article: '', noun: '' };
+const r = normalizeReply({ message: 'Was ist das deutsche Wort für dark- (prefix for colours, e.g. dunkelblau = dark blue)?', exercise: { number: 3, type: 'Karteikarte', direction: 'en-de', line: 'dark- (prefix for colours, e.g. dunkelblau = dark blue)', answer: 'dunkel-', wordId: 'dunkel-' } },
+  { ...ctx({ direction: 'en-de', wordsOnly: true }), wordIds: new Set(['dunkel-']), wordById: new Map([['dunkel-', dunkel]]) });
+check('EN→DE card and message never show «dunkelblau»', !/dunkel/i.test(r.exercise.line) && !/dunkel/i.test(r.message), `${r.exercise.line} | ${r.message}`);
 console.log(failed ? `\n${failed} check(s) failed.` : '\nAll card direction checks passed.');
 process.exit(failed ? 1 : 0);
