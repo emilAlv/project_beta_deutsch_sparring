@@ -34,5 +34,13 @@ const dunkel = { id: 'dunkel-', de: 'dunkel-', type: 'other', en: 'dark- (prefix
 const r = normalizeReply({ message: 'Was ist das deutsche Wort für dark- (prefix for colours, e.g. dunkelblau = dark blue)?', exercise: { number: 3, type: 'Karteikarte', direction: 'en-de', line: 'dark- (prefix for colours, e.g. dunkelblau = dark blue)', answer: 'dunkel-', wordId: 'dunkel-' } },
   { ...ctx({ direction: 'en-de', wordsOnly: true }), wordIds: new Set(['dunkel-']), wordById: new Map([['dunkel-', dunkel]]) });
 check('EN→DE card and message never show «dunkelblau»', !/dunkel/i.test(r.exercise.line) && !/dunkel/i.test(r.message), `${r.exercise.line} | ${r.message}`);
+// grammar gaps: the line never contains its own answer
+const gap = normalizeReply({ message: 'Weiter: ___ Tasche ist alt (die).', exercise: { number: 7, type: 'Lückentext', line: '___ Tasche ist alt (die).', answer: 'Die', hint: 'Das Geschlecht ist feminin.' } }, ctx({}));
+check('a gap whose bracket IS the answer loses the bracket (line and message)', gap.exercise.line === '___ Tasche ist alt.' && !gap.message.includes('(die)'), `${gap.exercise.line} | ${gap.message}`);
+check('…and a hint naming the gender of an article answer is removed', gap.exercise.hint === null, gap.exercise.hint);
+const base = normalizeReply({ message: 'x', exercise: { number: 2, type: 'Lückentext', line: 'Ich lege das Handy auf ___ Tisch (der).', answer: 'den', hint: 'Wohin?' } }, ctx({}));
+check('a base form that is NOT the answer stays', base.exercise.line === 'Ich lege das Handy auf ___ Tisch (der).' && base.exercise.hint === 'Wohin?');
+const choice = normalizeReply({ message: 'x', exercise: { number: 2, type: 'Lückentext', line: '___ Tasche ist alt (der/die/das).', answer: 'die' } }, ctx({}));
+check('a choice list (der/die/das) stays', choice.exercise.line === '___ Tasche ist alt (der/die/das).');
 console.log(failed ? `\n${failed} check(s) failed.` : '\nAll card direction checks passed.');
 process.exit(failed ? 1 : 0);

@@ -147,6 +147,18 @@ export function hintRevealsAnswer(hint, answer) {
   const a = comparable(answer);
   return Boolean(h && a && ` ${h} `.includes(` ${a} `));
 }
+// The question line must never contain its own answer: a "(die)" after "___ Tasche ist alt" IS the answer.
+// Brackets whose content equals the answer are removed (a choice list like "(der/die/das)" stays).
+export function stripAnswerFromLine(line, answer) {
+  const a = comparable(answer);
+  if (!a) return line;
+  return String(line).replace(/\s*\(([^()]*)\)/g, (m, inner) => (comparable(inner) === a ? '' : m)).replace(/\s+([.!?])/g, '$1');
+}
+// For an article gap ("der", "die", "das" …) a hint naming the gender gives the answer away.
+const ARTICLE_ANSWER = /^(der|die|das|den|dem|des|ein|eine|einen|einem|einer|eines)$/;
+const GENDER_HINT = /\b(feminin|maskulin|neutral|neutrum|weiblich|männlich|sächlich|geschlecht|genus|feminine|masculine|gender)\b/i;
+export const hintNamesGender = (hint, answer) => Boolean(hint && ARTICLE_ANSWER.test(comparable(answer)) && GENDER_HINT.test(hint));
+
 const int = (v, min, max) => {
   const n = Math.round(Number(v));
   return Number.isFinite(n) && n >= min && n <= max ? n : null;
@@ -330,15 +342,17 @@ export function normalizeReply(raw, ctx) {
     let hint = orNull(e.hint, 200);
     // A missing private answer cannot prove a hint safe. New model replies always contain one;
     // deterministic/demo replies populate it too.
-    if (!answer || hintRevealsAnswer(hint, answer)) hint = null;
+    if (!answer || hintRevealsAnswer(hint, answer) || hintNamesGender(hint, answer)) hint = null;
     exercise = {
       number: int(e.number, 1, 99),
       type,
       direction: type === 'flashcard' && ['en-de', 'de-en'].includes(e.direction) ? e.direction : null,
-      line: clip(e.line, 500).replace(/^[„"“»«]+|[“"”«»]+$/g, ''),
+      line: stripAnswerFromLine(clip(e.line, 500).replace(/^[„"“»«]+|[“"”«»]+$/g, ''), type === 'flashcard' ? '' : answer),
       hint,
     };
     if (type === 'flashcard' && !exercise.direction) exercise.direction = ARTICLE.test(exercise.line) ? 'de-en' : 'en-de';
+    const rawLine = clip(e.line, 500).replace(/^[„"“»«]+|[“"”«»]+$/g, '');
+    if (rawLine !== exercise.line && message.includes(rawLine)) message = message.split(rawLine).join(exercise.line);
     const shownLine = exercise.line;
     const fixed = fixWordCard(exercise, e, ctx);
     // the tutor's message often repeats the card line: keep it in step (no German on an English → German card)
