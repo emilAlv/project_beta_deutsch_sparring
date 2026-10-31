@@ -236,7 +236,9 @@ async function handle(req) {
   const openChecks = session.openTask
     ? testedChecks({ task: session.openTask, word: wordById.get(session.openWordId) || getWord(session.openWordId), difficulty: settings.difficulty, direction: session.openDirection || 'en-de' })
     : null;
-  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), wordById, openTask: session.openTask, openChecks, focus: body.grammarFocus };
+  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), wordById, openTask: session.openTask, openChecks, focus: body.grammarFocus,
+    // word sessions: the app enforces the chosen card direction and, without sentence tasks, flashcards only (lib/reply.js)
+    direction: filter || reviewPlan ? settings.direction : null, wordsOnly: Boolean(filter) && !settings.sentences };
 
   // --- get the tutor's answer (demo script or Gemini) ---
   let text;
