@@ -482,5 +482,15 @@ eq('parts line: nothing for sentence tasks', CP.partsView({ corrected: 'x' }), [
   check('new words sit in the middle of the session', pos.length > 0 && pos[0] > 0 && pos[pos.length - 1] < mixed.length - 1 && !S.isNew(wk[mixed[0].id]) && !S.isNew(wk[mixed[mixed.length - 1].id]), pos.join(','));
 }
 
+// ---- practised words with the SAME score: a new order each session (not fixed by their exact due time) ----
+{
+  const now = Date.now();
+  const pool = Array.from({ length: 12 }, (_, i) => ({ id: `p${String(i).padStart(2, '0')}`, de: `Wort${i}`, type: 'phrase', level: 'A1', sources: ['goethe'], topics: ['T'] }));
+  const scores = Object.fromEntries(pool.map((w, i) => [w.id, { v: { s: 4, k: 0, due: now - 1000 * (i + 1) } }])); // same score, different due times
+  const seeded = (seed) => () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const orders = new Set([1, 2, 3, 4, 5].map((seed) => S.pickWords({ words: pool, scores, count: 10, now, rand: seeded(seed) }).map((w) => w.id).join(',')));
+  check('same score: the word order changes between sessions', orders.size >= 4, String(orders.size));
+}
+
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll checks passed.');
 process.exit(failed ? 1 : 0);

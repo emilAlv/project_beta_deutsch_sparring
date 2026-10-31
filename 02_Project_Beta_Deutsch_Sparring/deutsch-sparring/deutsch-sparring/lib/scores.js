@@ -401,8 +401,10 @@ export function pickWords({ words, scores = {}, level, sources, section, list, c
 
   // final order: due & weak (incl. weak fillers), with the new words in the middle, checks last
   const all = [...takeDue, ...takeChecks, ...takeNew, ...extra];
-  const first = all.filter((w) => !isNew(rec(w)) && !isTenW(w)).sort((a, b) => Number(due(b)) - Number(due(a)) || byScore(a, b));
-  const checks = all.filter(isTenW);
+  // the ORDER inside the session: weakest score first, but words with the same score in a new random order every session
+  // (the exact due time only decides which words are picked, not their order – otherwise every session feels the same)
+  const first = all.filter((w) => !isNew(rec(w)) && !isTenW(w)).sort((a, b) => Number(due(b)) - Number(due(a)) || score(a) - score(b) || tie(a, b));
+  const checks = all.filter(isTenW).sort(tie);
   const news = all.filter((w) => isNew(rec(w)));
   // new words go in the MIDDLE: stopping early must not drop them all, and they are not the very first question
   const half = Math.ceil(first.length / 2);
