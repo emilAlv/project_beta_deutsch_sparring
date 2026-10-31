@@ -161,7 +161,7 @@ const { progress, cleanHistory, cleanScores, SAVE_ANSWER_AND_SCORE: SAVE_SQL } =
   failOn = null;
   const done = await progress().importData(U, { history, scores });
   check('retry after the failure imports everything', done === true && state.imported && state.sessions.length === 1 && state.scores.size === 1);
-  check('import writes v, g, a, p of a word in one row: 15 values for 15 columns', state.importSql?.params.length === 15 && (state.importSql.text.match(/\$\d+/g) || []).length === 15 && state.importSql.params[8] === 3 && state.importSql.params[11] === 1, JSON.stringify(state.importSql?.params));
+  check('import writes v, g, a, p of a word in one row: 20 values for 20 columns', state.importSql?.params.length === 20 && (state.importSql.text.match(/\$\d+/g) || []).length === 20 && state.importSql.params[8] === 3 && state.importSql.params[11] === 1, JSON.stringify(state.importSql?.params));
   check('a second import is refused (data exists)', (await progress().importData(U, { history, scores })) === false);
   void cleanHistory; void cleanScores;
 }
@@ -221,7 +221,7 @@ const { progress, cleanHistory, cleanScores, SAVE_ANSWER_AND_SCORE: SAVE_SQL } =
   eq('…a sentence task: meaning + article', scoreInputOf({ ...a, task: 'grammar' }).checks, ['meaning', 'article']);
   check('no difficulty from the browser: its own list is used', scoreInputOf({ ...a, difficulty: null, checks: ['meaning'] }).checks.join() === 'meaning');
 
-  // a saved answer: the row read from the database (with a and p) is scored, and the new row is written with all 13 score values
+  // a saved answer: the row read from the database (with a and p) is scored, and the new row is written with all 18 score values
   reset();
   state.version = LATEST_VERSION; state.hasNotebook = true;
   const T = (n) => new Date(n).toISOString();
@@ -236,7 +236,7 @@ const { progress, cleanHistory, cleanScores, SAVE_ANSWER_AND_SCORE: SAVE_SQL } =
   const out = await progress().addAnswer(U, { ...a, n: 9, hinted: false, correct: false, errorType: 'Wortschatz', rule: 'Plural', skipped: false, hasG: true, studentAnswer: 'die Lampe', corrected: 'die Lampe, die Lampen', question: 'the lamp', topicId: null },
     scoreInputOf({ ...a, correct: false, errorType: 'Wortschatz', rule: 'Plural', parts: null, hinted: false, skipped: false }));
   check('Hard, wrong plural only, row from the database: m 5 → 7, a 5 → 7, p new → 1', out.saved && out.rec.v.s === 7 && out.rec.a.s === 7 && out.rec.p.s === 1, JSON.stringify(out.rec));
-  check('the statement gets 30 values; v at $18, g at $21, a at $24, p at $27', params?.length === 30 && params[17] === 7 && params[20] === null && params[23] === 7 && params[26] === 1, JSON.stringify(params?.slice(16)));
+  check('the statement gets 35 values; v at $18, g at $21, a at $24, p at $27', params?.length === 35 && params[17] === 7 && params[20] === null && params[23] === 7 && params[26] === 1, JSON.stringify(params?.slice(16)));
   check('the guard text ($16) now contains the a and p columns of the row it read', typeof params?.[15] === 'string' && params[15].includes('"a":5'));
 }
 

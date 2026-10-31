@@ -176,6 +176,7 @@ async function handle(req) {
         sources: sourcesFor(['goethe', 'kurs'].includes(body.source) ? body.source : 'both'),
         ...filter,
         count: wordsNeeded(session.total, settings.sentences),
+        grammar: Boolean(settings.sentences), // with grammar: a missing Sentence score makes a word weak
         difficulty: settings.difficulty, // which scores make a word "weak": Easy Meaning, Medium + Article, Hard + Plural
         now: Date.now(),
       };

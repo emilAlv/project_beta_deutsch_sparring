@@ -183,7 +183,20 @@ export const MIGRATIONS = [
   'UPDATE word_scores SET a = v, a_streak = v_streak, a_due = v_due WHERE a IS NULL AND v IS NOT NULL',
     ],
   },
-  // next step: { version: 6, name: '…', statements: ['ALTER TABLE … ADD COLUMN IF NOT EXISTS …'] },
+  {
+    version: 6,
+    name: 'word_scores: the gap of a 10 (v_iv, a_iv, p_iv, g_iv) and when Meaning last rose (v_up)',
+    statements: [
+      // iv = days until a 10 comes back again (21, doubling to 180); empty = not a 10 / not known yet (counts as 21).
+      // v_up = when the Meaning score last rose (it can rise once per calendar day). Safe to run again.
+      'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS v_iv smallint',
+      'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS a_iv smallint',
+      'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS p_iv smallint',
+      'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS g_iv smallint',
+      'ALTER TABLE word_scores ADD COLUMN IF NOT EXISTS v_up timestamptz',
+    ],
+  },
+  // next step: { version: 7, name: '…', statements: ['ALTER TABLE … ADD COLUMN IF NOT EXISTS …'] },
 ];
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
