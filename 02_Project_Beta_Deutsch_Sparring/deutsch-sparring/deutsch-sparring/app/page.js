@@ -685,7 +685,14 @@ export default function Home() {
       ...x,
       session: { ...x.session, retype: null },
       stage: done && x.stage === 'practice' ? 'summary' : x.stage,
-      messages: x.messages.map((m) => (m.id === id ? { ...m, held: false } : m)),
+      // the held question (or the summary) now comes AFTER the retype lines, as its own card at the bottom of the chat
+      messages: (() => {
+        const held = x.messages.find((m) => m.id === id);
+        const next = held && (held.reply?.exercise || held.summary)
+          ? [{ id: uid(), at: Date.now(), role: 'tutor', reply: { message: '', feedback: null, exercise: held.reply?.exercise || null }, summary: held.summary || null }]
+          : [];
+        return [...x.messages.map((m) => (m.id === id ? { ...m, held: false, moved: true, summary: null } : m)), ...next];
+      })(),
     }));
   }
 
