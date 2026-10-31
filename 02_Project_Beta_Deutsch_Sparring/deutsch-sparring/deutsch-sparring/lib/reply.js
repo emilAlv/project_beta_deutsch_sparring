@@ -254,6 +254,18 @@ export function normalizeReply(raw, ctx) {
       const all = resolveParts(f.parts, feedback);
       const tested = Array.isArray(ctx.openChecks) && ctx.openChecks.length ? ctx.openChecks : ['meaning'];
       feedback.parts = Object.fromEntries(PARTS.filter((p) => tested.includes(p)).map((p) => [p, all[p]]));
+      // the verdict follows EXACTLY what the card asked (its instruction is built from the same parts, lib/instructions.js):
+      // a part the card did not ask for (e.g. the plural on Medium) can never make the answer wrong, and a part it
+      // asked for always counts. The student never has to guess what is required.
+      const ok = Object.values(feedback.parts).every(Boolean);
+      if (ok && !feedback.correct) {
+        feedback.correct = true;
+        feedback.errorType = null;
+        feedback.why = null;
+      } else if (!ok && feedback.correct) {
+        feedback.correct = false;
+        feedback.errorType = feedback.parts.meaning === false ? 'vocab' : feedback.parts.article === false ? 'article' : 'vocab';
+      }
     }
   }
 

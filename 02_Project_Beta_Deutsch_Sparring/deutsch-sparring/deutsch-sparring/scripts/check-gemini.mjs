@@ -274,6 +274,20 @@ const n1 = R.normalizeReply({
 }, ctx);
 check('normalizeReply: message trimmed, feedback mapped', n1?.message === 'Gut!' && n1.feedback.errorType === 'case' && n1.feedback.correct === false);
 const why = { mistake: '«die» → «der»', rule: 'in + Dativ bei «Wo?»: in der Stadt.', here: 'Wo gehe ich? · Ort, keine Bewegung → in der Schule.' };
+// the verdict follows exactly what the card asked (lib/instructions.js uses the same parts)
+{
+  const card = (correct, parts, openChecks, extra = {}) => R.normalizeReply({ message: 'x', feedback: { forNumber: 1, correct, studentAnswer: 'die Lampe', corrected: 'die Lampe, die Lampen', changedWords: [], explanation: 'Plural fehlt', rule: 'Plural', errorType: 'Wortschatz', parts, ...extra } }, { ...ctx, openTask: 'flashcard', openChecks })?.feedback;
+  const a = card(false, { meaning: true, article: true, plural: false }, ['meaning', 'article']);
+  check('Medium card: a missing plural (not asked) never makes it wrong', a.correct === true && a.errorType === null && !('plural' in a.parts));
+  const b = card(false, { meaning: true, article: true, plural: false }, ['meaning', 'article', 'plural']);
+  check('Hard card: a missing plural (asked) makes it wrong', b.correct === false);
+  const c = card(false, { meaning: true, article: false }, ['meaning', 'article'], { errorType: 'Artikel', rule: '' });
+  check('Medium card: a wrong article (asked) makes it wrong', c.correct === false && c.errorType === 'article');
+  const e = card(false, undefined, ['meaning', 'article'], { errorType: 'Wortschatz', rule: '' });
+  check('a wrong answer with no part named stays wrong', e.correct === false);
+  const d = card(false, { meaning: true, article: false }, ['meaning'], { errorType: 'Artikel' });
+  check('German → English (meaning only): a wrong article never makes it wrong', d.correct === true);
+}
 const fb = (correct, w) => R.normalizeReply({ message: 'x', feedback: { forNumber: 1, correct, studentAnswer: 'a', corrected: 'b', changedWords: [], explanation: '', rule: '', why: w } }, ctx)?.feedback;
 check('normalizeReply: a wrong answer keeps its three-step explanation', JSON.stringify(fb(false, why)) .includes('Ort, keine Bewegung') && fb(false, why).why.mistake === '«die» → «der»');
 check('normalizeReply: a right answer never gets an explanation of a mistake; an empty one is dropped', fb(true, why).why === null && fb(false, { mistake: '', rule: '', here: '' }).why === null && fb(false, 'nonsense').why === null);
