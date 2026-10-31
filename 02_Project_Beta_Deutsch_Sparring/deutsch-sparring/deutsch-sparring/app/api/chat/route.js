@@ -1,8 +1,8 @@
 import { getLesson, getKnownGrammar, guessTopic, topicsForLevel, FREE_TOPIC } from '../../../lib/content';
 import { allTopics } from '../../../lib/topics';
-import { curriculumEntry, curriculumLesson } from '../../../lib/curriculum';
+import { curriculumEntry, curriculumLesson, knownGrammarText } from '../../../lib/curriculum';
 import { getWords, getWord, wordTopicFilter, sourcesFor, wordLine, WORD_LINE_HEADER } from '../../../lib/words';
-import { pickWords, wordsNeeded, testedChecks } from '../../../lib/scores';
+import { pickWords, wordsNeeded, testedChecks, isNew } from '../../../lib/scores';
 import { GRAMMAR_POINTS, cleanGrammar, wantsSentenceTasks } from '../../../lib/grammar';
 import { buildSystemPrompt } from '../../../lib/prompt';
 import { generate } from '../../../lib/gemini';
@@ -138,11 +138,13 @@ async function handle(req) {
   // The first request of a session has no word ids yet: the server picks them (lib/scores.js) and
   // sends the ids back; the browser returns them with every later request, so the words stay the same.
   let words = [];
+  const fresh = new Set(); // words the student has never practised: the tutor shows them before testing them
   const filter = topicId ? wordTopicFilter(topicId) : null;
   if (filter) {
     const sent = (Array.isArray(body.wordIds) ? body.wordIds : []).slice(0, MAX_WORD_IDS).map((id) => getWord(String(id))).filter(Boolean);
     if (sent.length) {
       words = sent;
+      for (const id of (Array.isArray(body.newWordIds) ? body.newWordIds : []).slice(0, MAX_WORD_IDS)) fresh.add(String(id));
     } else {
       // logged in: the scores come from the database (the browser is not trusted); else the browser's own
       let scores;
@@ -169,6 +171,7 @@ async function handle(req) {
       words = pickWords(query);
       // nothing at this level in this list: use the other levels rather than an empty session
       if (!words.length) words = pickWords({ ...query, level: undefined });
+      for (const w of words) if (isNew(scores[w.id])) fresh.add(w.id);
     }
   }
   // --- exercise models (grammar topics): 3–5 patterns the AI turns into NEW exercises (lib/exercise-models.js) ---
@@ -237,8 +240,8 @@ async function handle(req) {
       name: String(name || 'du').slice(0, 40),
       lesson: filter ? null : (curriculumEntry(topicId) ? curriculumLesson(curriculumEntry(topicId)) : getLesson(topicId)),
       models,
-      words: filter ? { header: WORD_LINE_HEADER, lines: words.map(wordLine) } : null,
-      knownGrammar: getKnownGrammar(),
+      words: filter ? { header: WORD_LINE_HEADER, lines: words.map((w) => wordLine(w, fresh.has(w.id))) } : null,
+      knownGrammar: getKnownGrammar() || knownGrammarText(settings.level),
       catalog,
       settings: { ...settings, difficulty: DIFFICULTY_DE[settings.difficulty] },
       session,
@@ -273,6 +276,6 @@ async function handle(req) {
 
   // the picked words for the browser to keep: id + type + the word as shown on the summary screen (phrases have no grammar score)
   function wordInfo() {
-    return filter ? words.map((w) => ({ id: w.id, type: w.type, label: (w.noun ? `${w.article} ${w.noun}` : w.de || w.id).slice(0, 60) })) : undefined;
+    return filter ? words.map((w) => ({ id: w.id, type: w.type, label: (w.noun ? `${w.article} ${w.noun}` : w.de || w.id).slice(0, 60), ...(fresh.has(w.id) ? { fresh: true } : {}) })) : undefined;
   }
 }

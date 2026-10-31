@@ -120,16 +120,17 @@ export function levelsOf({ section, list } = {}) {
 }
 
 // ---- what goes into the tutor's prompt: one compact line per word ----
-export const WORD_LINE_HEADER = 'id | German | article | plural or Perfekt | English | adjective | case | gender rule';
+export const WORD_LINE_HEADER = 'id | German | article | plural or Perfekt | English | adjective | case | gender rule | extra | new';
 
-export function wordLine(w) {
+// fresh = the student has no score for this word yet: the tutor shows it before testing it (lib/prompt.js)
+export function wordLine(w, fresh = false) {
   const second = w.type === 'noun'
     ? (w.number === 'pl' ? 'only plural' : w.plural || (w.number === 'sg' ? 'no plural' : ''))
     : w.perfekt;
   const de = w.type === 'noun' && w.noun ? w.noun : w.de;
   // nouns: the rule of thumb for der/die/das from the ending, worked out by the app (lib/gender.js) – or an exception
   const gender = w.type === 'noun' ? genderRule(de, w.article)?.text || '' : '';
-  return [w.id, de, w.article, second, w.en, w.adjective, w.case, gender]
+  return [w.id, de, w.article, second, w.en, w.adjective, w.case, gender, String(w.extra || '').slice(0, 70), fresh ? 'new' : '']
     .map((x) => String(x || '').replace(/\s*\|\s*/g, '/').trim())
     .join(' | ');
 }

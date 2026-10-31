@@ -647,13 +647,22 @@ export function gapExample(example) {
 export function curriculumLesson(entry) {
   return `CURRICULUM TOPIC (written by the app, from the grammar curriculum)
 Title: ${entry.title} (${entry.titleEn})
-Level: ${entry.level}. Make the exercises at level ${entry.level}: simple, short sentences with everyday words and only the grammar a student can know at this level.
+Level: ${entry.level}. ${entry.level === 'B1' ? 'Write natural B1 sentences: connected, 10–20 words, with a Nebensatz or connector where the rule allows. NOT A1-style short sentences.' : `Make the exercises at level ${entry.level}: simple, short sentences with everyday words and only the grammar a student can know at this level.`}
 Rule: ${entry.rule}
 Correct example sentences (key words in **bold**; imitate them, but write new sentences, do not copy them):
 ${entry.examples.map((x) => `- ${x.replace(MARK, (_, word) => `**${word}**`)}`).join('\n')}
 Exercise ideas:
 ${entry.exerciseIdeas.map((x) => `- ${x}`).join('\n')}
 ${entry.traps?.length ? `Typical traps (mention the matching one briefly in the explanation when a student falls into it; never ask about it as a quiz):\n${entry.traps.map((x) => `- ${x}`).join('\n')}\n` : ''}feedback.rule: use EXACTLY one of these names (the stats group by them): ${entry.ruleNames.map((r) => `"${r}"`).join(', ')}.${entry.appNote ? `\nNote: ${entry.appNote}` : ''}`;
+}
+
+// What the tutor may assume the student already knows (KNOWN GRAMMAR in lib/prompt.js): the curriculum topics of all
+// levels up to and including `level`, in teaching order. Replaces the missing content/known-grammar.md.
+export function knownGrammarText(level) {
+  const upTo = CURRICULUM_LEVELS.indexOf(level) < 0 ? CURRICULUM_LEVELS.length - 1 : CURRICULUM_LEVELS.indexOf(level);
+  return CURRICULUM_LEVELS.slice(0, upTo + 1)
+    .map((lv) => `${lv}: ${planOrder(lv).map((id) => shortTitle(curriculumEntry(id))).join('; ')}`)
+    .join('\n');
 }
 
 // The CURRICULUM text of the coach (lib/coach-prompt.js): the grammar topics of every level, from this list.

@@ -130,7 +130,7 @@ const scores = {
   [ids[4]]: { v: { s: 10, k: 4, due: T0 - DAY } }, // a 10 (check)
 };
 const picked = S.pickWords({ words, scores, section: 'Home & living', count: 13, now: T0 });
-eq('due words come first, lowest score first', picked.slice(0, 3).map((w) => w.id), [ids[2], ids[0], ids[1]]);
+eq('due words come first, lowest score first (new words sit in the middle)', picked.filter((w) => scores[w.id]).slice(0, 3).map((w) => w.id), [ids[2], ids[0], ids[1]]);
 check('a word with 10 is used as a check', picked.some((w) => w.id === ids[4]));
 check('the not-yet-due word is left out while new words exist', !picked.some((w) => w.id === ids[3]));
 const newOnes = picked.filter((w) => !scores[w.id]);
@@ -389,6 +389,12 @@ eq('parts line: nothing for sentence tasks', CP.partsView({ corrected: 'x' }), [
   const scores = { w19: { v: { s: 2, k: 0, due: now - 1000 } } }; // a weak, due word
   const picked = S.pickWords({ words: pool, scores, count: 10, now, rand: seeded(7) });
   check('a weak word that is due still comes before new words', picked[0]?.id === 'w19', picked.map((w) => w.id).join(','));
+  // R22: new words are in the MIDDLE of the session (not last: stopping early must not drop them all)
+  const wk = {};
+  for (let i = 0; i < 6; i += 1) wk[`w0${i}`] = { v: { s: 2, k: 0, due: now - 1000 } }; // six weak, due words; the rest are new
+  const mixed = S.pickWords({ words: pool, scores: wk, count: 10, now, rand: seeded(3) });
+  const pos = mixed.map((w, i) => (S.isNew(wk[w.id]) ? i : -1)).filter((i) => i >= 0);
+  check('new words sit in the middle of the session', pos.length > 0 && pos[0] > 0 && pos[pos.length - 1] < mixed.length - 1 && !S.isNew(wk[mixed[0].id]) && !S.isNew(wk[mixed[mixed.length - 1].id]), pos.join(','));
 }
 
 console.log(failed ? `\n${failed} check(s) FAILED` : '\nAll checks passed.');
