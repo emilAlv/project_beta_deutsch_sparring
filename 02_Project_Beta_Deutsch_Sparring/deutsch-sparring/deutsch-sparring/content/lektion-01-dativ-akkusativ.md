@@ -34,7 +34,7 @@ Dativ Plural: Nomen bekommt **-n** (die Stühle → mit den Stühle**n**), ausse
 | Dat | mir | dir | ihm | ihr | ihm | uns | euch | ihnen/Ihnen |
 
 ### Verben mit Dativ
-helfen, danken, gefallen, gehören, passen, schmecken, gratulieren, antworten, fehlen, gut tun, wehtun
+helfen, danken, gefallen, gehören, passen, schmecken, gratulieren, antworten, fehlen, guttun, wehtun
 - *Die Wohnung gefällt **mir**.* · *Das Sofa gehört **meinem** Bruder.*
 
 ### Verben mit Dativ (Person) + Akkusativ (Sache)
@@ -55,7 +55,7 @@ Kurzformen: in dem → **im**, an dem → **am**, in das → **ins**, an das →
 | stellen – Ich stelle die Lampe neben **das** Sofa. | stehen – Die Lampe steht neben **dem** Sofa. |
 | setzen – Ich setze mich auf **den** Stuhl. | sitzen – Ich sitze auf **dem** Stuhl. |
 | hängen – Ich hänge das Bild an **die** Wand. | hängen – Das Bild hängt an **der** Wand. |
-| stecken – Ich stecke den Schlüssel in **die** Tasche. | stecken – Der Schlüssel steckt in **der** Tasche. |
+| stecken – Ich stecke den Schlüssel in **die** Tasche. | stecken – Der Schlüssel steckt in **der** Tasche. (auch hier regelmässig: steckte, gesteckt) |
 | gehen/fahren – Ich gehe in **die** Küche. | sein/wohnen – Ich bin in **der** Küche. |
 
 ## Typische Fehler

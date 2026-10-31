@@ -17,6 +17,7 @@ import { detectIntent, detectTopicWish } from './intents.js';
 import { RULES } from './grammar.js';
 import { chooseTask, findTask, infinitive } from './word-tasks.js';
 import { align, localizeWord, toVariant } from './variants.js';
+import { getWords } from './words.js';
 import { focusRevealsAnswer } from './reply.js';
 import { asksArticle, asksPlural as asksPluralAt } from './scores.js';
 
@@ -207,7 +208,7 @@ const splitMeanings = (en) => String(en || '').split(/,\s*(?![^()]*\))/).map((x)
 
 // variant = the student's choice: the word is shown the way that variant writes it (the answer may use either)
 function mockWord(word, variant) {
-  const w = localizeWord(word, variant);
+  const w = localizeWord(word, variant, (n) => getWords().some((x) => x.type === 'noun' && x.noun === n));
   if (w.type === 'noun') {
     return {
       id: w.id, type: 'noun', de: `${w.article} ${w.noun}`, article: w.article, noun: w.noun, variants: [],

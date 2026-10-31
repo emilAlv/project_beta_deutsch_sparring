@@ -161,14 +161,14 @@ export const CURRICULUM = [
       'Ich komme aus *der|die* Schweiz.',
     ],
     exerciseIdeas: ['Lückentext: Artikel im Dativ nach der Präposition.', 'Auswahl: dem, der oder den?', 'Satzbau: Satz mit mit + Verkehrsmittel.'],
-    ruleNames: [RULES.datMit, 'Dativ nach bei/von/zu', 'Dativ nach aus/nach'],
+    ruleNames: [RULES.datMit, 'Dativ nach bei', 'Dativ nach von', 'Dativ nach zu', 'Dativ nach aus/nach'],
     traps: ['zu steht immer mit Dativ, auch bei einer Bewegung: Ich gehe zum Arzt (nicht «in den Arzt»).', 'nach vor Städten und Ländern ohne Artikel (nach Luzern); mit Artikel: in die Schweiz.', 'von (Person, Ort) ist nicht aus (Land, Stadt, Material): Ich komme von der Post – ich komme aus Spanien.'],
   },
   {
     id: 'g-a1-perfekt', level: 'A1',
     needs: [], role: 'productive',
     title: 'Perfekt mit haben und sein', titleEn: 'Perfect tense, haben and sein',
-    rule: 'Das Perfekt bildest du mit haben oder sein und dem Partizip II am Satzende: Ich habe Kaffee getrunken. Die meisten Verben brauchen haben. Mit sein bildest du das Perfekt bei Bewegung und Zustandswechsel: ich bin gefahren, ich bin gegangen, ich bin geblieben. Regelmässige Verben haben ge-…-t (gemacht), unregelmässige oft ge-…-en (gegessen).',
+    rule: 'Das Perfekt bildest du mit haben oder sein und dem Partizip II am Satzende: Ich habe Kaffee getrunken. Die meisten Verben brauchen haben. Mit sein bildest du das Perfekt bei Bewegung von A nach B (ich bin gefahren) und bei Zustandswechsel (ich bin aufgewacht). Dazu kommen drei Ausnahmen: sein, bleiben und werden (ich bin gewesen, ich bin geblieben, ich bin geworden). Regelmässige Verben haben ge-…-t (gemacht), unregelmässige oft ge-…-en (gegessen).',
     examples: [
       'Ich *habe* gestern Fussball *gespielt|spielen*.',
       'Wir *sind* nach Bern *gefahren|fahren*.',
@@ -258,7 +258,7 @@ export const CURRICULUM = [
       'Das Handy liegt in *der|die* Tasche.',
     ],
     exerciseIdeas: ['Lückentext: Artikel nach Wo? oder Wohin?', 'Auswahl: Dativ oder Akkusativ, mit liegen/legen.', 'Fehler finden: Ich gehe in dem Park.'],
-    ruleNames: [RULES.datIn, RULES.akkIn],
+    ruleNames: [RULES.wechselDat, RULES.wechselAkk],
     traps: ['Wo? und Wohin? entscheiden den Fall nur bei den neun Wechselpräpositionen. zu, mit, bei, von, aus, nach haben immer Dativ: Ich gehe zur Bäckerei.', 'stellen, legen, setzen (Wohin?) + Akkusativ; stehen, liegen, sitzen (Wo?) + Dativ.', 'hängen: Das Bild hängt an der Wand (Wo?). Ich hänge das Bild an die Wand (Wohin?).'],
   },
   {
@@ -352,7 +352,7 @@ export const CURRICULUM = [
     ],
     exerciseIdeas: ['Lückentext: Partizip II ergänzen.', 'Satzbau: Perfektsatz aus Pronomen + Infinitiv.', 'Fehler finden: gegefahren statt gefahren.'],
     ruleNames: [RULES.perfektHaben, RULES.perfektSein, 'Partizip II'],
-    traps: ['sein im Perfekt bei Bewegung und Zustandswechsel: Ich bin aufgestanden, wir sind angekommen (nicht «habe aufgestanden»).', 'Trennbare Verben: ge steht in der Mitte: angerufen, eingekauft, abgeholt.'],
+    traps: ['sein im Perfekt bei Bewegung und Zustandswechsel: Ich bin aufgestanden, wir sind angekommen (nicht «habe aufgestanden»). Ausnahmen: sein, bleiben, werden (ich bin geblieben).', 'Trennbare Verben: ge steht in der Mitte: angerufen, eingekauft, abgeholt.'],
   },
   {
     id: 'g-a2-reflexive-verben', level: 'A2',
@@ -500,9 +500,9 @@ export const CURRICULUM = [
     examples: [
       'Das Brot *wird|werden* jeden Morgen gebacken.',
       'Das Haus *wurde|werden* 1990 gebaut.',
-      'In der Schweiz *werden|werden* viele Sprachen gesprochen.',
+      'In der Schweiz *werden|werden, Plural, Präsens* viele Sprachen gesprochen.',
       'Der Brief wurde von der Sekretärin *geschrieben|schreiben*.',
-      'Das Fenster muss geöffnet *werden|werden*.',
+      'Das Fenster muss geöffnet *werden|Infinitiv*.',
     ],
     exerciseIdeas: ['Lückentext: werden oder wurde und das Partizip II.', 'Satzbau: einen Aktivsatz ins Passiv umformen.', 'Übersetzung: «The house was built in 1990.»'],
     ruleNames: ['Passiv Präsens', 'Passiv Präteritum'],
@@ -556,7 +556,7 @@ export const CURRICULUM = [
     id: 'g-b1-n-deklination', level: 'B1',
     needs: ['g-b1-genitiv'], role: 'receptive',
     title: 'n-Deklination: der Student, den Studenten', titleEn: 'Weak masculine nouns',
-    rule: 'Einige maskuline Nomen bekommen in allen Fällen ausser im Nominativ die Endung -n oder -en. Man nennt das n-Deklination: der Junge, der Student, der Kollege, der Mensch, der Nachbar, der Herr. Akkusativ: den Studenten. Dativ: dem Studenten. Genitiv: des Studenten. Nur bei der Herr ist es -n: den Herrn.',
+    rule: 'Einige maskuline Nomen bekommen in allen Fällen ausser im Nominativ Singular eine Endung (n-Deklination). Nomen auf -e bekommen -n (der Junge – den Jungen, der Kollege – den Kollegen), ebenso der Nachbar – den Nachbarn, der Bauer – den Bauern. Die anderen bekommen -en (den Studenten, den Menschen). Der Herr: Singular -n (den Herrn), Plural -en (die Herren). Im Plural haben sie in allen Fällen -(e)n.',
     examples: [
       'Ich kenne den *Studenten|der Student* gut.',
       'Wir helfen dem *Nachbarn|der Nachbar* beim Umzug.',

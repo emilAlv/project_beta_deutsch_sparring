@@ -12,7 +12,7 @@
 Referenzsprachen: Englisch (Spalte «Englisch») und Spanisch (Spalte «Spanisch»).
 Karteikarten: Englisch → Deutsch (mit Artikel) oder Deutsch → Englisch.
 Lerne jedes Nomen mit Artikel und Plural, jedes Verb mit Perfekt.
-Verben der Bewegung und der Veränderung bilden das Perfekt mit «sein» (ich bin gegangen). Verben mit Präposition lernt man mit: warten auf + Akk, sich freuen auf/über + Akk. Wechselverben: stellen und legen fragen «Wohin?» (Akkusativ), stehen und liegen fragen «Wo?» (Dativ).
+Verben der Bewegung von A nach B und der Zustandsänderung bilden das Perfekt mit «sein» (ich bin gegangen, ich bin aufgewacht). Dazu kommen sein, bleiben und werden (ich bin gewesen, ich bin geblieben, ich bin geworden). Verben mit Präposition lernt man mit: warten auf + Akk, sich freuen auf/über + Akk. Wechselverben: stellen und legen fragen «Wohin?» (Akkusativ), stehen und liegen fragen «Wo?» (Dativ).
 
 ## Verben – Bewegung und Position
 | Verb | Englisch | Spanisch | Perfekt | Kasus / Präposition | Niveau |

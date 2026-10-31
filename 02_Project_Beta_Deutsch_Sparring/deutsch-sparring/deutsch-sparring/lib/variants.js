@@ -24,7 +24,7 @@ export const PAIRS = [
   { id: 'stube', type: 'noun', ch: { art: 'die', w: 'Stube', pl: 'Stuben' }, de: { art: 'das', w: 'Wohnzimmer', pl: 'Wohnzimmer' } },
   { id: 'lavabo', type: 'noun', ch: { art: 'das', w: 'Lavabo', pl: 'Lavabos' }, de: { art: 'das', w: 'Waschbecken', pl: 'Waschbecken' } },
   { id: 'glace', type: 'noun', ch: { art: 'die', w: 'Glace', pl: 'Glaces' }, de: { art: 'das', w: 'Eis', pl: null } },
-  { id: 'natel', type: 'noun', ch: { art: 'das', w: 'Natel', pl: 'Natels' }, de: { art: 'das', w: 'Handy', pl: 'Handys' } },
+  { id: 'natel', type: 'noun', noLocalize: true, ch: { art: 'das', w: 'Natel', pl: 'Natels' }, de: { art: 'das', w: 'Handy', pl: 'Handys' } },
   { id: 'billett', type: 'noun', ch: { art: 'das', w: 'Billett', pl: 'Billette' }, de: { art: 'die', w: 'Fahrkarte', pl: 'Fahrkarten' } },
   { id: 'poulet', type: 'noun', ch: { art: 'das', w: 'Poulet', pl: 'Poulets' }, de: { art: 'das', w: 'Hähnchen', pl: 'Hähnchen' } },
   { id: 'rueebli', type: 'noun', ch: { art: 'das', w: 'Rüebli', pl: 'Rüebli' }, de: { art: 'die', w: 'Karotte', pl: 'Karotten' } },
@@ -43,18 +43,34 @@ const other = (v) => (v === 'de' ? 'ch' : 'de');
 // ---------- spelling: ss ↔ ß ----------
 // German standard spelling writes ß after a long vowel or a diphthong (Straße, groß, heißen, Fuß) and ss after a
 // short vowel (Wasser, muss, dass, Klasse, Tasse, müssen). A computer cannot hear the vowel, so we never replace
-// every "ss": only words that BEGIN with / CONTAIN one of these stems (written the Swiss way) change. Everything
-// else keeps its "ss". Add a stem here when a word is missing; never add one with a short vowel.
-const SS_STEMS = [
-  'strasse', 'gross', 'gröss', 'heiss', 'weiss', 'fuss', 'füss', 'schliess', 'süss', 'draussen', 'ausser',
-  'fleiss', 'giess', 'gruss', 'grüss', 'spass', 'stoss', 'stöss', 'beiss', 'reiss', 'bloss', 'fliess', 'schiess',
-  'geniess', 'spiess', 'strauss', 'sträuss', 'gemäss', 'mässig', 'ermäss', 'massnahme', 'massstab',
+// every "ss": only words that contain one of these stems (written the Swiss way) change. Everything else keeps its "ss".
+// Add a stem here when a word is missing; never add one with a short vowel.
+// Two kinds of stem (review T21 – «Preisschild» must not become «Preißchild»):
+//  · ROOT stems can stand anywhere in a compound: Hauptstrasse, Urgrossvater, Barfuss, zeitgemäss, Eiweiss, Blumenstrauss.
+//  · VERB stems (schliessen, giessen, reissen, stossen …) only count at the start of a word or after a verb prefix
+//    (ver-, be-, ab-, an-, auf-, aus-, ein- …): abschliessen, zerreissen, Anstoss. In «Preis|schild» or «Kreis|stoss»
+//    the "s" belongs to the first word, so nothing changes.
+const ROOT_STEMS = [
+  'strasse', 'gross', 'gröss', 'heiss', 'weiss', 'fuss', 'füss', 'süss', 'spass', 'gruss', 'grüss', 'spiess',
+  'strauss', 'sträuss', 'gemäss', 'mässig', 'massnahme', 'massstab', 'draussen', 'aussen', 'ausser', 'äusser',
 ].sort((a, b) => b.length - a.length);
-const SS_RE = new RegExp(SS_STEMS.join('|'), 'gi');
+const VERB_STEMS = ['schliess', 'fliess', 'schiess', 'geniess', 'giess', 'beiss', 'reiss', 'stoss', 'stöss', 'fleiss', 'bloss', 'ermäss']
+  .sort((a, b) => b.length - a.length);
+const PREFIXES = ['zusammen', 'zurück', 'heraus', 'hinaus', 'herunter', 'hinunter', 'durch', 'unter', 'nieder', 'weiter', 'wieder', 
+  'ver', 'be', 'ge', 'er', 'zer', 'ent', 'an', 'ab', 'auf', 'aus', 'ein', 'um', 'zu', 'vor', 'nach', 'mit', 'über', 'hin', 'her', 'weg', 'fest',
+  'los', 'dar', 'un', 'bei', 'fort', 'frei', 'ab', 'hinein', 'herein']
+  .sort((a, b) => b.length - a.length);
+const SS_ROOT_RE = new RegExp(ROOT_STEMS.join('|'), 'giu');
+const SS_VERB_RE = new RegExp(`(?<![\\p{L}])((?:${PREFIXES.join('|')})*)(${VERB_STEMS.join('|')})`, 'giu');
+// Reis (rice) + s…: Reissalat, Reissuppe are rice dishes, not reissen (Reissverschluss)
+const RICE = /^reiss$/i;
+const RICE_NEXT = /^(alat|uppe|orte|ack|peise|ilo)/i;
+const toEszett = (m) => (m === m.toUpperCase() && /[A-ZÄÖÜ]{2}/.test(m) ? m : m.replace(/ss/i, 'ß'));
 
 // Swiss spelling → German spelling for the listed stems only. ALL-CAPS words are left alone.
 function swissToGermanSpelling(text) {
-  return text.replace(SS_RE, (m) => (m === m.toUpperCase() && /[A-ZÄÖÜ]{2}/.test(m) ? m : m.replace(/ss/i, 'ß')));
+  return text.replace(SS_ROOT_RE, toEszett).replace(SS_VERB_RE, (m, pre, stem, at, all) => (
+    RICE.test(stem) && RICE_NEXT.test(all.slice(at + m.length)) ? m : pre + toEszett(stem)));
 }
 
 // Spelling of a text in the student's variant. 'ch': ß → ss everywhere (Swiss rule). 'de': Swiss ss → ß for the
@@ -110,19 +126,25 @@ export function sameAnswer(a, b) {
 }
 
 // ---------- a word of the word list in the student's variant ----------
-const SWISS_NOUN = new Map(NOUNS.map((p) => [p.ch.w, p]));
-const GERMAN_NOUN = new Map(NOUNS.map((p) => [p.de.w, p]));
+// pairs with noLocalize still count as the same answer (sameAnswer), but the word list is not rewritten with them
+// (Swiss people say «Handy» today, so Handy stays Handy)
+const LOCAL_NOUNS = NOUNS.filter((p) => !p.noLocalize);
+const SWISS_NOUN = new Map(LOCAL_NOUNS.map((p) => [p.ch.w, p]));
+const GERMAN_NOUN = new Map(LOCAL_NOUNS.map((p) => [p.de.w, p]));
 const SWISS_VERB = new Map(VERBS.map((p) => [p.ch.forms[0], p]));
 const GERMAN_VERB = new Map(VERBS.map((p) => [p.de.forms[0], p]));
 const spell = (s, variant) => (s ? toVariant(s, variant) : s);
 
 // A word as the app reads it from vocab/words.json (Swiss spelling and Swiss words) → the same word as the chosen
 // variant writes it: { article, noun, plural ("die Schränke"), de, perfekt, adjective } converted; everything else as it was.
-export function localizeWord(w, variant) {
+// `known(noun)` (optional) says whether a noun is a word of its own in the word list: then the pair is not used, so
+// «Schrank» is not turned into a second «Kasten» card when «Kasten» is in the list anyway.
+export function localizeWord(w, variant, known = null) {
   const v = cleanVariant(variant);
   const out = { ...w };
   if (w.type === 'noun') {
-    const pair = (v === 'de' ? SWISS_NOUN : GERMAN_NOUN).get(w.noun);
+    let pair = (v === 'de' ? SWISS_NOUN : GERMAN_NOUN).get(w.noun);
+    if (pair && known && known(pair[v].w)) pair = null;
     if (pair) {
       const x = pair[v];
       out.article = x.art;
@@ -187,6 +209,6 @@ export function replyToVariant(reply, variant) {
 
 // The two rules the tutor prompt uses (lib/prompt.js): one per variant.
 export const VARIANT_RULE = {
-  ch: 'Swiss Standard German. SPELLING: write "ss", never "ß" (Strasse, gross, heissen, Fuss, schliessen). WORD CHOICE: use the Swiss words of the course book (Velo, Spital, Trottoir, parkieren, Estrich, Kasten, Stube, Lavabo, Glace, Natel, Billett, Poulet, Rüebli, Znüni, grillieren, Coiffeur).',
+  ch: 'Swiss Standard German. SPELLING: write "ss", never "ß" (Strasse, gross, heissen, Fuss, schliessen). WORD CHOICE: use the Swiss words of the course book (Velo, Spital, Trottoir, parkieren, Estrich, Kasten, Stube, Lavabo, Glace, Billett, Poulet, Rüebli, Znüni, grillieren, Coiffeur).',
   de: 'German Standard German (as written in Germany). SPELLING: use "ß" after a long vowel or diphthong (Straße, groß, heißen, Fuß, schließen, süß, Spaß), but keep "ss" after a short vowel (Wasser, muss, dass, Klasse, müssen). WORD CHOICE: use the German words, not the Swiss ones of the course book (Fahrrad, Krankenhaus, Bürgersteig, parken, Dachboden, Schrank, Wohnzimmer, Waschbecken, Eis, Handy, Fahrkarte, Hähnchen, Karotte, Pausenbrot, grillen, Friseur).',
 };

@@ -40,7 +40,7 @@ In Hauptsätzen steht die trennbare Vorsilbe am Ende: Ich stehe um sieben auf. M
 | 6 | Finde den Fehler: Ich aufstehe um sieben Uhr. | Ich stehe um sieben Uhr auf. | Fehler finden |
 | 7 | Wir müssen früh ___. (aufstehen) | aufstehen | Lückentext |
 | 8 | A: Kaufst du heute ___? B: Ja, nach der Arbeit. | ein | Lückentext |
-| 9 | Übersetze: I call you tomorrow. | Ich rufe dich morgen an. | Übersetzung |
+| 9 | Übersetze: I'll call you tomorrow. | Ich rufe dich morgen an. | Übersetzung |
 | 10 | Sie ___ den Fernseher aus. (ausschalten) | schaltet | Lückentext |
 
 ## Nicht verwenden (off-limits)

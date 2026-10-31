@@ -55,6 +55,16 @@ export function pluralOf(w) {
 // ---- genitive / dative / accusative singular of masculine and neuter nouns ----
 const MIXED_NS = /([Nn]ame|[Bb]uchstabe|[Gg]edanke|[Gg]laube|[Ww]ille|[Ff]unke|[Ff]riede|[Hh]aufe)$/; // des Namens, des Familiennamens
 const WEAK_LIST = { Mensch: 'Menschen', Nachbar: 'Nachbarn', Herr: 'Herrn', Bär: 'Bären', Held: 'Helden', Prinz: 'Prinzen', Narr: 'Narren', Graf: 'Grafen', Pilot: 'Piloten' };
+// masculine / neuter nouns on -ee are strong: der See – den See – des Sees (not the weak «den Seen»), also Schnee, Tee, Kaffee, Klee
+const STRONG_EE = /ee$/;
+// English loanwords: genitive -s only (des Jobs, des Snacks), never -es
+const LOAN_S = new Set(['Job', 'Snack', 'Song', 'Hit', 'Link', 'Blog', 'Steak', 'Fan', 'Chef', 'Park', 'Club', 'Cent', 'Sport']);
+// both endings are correct: des Meeres / des Meers, des Tieres / des Tiers …  (main form first)
+const BOTH_S_ES = new Set(['Meer', 'Tier', 'Bier', 'Haar']);
+// nouns made from an adjective (der Bekannte, das Selbstgemachte): they decline like an adjective
+const isAdjNoun = (w) => w.note === 'Adj.-Nomen';
+const adjNounForm = (n, ending) => cap(withEnding(n.toLowerCase(), ending)); // Selbstgemachte + en → Selbstgemachten
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const countVowelGroups = (s) => (s.toLowerCase().match(/[aeiouäöüy]+/g) || []).length;
 
 // weak masculine nouns (der Kunde – den/dem Kunden): the form for Akkusativ and Dativ (and Genitiv).
@@ -62,6 +72,7 @@ const countVowelGroups = (s) => (s.toLowerCase().match(/[aeiouäöüy]+/g) || []
 function weakForm(w) {
   const n = w.noun;
   if (genderOf(w) !== 'm') return null;
+  if (STRONG_EE.test(n)) return null; // der See, der Tee …: plural -s / -n, but not weak
   if (WEAK_LIST[n]) return WEAK_LIST[n];
   const p = pluralOf(w);
   if (MIXED_NS.test(n)) return `${n}n`;
@@ -81,6 +92,9 @@ export function genitiveSg(w) {
   const weak = weakForm(w);
   if (weak === 'unsure') return null;
   if (weak) return { main: MIXED_NS.test(n) ? `${n}ns` : weak, alts: [] };
+  if (STRONG_EE.test(n)) return { main: `${n}s`, alts: [] }; // des Sees, des Tees, des Kaffees
+  if (LOAN_S.has(n)) return { main: `${n}s`, alts: [] }; // des Jobs, des Snacks, des Chefs
+  if (BOTH_S_ES.has(n)) return { main: `${n}s`, alts: [`${n}es`] }; // des Meers / des Meeres
   if (/e$/.test(n)) return null; // Ende, Auge, Interesse, Käse …
   if (/(au|ei|ie|eu|äu|ai)s$/.test(n) || /(ss|ß|x|z|sch)$/.test(n) || /[^aeiouäöüs]s$/.test(n)) return { main: `${n}es`, alts: [] }; // Haus, Platz, Tisch, Kurs
   if (/[aeiouäöü]s$/.test(n)) return null; // Ergebnis, Bus, Kürbis … (double s)
@@ -92,11 +106,21 @@ export function genitiveSg(w) {
   return { main: `${n}s`, alts: [] }; // des Abends
 }
 
-// dative plural: noun + n (not after n or s)
-const datPl = (p) => (/[ns]$/.test(p) ? p : `${p}n`);
+// dative plural: noun + n – but not after n or s, not after a vowel other than e (Kameras, Hobbys need none anyway),
+// not after units (die Euro, die Cent: mit zehn Euro) and not for abbreviations (die Lkw, die PCs)
+const UNITS = new Set(['Euro', 'Cent', 'Dollar']);
+const datPl = (p) => {
+  if (/[ns]$/.test(p) || /[aiouäöüy]$/.test(p) || UNITS.has(p)) return p;
+  if (/^[A-ZÄÖÜ]{2,}s?$/.test(p) || !/[aeiouäöüy]/i.test(p) || p.includes('.')) return p;
+  return `${p}n`;
+};
 
 // The noun in the asked case and number → { text, alts } or null
 function nounForm(w, kase, plural) {
+  if (isAdjNoun(w)) {
+    const g = plural ? 'pl' : genderOf(w);
+    return g ? { text: adjNounForm(w.noun, WEAK_END[kase][g]), alts: [] } : null;
+  }
   if (plural) {
     const p = pluralOf(w);
     if (!p) return null;
@@ -130,8 +154,10 @@ export function nounPhrase(w, kase, { adj = null, plural = false } = {}) {
   const alts = [];
   for (const n of [noun.text, ...noun.alts]) {
     if (n !== noun.text) alts.push(join(art, adj && withEnding(adj, ending), n));
-    if (isPl) alts.push(join(adj && withEnding(adj, STRONG_PL_END[kase]), n)); // "alte Schränke"
-    else alts.push(join(INDEFINITE[kase][g], adj && withEnding(adj, MIXED_END[kase][g]), n)); // "einen alten Schrank"
+    // an adjective noun takes the ending itself: ein neues Selbstgemachtes, neue Bekannte
+    const nn = (end) => (isAdjNoun(w) ? adjNounForm(w.noun, end) : n);
+    if (isPl) alts.push(join(adj && withEnding(adj, STRONG_PL_END[kase]), nn(STRONG_PL_END[kase]))); // "alte Schränke"
+    else alts.push(join(INDEFINITE[kase][g], adj && withEnding(adj, MIXED_END[kase][g]), nn(MIXED_END[kase][g]))); // "einen alten Schrank"
   }
   return { phrase: main, alts: [...new Set(alts)].filter((x) => x !== main), art, gender: g, ending, noun: noun.text };
 }

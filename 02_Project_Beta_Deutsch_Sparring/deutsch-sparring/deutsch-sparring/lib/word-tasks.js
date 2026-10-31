@@ -10,6 +10,7 @@
 
 import { align } from './variants.js';
 import { GRAMMAR_POINTS, CASE_POINTS, RULES } from './grammar.js';
+import { objectsFor } from './verb-objects.js';
 import {
   nounPhrase, withEnding, genderOf, pluralOf, articlesOfGender, definiteArticle, indefiniteArticle, weakEnding, mixedEnding,
 } from './declension.js';
@@ -142,13 +143,63 @@ function perfektParts(w) {
   return m ? { aux: m[1] === 'hat' ? 'haben' : 'sein', rest: m[2].trim() } : null;
 }
 
+// Modal verbs use the Präteritum in speech, not the Perfekt (ich musste, not «ich habe gemusst»): ich / du / er / wir
+const MODAL_PRAET = {
+  dürfen: ['durfte', 'durftest', 'durfte', 'durften'], können: ['konnte', 'konntest', 'konnte', 'konnten'],
+  müssen: ['musste', 'musstest', 'musste', 'mussten'], sollen: ['sollte', 'solltest', 'sollte', 'sollten'],
+  wollen: ['wollte', 'wolltest', 'wollte', 'wollten'], möchten: ['wollte', 'wolltest', 'wollte', 'wollten'],
+  mögen: ['mochte', 'mochtest', 'mochte', 'mochten'],
+};
+export const isModal = (w) => Object.hasOwn(MODAL_PRAET, infinitive(w));
+
+function praeteritumTasks(w) {
+  const inf = infinitive(w);
+  const forms = MODAL_PRAET[inf];
+  const rule = RULES.praeteritumModal;
+  return PERSONS.map((who, i) => {
+    const form = forms[i];
+    const solution = `${cap(who.p)} ${form}.`;
+    const wrongPerfekt = `${who.p} ${who.haben} ${String(w.perfekt || '').replace(/^hat /, '')}`;
+    return {
+      kind: 'praeteritum', type: 'Satzbau', line: `Bilde das Präteritum: ${who.p} + ${inf}`, rule, solution, wordId: w.id,
+      hint: (strong, d) => (strong ? '(Modalverben: Präteritum, nicht Perfekt)' : d === 'hard' ? null : d === 'easy' ? `(${inf} → Präteritum)` : '(Präteritum)'),
+      options: (d) => (d === 'easy' ? [`${cap(who.p)} ${form}`, cap(wrongPerfekt)].sort() : []),
+      check(answer) {
+        const a = norm(answer);
+        const correct = has(a, form);
+        const explanation = `Modalverben stehen meist im Präteritum: ${who.p} ${form}.${inf === 'möchten' ? ' «möchten» hat kein eigenes Präteritum, man nimmt «wollen».' : ''}`;
+        if (correct) return { correct: true, corrected: answer.trim(), changedWords: [], explanation, rule, errorType: null };
+        return { correct: false, corrected: solution, changedWords: [form], explanation, rule, errorType: 'Verbform' };
+      },
+    };
+  });
+}
+
+// The Swiss (and Southern German) Perfekt of stehen, liegen, sitzen, hängen uses sein, joggen can take both:
+// the word list says so in `extra` («CH: ist gestanden», «joggen (hat gejoggt) is also used»). → the OTHER helper verb, or null.
+function otherAux(w, aux) {
+  const extra = String(w.extra || '');
+  const other = aux === 'haben' ? 'ist' : 'hat';
+  if (new RegExp(`CH: ${other}\\b`).test(extra) || new RegExp(`\\(${other} [^)]+\\) is also used`).test(extra)) return other === 'ist' ? 'sein' : 'haben';
+  return null;
+}
+
+// sein, bleiben, werden: the exception to «movement or change of state»
+const SEIN_EXCEPTION = new Set(['sein', 'bleiben', 'werden']);
+
 function perfektTasks(w) {
+  if (isModal(w)) return praeteritumTasks(w);
   const parts = perfektParts(w);
   const inf = infinitive(w);
   if (!parts || !inf) return [];
   const rule = parts.aux === 'sein' ? RULES.perfektSein : RULES.perfektHaben;
+  const alt = otherAux(w, parts.aux);
+  const seinWhy = SEIN_EXCEPTION.has(inf)
+    ? ' Ausnahme: «sein», «bleiben» und «werden» bilden das Perfekt mit «sein».'
+    : ' Bewegung von A nach B oder Zustandsänderung: Perfekt mit «sein».';
   return PERSONS.map((who) => {
     const auxForm = who[parts.aux];
+    const altForm = alt ? who[alt] : null;
     const rest = parts.rest.replace(/\bsich\b/, who.refl);
     const solution = `${cap(who.p)} ${auxForm} ${rest}.`;
     const wrongAux = who[parts.aux === 'sein' ? 'haben' : 'sein'];
@@ -156,14 +207,16 @@ function perfektTasks(w) {
     return {
       kind: 'perfekt', type: 'Satzbau', line: `Bilde das Perfekt: ${who.p} + ${inf}`, rule, solution, wordId: w.id,
       hint: (strong, d) => (strong ? `(Hilfsverb: ${parts.aux === 'sein' ? 'sein' : 'haben'})` : d === 'hard' ? null : d === 'easy' ? '(haben oder sein?)' : '(Hilfsverb + Partizip)'),
-      options: (d) => (d === 'easy' ? [`${cap(who.p)} ${auxForm} ${rest}`, `${cap(who.p)} ${wrongAux} ${rest}`].sort() : []),
+      // both helper verbs are right for these verbs: a multiple choice between them would have two right answers
+      options: (d) => (d === 'easy' && !altForm ? [`${cap(who.p)} ${auxForm} ${rest}`, `${cap(who.p)} ${wrongAux} ${rest}`].sort() : []),
       check(answer) {
         const a = norm(answer);
-        const needed = [auxForm, ...rest.split(' ')];
-        const correct = needed.every((t) => has(a, t));
-        const explanation = `Perfekt: ${parts.aux === 'sein' ? 'sein' : 'haben'} + Partizip → ${auxForm} ${rest}.${parts.aux === 'sein' ? ' Bewegung oder Zustandsänderung: Perfekt mit «sein».' : ''}`;
+        const restOk = rest.split(' ').every((t) => has(a, t));
+        const correct = restOk && (has(a, auxForm) || (altForm && has(a, altForm)));
+        const bothNote = altForm ? ` Auch «${who.p} ${altForm} ${rest.split(' ').pop()}» ist richtig: beide Formen gelten (in der Schweiz sagt man oft «sein»).` : '';
+        const explanation = `Perfekt: ${parts.aux === 'sein' ? 'sein' : 'haben'} + Partizip → ${auxForm} ${rest}.${parts.aux === 'sein' ? seinWhy : ''}${bothNote}`;
         if (correct) return { correct: true, corrected: answer.trim(), changedWords: [], explanation, rule, errorType: null };
-        const auxWrong = has(a, wrongAux) && !has(a, auxForm);
+        const auxWrong = has(a, wrongAux) && !has(a, auxForm) && !altForm;
         return {
           correct: false,
           corrected: solution,
@@ -178,13 +231,7 @@ function perfektTasks(w) {
 }
 
 // the objects for the verb + case sentences (nouns we know how to decline)
-const OBJECTS = {
-  person: [{ id: 'o1', article: 'der', noun: 'Freund', plural: 'die Freunde' }, { id: 'o2', article: 'die', noun: 'Lehrerin', plural: 'die Lehrerinnen' }, { id: 'o3', article: 'das', noun: 'Kind', plural: 'die Kinder' }],
-  thing: [{ id: 'o4', article: 'der', noun: 'Brief', plural: 'die Briefe' }, { id: 'o5', article: 'die', noun: 'Tasche', plural: 'die Taschen' }, { id: 'o6', article: 'das', noun: 'Paket', plural: 'die Pakete' }],
-  place: [{ id: 'o7', article: 'der', noun: 'Garten', plural: 'die Gärten' }, { id: 'o8', article: 'die', noun: 'Stadt', plural: 'die Städte' }, { id: 'o9', article: 'das', noun: 'Haus', plural: 'die Häuser' }],
-};
 const PREP_SHORT = { in: ['im', 'ins'], an: ['am', 'ans'], auf: ['aufs'], zu: ['zum', 'zur'], bei: ['beim'], von: ['vom'] };
-const PLACE_PREPS = ['in', 'an', 'auf', 'aus', 'nach', 'zu'];
 
 // "in + Akk" / "Dat" / "bei + Dat, für + Akk" (the first part counts) → { prep, kase } or null
 export function verbCase(w) {
@@ -196,16 +243,20 @@ export function verbCase(w) {
 function verbCaseTasks(w) {
   const vc = verbCase(w);
   let inf = infinitive(w);
-  if (!vc || !inf || /^sich /.test(inf)) return [];
+  if (!vc || !inf || /^sich /.test(inf) || /^\(sich\)/.test(String(w.de || ''))) return []; // reflexive verbs: no task
   if (vc.prep) inf = inf.replace(new RegExp(`\\s+${vc.prep}$`), ''); // "achten auf" → "achten"
-  const pool = vc.prep ? (PLACE_PREPS.includes(vc.prep) ? OBJECTS.place : OBJECTS.person) : vc.kase === 'Akkusativ' ? OBJECTS.thing : OBJECTS.person;
+  // only verbs with a hand-written list of fitting objects (lib/verb-objects.js) get a task; verbs with two objects
+  // (merken, vergleichen, verwechseln, informieren, erinnern …) have none
+  const pool = objectsFor(inf, vc.prep);
+  if (!pool.length) return [];
   const rule = vc.prep ? RULES.prep(vc.kase, vc.prep) : vc.kase === 'Akkusativ' ? RULES.verbAkk : RULES.verbDat;
   const core = norm(inf).replace(/e?n$/, '').slice(-3);
   return pool.map((obj) => {
     const np = nounPhrase({ ...obj, number: '' }, vc.kase);
     const phrases = [np.phrase, ...np.alts];
     const accepted = vc.prep ? phrases.flatMap((p) => prepForms(vc.prep, p)) : phrases;
-    const main = vc.prep ? prepForms(vc.prep, np.phrase)[0] : np.phrase;
+    const forms = vc.prep ? prepForms(vc.prep, np.phrase) : [np.phrase];
+    const main = forms[forms.length - 1]; // the contracted form (am, im, zum …) when there is one
     const solution = `Ich möchte ${main} ${inf}.`;
     const why = vc.prep
       ? `«${inf} ${vc.prep}» steht mit ${vc.kase === 'Akkusativ' ? 'dem Akkusativ' : 'dem Dativ'}: ${main}.`

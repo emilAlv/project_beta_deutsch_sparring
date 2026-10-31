@@ -42,7 +42,7 @@ this». Hint, rule, skip and stop still work in the chat (and as chips above the
   (e.g. *wegen des alten Schranks*); **verbs** – the Perfekt (*Ich bin abgebogen*) and a sentence with the
   case the verb needs; **adjectives** – fill in the ending; **phrases** and other words – card only.
   The tutor names the point the same way every time in `feedback.rule` (*Genitiv nach wegen*,
-  *Dativ nach in (Wo?)*, *Perfekt mit sein* … list in `lib/grammar.js`), so the stats can group it.
+  *Wechselpräposition Wo? (Dativ)*, *Perfekt mit sein* … list in `lib/grammar.js`), so the stats can group it.
   A wrong word or article is reported as *Artikel* / *Wortschatz* (costs the Meaning / Article score); a wrong case,
   ending or Perfekt as *Kasus* / *Adjektivendung* / *Verbform* / *Präposition* (costs the Sentence score only).
   For a flashcard the tutor also says which PART was right in `feedback.parts` (`{ meaning, article, plural }`),
