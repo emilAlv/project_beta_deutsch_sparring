@@ -1,3 +1,5 @@
+> **Note (R25, 2026-10-31):** the `content/wortschatz-*.md` files named below were removed from the app. Vocabulary now lives in `vocab/` (see `vocab/README.md`). The file names below are kept as history.
+
 # Converting the MASTERLIST into lesson files
 
 Instructions for the session (human or AI) that turns Emilio's vocabulary list into topics for

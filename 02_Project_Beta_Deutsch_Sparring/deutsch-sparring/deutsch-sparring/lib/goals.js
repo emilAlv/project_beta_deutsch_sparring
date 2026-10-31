@@ -8,7 +8,8 @@
 // The progress percent of a goal is worked out by the app (lib/home-stats.js), never by the model.
 
 export const GOAL_TYPES = ['exam', 'vocab', 'grammar'];
-export const GOAL_LEVELS = ['A1', 'A2', 'B1'];
+import { LEVELS } from './schema-helpers.js';
+export const GOAL_LEVELS = LEVELS;
 export const MAX_GOALS = 12;
 export const MAX_MILESTONES = 12;
 export const DEFAULT_MILESTONES = 4;

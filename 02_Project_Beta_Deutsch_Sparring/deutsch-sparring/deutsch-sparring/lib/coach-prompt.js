@@ -2,15 +2,13 @@
 // student's practice; it is not the tutor (the tutor is in lib/prompt.js and speaks German).
 // The numbers (progress, strengths, gaps) are worked out by the app and only passed on here.
 import { dayNum } from './goals.js';
+import { str, nullableStr, enumOf } from './schema-helpers.js';
 import { TEMPLATE_IDS, MINUTES_PER_DAY, CUTS, SOURCE_CHOICES, PLAN_VERSION, MAX_LABEL } from './plan.js';
 import { milestoneTitle, partTitle } from './plan-templates.js';
 import { curriculumCoachText } from './curriculum.js';
 import { LEVELS, DIFFICULTIES, QUESTION_STEPS, GRAMMAR_POINTS } from './session-settings.js';
 import { wordCountsByLevel } from './words.js';
 
-const str = (description, extra = {}) => ({ type: 'STRING', description, ...extra });
-const nullableStr = (description) => str(description, { nullable: true });
-const enumOf = (values, extra = {}) => ({ type: 'STRING', format: 'enum', enum: values, ...extra });
 
 // Gemini responseSchema (OpenAPI subset). The server cleans the answer again (lib/coach.js normalizeCoach).
 export const COACH_SCHEMA = {

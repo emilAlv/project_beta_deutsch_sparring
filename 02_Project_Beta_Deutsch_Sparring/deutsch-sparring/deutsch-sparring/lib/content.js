@@ -3,7 +3,8 @@ import path from 'path';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content');
 const SKIP = new Set(['template.md', 'known-grammar.md']);
-export const LEVELS = ['A1', 'A2', 'B1'];
+import { LEVELS } from './schema-helpers.js';
+export { LEVELS };
 
 // Special topic for free practice on a theme that has no lesson file (e.g. "im Café bestellen").
 export const FREE_TOPIC = { id: 'free', title: 'Freies Üben', short: 'Freies Üben', type: 'Gemischt', levels: LEVELS };
@@ -105,18 +106,6 @@ export function getLesson(id) {
 
 // ---- word tables and example exercises (used by the demo tutor; the real tutor reads the file) ----
 
-const ARTICLES = /^(der|die|das)\s+/i;
-const stripNotes = (x) => x.replace(/\((?!CH\))[^)]*\)/g, '').replace(/\s+/g, ' ').trim();
-
-// "das Wohnzimmer / (CH) die Stube" → { main: 'das Wohnzimmer', variants: ['die Stube'] }
-function nounVariants(cell) {
-  const parts = cell.split('/').map((x) => stripNotes(x).replace(/\(CH\)\s*/g, '').trim()).filter(Boolean);
-  const first = parts[0] || '';
-  const article = (first.match(ARTICLES) || [])[1] || '';
-  const all = parts.map((x) => (ARTICLES.test(x) || !article ? x : `${article} ${x}`));
-  return { main: all[0], variants: all.slice(1) };
-}
-
 function tableRows(text) {
   const rows = [];
   let header = null;
@@ -134,27 +123,6 @@ function tableRows(text) {
     rows.push(Object.fromEntries(header.map((h, i) => [h, cells[i] || ''])));
   }
   return rows;
-}
-
-// Nouns from the "Nomen | Englisch | Plural | … | Typisches Adjektiv" tables.
-export function getVocab(id) {
-  const text = getLesson(id);
-  if (!text) return [];
-  return tableRows(text)
-    .filter((r) => r.nomen && ARTICLES.test(r.nomen) && r.englisch)
-    .map((r) => {
-      const { main, variants } = nounVariants(r.nomen);
-      const [, article, noun] = main.match(/^(der|die|das)\s+(.+)$/i) || [];
-      return {
-        de: main,
-        article: (article || '').toLowerCase(),
-        noun: noun || main,
-        variants,
-        en: r.englisch.split(',').map((x) => x.trim()).filter(Boolean),
-        plural: stripNotes((r.plural || '').split('/')[0]).replace(/^[–-]$/, ''),
-        adjective: stripNotes((r['typisches adjektiv'] || '').split(',')[0]),
-      };
-    });
 }
 
 // The "# | Übung | Lösung | Typ" table.

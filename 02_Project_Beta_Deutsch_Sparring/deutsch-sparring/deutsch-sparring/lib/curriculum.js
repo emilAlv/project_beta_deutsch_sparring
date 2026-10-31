@@ -20,7 +20,8 @@
 //   appNote       optional: one line of extra advice for the tutor
 import { RULES } from './grammar.js';
 
-export const CURRICULUM_LEVELS = ['A1', 'A2', 'B1'];
+import { LEVELS } from './schema-helpers.js';
+export const CURRICULUM_LEVELS = LEVELS;
 // Fallback only (Goethe vocabulary size per level). The coach is told the REAL counts of vocab/words.json: see wordCountsByLevel in lib/words.js.
 export const CURRICULUM_WORDS = { A1: 650, A2: 1300, B1: 2400 };
 
