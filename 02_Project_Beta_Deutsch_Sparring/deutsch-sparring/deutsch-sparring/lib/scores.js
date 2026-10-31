@@ -79,7 +79,7 @@ export function testedChecks({ task = 'flashcard', word = null, difficulty = 'me
   const out = ['meaning'];
   if (word?.type !== 'noun') return out;
   if (task === 'grammar') return [...out, 'article'];
-  if (asksArticle(difficulty)) out.push('article');
+  if (asksArticle(difficulty) && direction !== 'de-en') out.push('article'); // German → English asks the meaning only
   if (asksPlural(difficulty) && direction !== 'de-en' && word.plural) out.push('plural');
   return out;
 }

@@ -157,7 +157,7 @@ eq('Easy noun card tests the word only', S.testedChecks({ word: lamp, difficulty
 eq('Medium noun card: + article', S.testedChecks({ word: lamp, difficulty: 'medium' }), ['meaning', 'article']);
 eq('Hard noun card: + article + plural', S.testedChecks({ word: lamp, difficulty: 'hard' }), ['meaning', 'article', 'plural']);
 eq('Hard noun without a plural: no plural', S.testedChecks({ word: { type: 'noun', plural: '' }, difficulty: 'hard' }), ['meaning', 'article']);
-eq('German → English on Hard: meaning + article, never the plural', S.testedChecks({ word: lamp, difficulty: 'hard', direction: 'de-en' }), ['meaning', 'article']);
+eq('German → English on Hard: the meaning only (owner decision 31 Oct)', S.testedChecks({ word: lamp, difficulty: 'hard', direction: 'de-en' }), ['meaning']);
 eq('German → English on Easy: meaning only', S.testedChecks({ word: lamp, difficulty: 'easy', direction: 'de-en' }), ['meaning']);
 for (const d of ['easy', 'medium', 'hard']) eq(`verb on ${d}: just the word`, S.testedChecks({ word: verb, difficulty: d }), ['meaning']);
 eq('sentence task with a noun: meaning + article (any level)', S.testedChecks({ task: 'grammar', word: lamp, difficulty: 'easy' }), ['meaning', 'article']);

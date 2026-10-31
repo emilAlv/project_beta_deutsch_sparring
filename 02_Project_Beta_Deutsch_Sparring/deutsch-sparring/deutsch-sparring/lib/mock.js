@@ -281,7 +281,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
   const dir = cardDirection(settings, p.cardNo);
   const others = vocab.filter((w) => w !== word);
   const pick = (k) => (others.length ? others[(idx * 7 + k * 13) % others.length] : word);
-  const withArticle = isNoun(word) && articleChecked(settings);
+  const withArticle = false; // German → English asks the meaning only (the noun is shown with its article)
   if (dir === 'en-de') {
     // Easy: choose between German words (the article is not checked on Easy)
     const choices = [word, pick(1), pick(2)].map(bareOf).filter((x, i, all) => all.indexOf(x) === i).sort();
@@ -300,7 +300,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
       word,
     };
   }
-  // German → English. With grammar on, a noun comes WITHOUT its article: the student gives article and meaning.
+  // German → English: the meaning only (owner decision 31 Oct). The bare-noun card below is kept but not used.
   if (withArticle) {
     return {
       exercise: {
