@@ -222,6 +222,49 @@ export function cleanFocus(g) {
 // wordById = Map(word id -> word-list entry): lets a new question say which parts it tests (exercise.checks).
 // wordIds = the ids of the words picked for this session; a wordId outside this set is dropped.
 // focus = the grammar focus the browser shows now (cleaned): hidden when the new open flashcard's answer is in it.
+// The word a card is about: its wordId, or (when the AI forgot it) the list word the card line shows.
+const lc = (x) => String(x || '').trim().toLowerCase();
+function cardWord(e, line, ctx) {
+  const id = clip(e.wordId, 120);
+  if (id && ctx.wordById?.has(id)) return ctx.wordById.get(id);
+  const l = lc(line).replace(/[?.!:]+$/, '');
+  for (const w of ctx.wordById?.values() || []) {
+    const forms = [w.noun, w.article && w.noun ? `${w.article} ${w.noun}` : '', String(w.de || '').split(',')[0]].map(lc).filter(Boolean);
+    if (forms.some((f) => l === f || l.endsWith(` ${f}`) || l.includes(`___ ${f}`) || l.includes(`… ${f}`))) return w;
+  }
+  return null;
+}
+// words as lib/words.js gives them: { id, de, type, en, article, noun, plural, … }
+const germanOf = (w) => (w.article && w.noun ? `${w.article} ${w.noun}` : String(w.de || '').split(',')[0].trim());
+const englishOf = (w) => String(w.en || '').split(',')[0].trim();
+
+// Safety net for word sessions: what the card shows must match the session's settings, whatever the AI wrote.
+// · Words only (no sentence tasks): every question is a flashcard – never an "article only" drill.
+// · A fixed direction is kept: English → German shows the ENGLISH word (never the German one), German → English the German noun.
+function fixWordCard(ex, e, ctx) {
+  if (!ctx?.direction && !ctx?.wordsOnly) return;
+  const word = cardWord(e, ex.line, ctx);
+  if (ctx.wordsOnly && ex.type !== 'flashcard' && word) {
+    ex.type = 'flashcard';
+    ex.hint = null;
+    ex.direction = ctx.direction === 'de-en' ? 'de-en' : 'en-de';
+  }
+  if (ex.type !== 'flashcard') return null;
+  if (['en-de', 'de-en'].includes(ctx.direction)) ex.direction = ctx.direction;
+  if (!word) return null;
+  if (!clip(e.wordId, 120)) e.wordId = word.id;
+  const german = germanOf(word);
+  const english = englishOf(word);
+  if (ex.direction === 'en-de' && english) {
+    const shows = [german, word.noun].map(lc).filter(Boolean).some((g) => lc(ex.line).includes(g));
+    if (shows || ARTICLE.test(ex.line)) ex.line = english;
+    if (ex.hint && [german, word.noun].map(lc).filter(Boolean).some((g) => lc(ex.hint).includes(g))) ex.hint = null;
+  } else if (ex.direction === 'de-en' && german && !lc(ex.line).includes(lc(word.noun || german))) {
+    ex.line = german;
+  }
+  return word;
+}
+
 export function normalizeReply(raw, ctx) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const message = clip(raw.message, 1200);
@@ -288,13 +331,16 @@ export function normalizeReply(raw, ctx) {
       hint,
     };
     if (type === 'flashcard' && !exercise.direction) exercise.direction = ARTICLE.test(exercise.line) ? 'de-en' : 'en-de';
-    if (type === 'flashcard' && exercise.direction === 'en-de') openAnswer = answer;
+    const fixed = fixWordCard(exercise, e, ctx);
+    if (exercise.type === 'flashcard' && exercise.direction === 'en-de') {
+      openAnswer = fixed && !lc(answer).includes(lc(fixed.noun || germanOf(fixed))) ? germanOf(fixed) : answer;
+    }
     // vocabulary: which word, and which score the answer counts for (optional; old replies have neither)
     const wordId = clip(e.wordId, 120);
     if (wordId && ctx.wordIds?.has(wordId)) {
       exercise.wordId = wordId;
       // a card is always the "flashcard" task, every other exercise type is a "grammar" task with the word
-      exercise.task = type === 'flashcard' ? 'flashcard' : 'grammar';
+      exercise.task = exercise.type === 'flashcard' ? 'flashcard' : 'grammar';
       // which parts answering it tests (Easy: the word, Medium: + article, Hard: + plural; lib/scores.js)
       exercise.checks = testedChecks({ task: exercise.task, word: ctx.wordById?.get(wordId) || null, difficulty: ctx.difficulty, direction: exercise.direction });
     }
