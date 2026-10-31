@@ -217,7 +217,7 @@ const { progress, cleanHistory, cleanScores, SAVE_ANSWER_AND_SCORE: SAVE_SQL } =
   eq('cleanAnswer: checks always hold meaning and only known parts; parts are true / false / null', [a.checks, a.parts, a.direction], [['meaning', 'article'], { meaning: true, article: null, plural: false }, 'en-de']);
   eq('the server works out the tested parts itself (Hard noun, English → German)', scoreInputOf(a).checks, ['meaning', 'article', 'plural']);
   eq('…and from the word, not from the browser (Easy)', scoreInputOf({ ...a, difficulty: 'easy' }).checks, ['meaning']);
-  eq('…German → English on Hard: no plural', scoreInputOf({ ...a, direction: 'de-en' }).checks, ['meaning', 'article']);
+  eq('…German → English on Hard: the meaning only', scoreInputOf({ ...a, direction: 'de-en' }).checks, ['meaning']);
   eq('…a sentence task: meaning + article', scoreInputOf({ ...a, task: 'grammar' }).checks, ['meaning', 'article']);
   check('no difficulty from the browser: its own list is used', scoreInputOf({ ...a, difficulty: null, checks: ['meaning'] }).checks.join() === 'meaning');
 

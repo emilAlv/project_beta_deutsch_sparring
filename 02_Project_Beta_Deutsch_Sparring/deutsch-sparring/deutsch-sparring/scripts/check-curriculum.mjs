@@ -139,7 +139,7 @@ check('lesson text has rule names, level and examples', lesson.includes(list[0].
   }
   check('prompt: case is not named on Mittel and Schwer (CASE CHOICE)', p.includes('CASE CHOICE') && /NEVER name the case/.test(p));
   const v = mk('B1', 'Mittel', kgB1, { header: 'id | German', lines: ['w1 | Lampe'] }, ['akkusativ']);
-  check('prompt: NEW WORDS rule (show first, German → English), "new" and "extra" columns', v.includes('NEW WORDS') && v.includes('"de-en"') && v.includes('"extra"') && v.includes('"new"'));
+  check('prompt: NEW WORDS rule keeps the chosen direction, "new" and "extra" columns', v.includes('NEW WORDS') && v.includes('Keep the chosen flashcard direction') && v.includes('"extra"') && v.includes('"new"'));
   check('prompt: repeated mistake gets a new memory aid', /NEW memory aid or a contrasting pair/.test(p));
 }
 
