@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { databaseUrl } from './schema.mjs';
 import { sql, ensureSchema, UUID } from './db';
 
-const COLUMNS = 'id, username, password_hash, salt';
+// session_counter: raised by "Log out everywhere"; kept in users.settings ("sv"), missing = 0 (no migration needed)
+const COLUMNS = "id, username, password_hash, salt, COALESCE((settings->>'sv')::int, 0) AS session_counter";
 
 // ---------- in memory (AUTH_MEMORY=1) ----------
 // on globalThis so every route of the dev server sees the same list
@@ -22,10 +23,17 @@ const memoryStore = {
   async create({ username, hash, salt }) {
     const key = username.toLowerCase();
     if (mem.byName.has(key)) return null;
-    const user = { id: randomUUID(), username, password_hash: hash, salt };
+    const user = { id: randomUUID(), username, password_hash: hash, salt, session_counter: 0 };
     mem.byId.set(user.id, user);
     mem.byName.set(key, user.id);
     return { ...user };
+  },
+  // "Log out everywhere": every cookie made before this stops working → the new counter, or null
+  async bumpSessionCounter(id) {
+    const u = mem.byId.get(id);
+    if (!u) return null;
+    u.session_counter = (u.session_counter || 0) + 1;
+    return u.session_counter;
   },
 };
 
@@ -51,6 +59,17 @@ const dbStore = {
       [randomUUID(), username, hash, salt],
     );
     return rows[0] || null;
+  },
+  // "Log out everywhere": one statement, so two clicks at the same time still both count → the new counter, or null
+  async bumpSessionCounter(id) {
+    if (!UUID.test(id)) return null;
+    await ensureSchema();
+    const rows = await sql().query(
+      `UPDATE users SET settings = settings || jsonb_build_object('sv', COALESCE((settings->>'sv')::int, 0) + 1)
+       WHERE id = $1 RETURNING (settings->>'sv')::int AS session_counter`,
+      [id],
+    );
+    return rows[0] ? rows[0].session_counter : null;
   },
 };
 

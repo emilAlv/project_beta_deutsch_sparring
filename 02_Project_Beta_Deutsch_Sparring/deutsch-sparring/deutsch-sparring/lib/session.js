@@ -4,8 +4,9 @@
 // (DATABASE_URL / POSTGRES_URL) – or, for local tests only, AUTH_MEMORY=1 (users kept in memory,
 // lost on restart; ignored on Vercel). Otherwise the app works as before (name + class code).
 //
-// The cookie holds the user id, the expiry and a short fingerprint of the password hash (so a
-// password reset logs out old sessions), signed with SESSION_SECRET (HMAC-SHA256). It is not
+// The cookie holds the user id, the expiry, a short fingerprint of the password hash (so a
+// password reset logs out old sessions) and the account's session counter (so "Log out everywhere"
+// ends every older cookie; a cookie from before this counter existed counts as 0), signed with SESSION_SECRET (HMAC-SHA256). It is not
 // secret, but nobody can change or forge it without SESSION_SECRET.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { databaseUrl } from './schema.mjs';
@@ -25,13 +26,16 @@ export function passwordVersion(passwordHash) {
   return hmac('pv', passwordHash).slice(0, 16);
 }
 
-export function createSessionToken(userId, passwordHash) {
+// the account's session counter as a whole number ≥ 0; anything missing or odd counts as 0
+export const sessionCounter = (n) => (Number.isSafeInteger(n) && n > 0 ? n : 0);
+
+export function createSessionToken(userId, passwordHash, counter = 0) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_DAYS * 86_400;
-  const payload = Buffer.from(JSON.stringify({ u: userId, e: exp, v: passwordVersion(passwordHash) })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ u: userId, e: exp, v: passwordVersion(passwordHash), s: sessionCounter(counter) })).toString('base64url');
   return `${payload}.${hmac('session', payload)}`;
 }
 
-// → { userId, pv } or null (missing, forged, broken or expired)
+// → { userId, pv, sv } or null (missing, forged, broken or expired)
 export function readSessionToken(token) {
   if (!process.env.SESSION_SECRET || typeof token !== 'string' || !token || token.length > 1000) return null;
   const parts = token.split('.');
@@ -44,7 +48,7 @@ export function readSessionToken(token) {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (typeof data.u !== 'string' || typeof data.v !== 'string' || !Number.isFinite(data.e)) return null;
     if (data.e * 1000 <= Date.now()) return null;
-    return { userId: data.u, pv: data.v };
+    return { userId: data.u, pv: data.v, sv: sessionCounter(data.s) }; // no counter (older cookie) = 0
   } catch {
     return null;
   }

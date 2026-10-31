@@ -78,14 +78,20 @@ different.
   is not sent along when another website tries to use our app (`SameSite=Lax`).
 - Without a valid cookie every page goes to the login page and every API route answers
   "not logged in". Each API route checks the account again itself.
-- *Log out* (avatar menu, top right) ends the session **in that browser only**. The server keeps no list
-  of logins: the cookie is checked by its signature, so a copy of it somewhere else keeps working until
-  it runs out (30 days) or the password is reset. Log out also clears this browser's copy of the
+- *Log out* (avatar menu, top right) ends the session **in that browser only**. The cookie is checked
+  by its signature, so a copy of it somewhere else keeps working until it runs out (30 days), the password
+  is reset, or the student uses *Log out everywhere*. Log out also clears this browser's copy of the
   student's data and the class code (R7, `clearAccountData` in `lib/storage.js`); other students' data
   on the same computer stays.
-- A password reset (below) makes every old cookie useless at once, because the cookie holds a
+- *Log out everywhere* (same menu, asks "are you sure?" first) ends **every** login of that account – other
+  computers, phones and copied cookies – and clears this browser like *Log out*. How: each account has a
+  session counter (`sv` in `users.settings`, missing = 0) and every cookie carries the counter it was made
+  with. The button raises the counter by one, so every older cookie no longer matches and is refused; a
+  new log-in gets a cookie with the new number. Cookies from before this feature count as 0, so nobody was
+  logged out by the update. (`app/api/auth/logout-everywhere/route.js`, `lib/auth.js` `currentUser`.)
+- A password reset (below) also makes every old cookie useless at once, because the cookie holds a
   fingerprint of the password: the student is logged out on all devices. (Checked in `lib/auth.js`
-  `currentUser` and `lib/session.js` `passwordVersion`.) There is no "log out everywhere" button yet.
+  `currentUser` and `lib/session.js` `passwordVersion`.)
 
 ## Protection against guessing
 
