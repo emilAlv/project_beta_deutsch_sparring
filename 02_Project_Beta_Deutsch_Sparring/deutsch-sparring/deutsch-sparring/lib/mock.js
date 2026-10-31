@@ -294,7 +294,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         line: word.en[0],
         answer: `${word.de}${plural ? `, ${word.plural}` : ''}`,
         hint: strongHint ? `(${word.article ? `${word.article} …, ` : ''}Anfang: ${word.noun.slice(0, 3)}…)`
-          : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : isNoun(word) ? (plural ? 'mit Artikel und Plural' : 'mit Artikel') : null,
+          : d === 'easy' ? `(Anfang: ${word.noun.slice(0, 2)}…)` : null, // the app shows what to type (lib/instructions.js)
       },
       options: d === 'easy' ? choices : [],
       word,
@@ -309,7 +309,7 @@ function vocabQuestion(vocab, n, settings, strongHint = false, pin = null) {
         direction: 'de-en',
         line: word.noun,
         answer: `${word.article} – ${meaningOf(word)}`,
-        hint: strongHint ? `(Artikel: ${word.article}, ${meaningOf(word).slice(0, 3)}…)` : d === 'hard' ? 'mit Artikel' : 'mit Artikel, auf Englisch',
+        hint: strongHint ? `(Artikel: ${word.article}, ${meaningOf(word).slice(0, 3)}…)` : null, // the app shows what to type
       },
       options: [],
       word,
