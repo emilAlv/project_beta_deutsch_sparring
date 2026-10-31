@@ -62,11 +62,15 @@ const PREFIXES = ['zusammen', 'zurück', 'heraus', 'hinaus', 'herunter', 'hinunt
   .sort((a, b) => b.length - a.length);
 const SS_ROOT_RE = new RegExp(ROOT_STEMS.join('|'), 'giu');
 const SS_VERB_RE = new RegExp(`(?<![\\p{L}])((?:${PREFIXES.join('|')})*)(${VERB_STEMS.join('|')})`, 'giu');
+// Reis (rice) + s…: Reissalat, Reissuppe are rice dishes, not reissen (Reissverschluss)
+const RICE = /^reiss$/i;
+const RICE_NEXT = /^(alat|uppe|orte|ack|peise|ilo)/i;
 const toEszett = (m) => (m === m.toUpperCase() && /[A-ZÄÖÜ]{2}/.test(m) ? m : m.replace(/ss/i, 'ß'));
 
 // Swiss spelling → German spelling for the listed stems only. ALL-CAPS words are left alone.
 function swissToGermanSpelling(text) {
-  return text.replace(SS_ROOT_RE, toEszett).replace(SS_VERB_RE, (m, pre, stem) => pre + toEszett(stem));
+  return text.replace(SS_ROOT_RE, toEszett).replace(SS_VERB_RE, (m, pre, stem, at, all) => (
+    RICE.test(stem) && RICE_NEXT.test(all.slice(at + m.length)) ? m : pre + toEszett(stem)));
 }
 
 // Spelling of a text in the student's variant. 'ch': ß → ss everywhere (Swiss rule). 'de': Swiss ss → ß for the

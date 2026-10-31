@@ -27,7 +27,7 @@ const yes = {
 for (const [from, to] of Object.entries(yes)) eq(`de: ${from}`, de(from), to);
 
 // must NOT change: the "ss" is not a stem (the s belongs to the first part of a compound, or the vowel is short)
-const no = ['Preisschild', 'Preisstufe', 'Kreisstadt', 'Kreisstrasse'.replace('strasse', 'stadt'), 'Eisschrank', 'Waisse'.replace('Waisse', 'Waisenhaus'),
+const no = ['Preisschild', 'Reissalat', 'Reissuppe', 'Preisstufe', 'Kreisstadt', 'Kreisstrasse'.replace('strasse', 'stadt'), 'Eisschrank', 'Waisse'.replace('Waisse', 'Waisenhaus'),
   'Wasser', 'Klasse', 'muss', 'dass', 'müssen', 'Tasse', 'Fluss', 'essen', 'vergessen', 'lassen', 'Adresse', 'interessant', 'Schloss', 'passen',
   'Ergebnisse', 'Messer', 'Pass', 'nass', 'Kuss', 'Mittagessen', 'Mineralwasser', 'Anschluss', 'Wissenschaft', 'Handy', 'Natel', 'Kasten'];
 for (const w of no) eq(`de keeps ${w}`, de(w), w);
