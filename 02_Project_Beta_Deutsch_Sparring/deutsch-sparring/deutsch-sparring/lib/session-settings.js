@@ -9,7 +9,8 @@ export const KINDS = ['grammar', 'vocab']; // what is stored: Grammar · a word 
 export const SETUP_KINDS = [...KINDS, 'mixed']; // + the Mixed review (R24): no topic, the app picks what is due
 export const MIXED_TOPIC_ID = 'mixed-review';
 export const MIXED_QUESTION_STEPS = [10, 20]; // a mixed review has 10–20 questions
-export const LEVELS = ['A1', 'A2', 'B1'];
+import { LEVELS } from './schema-helpers.js';
+export { LEVELS };
 // the topic entry of the Mixed review (shown in the ribbon as "Mixed review", never a real lesson)
 export const MIXED_TOPIC = { id: MIXED_TOPIC_ID, title: 'Gemischte Wiederholung', short: 'Mixed review', type: 'Gemischt', levels: LEVELS };
 export const DIFFICULTIES = ['easy', 'medium', 'hard'];

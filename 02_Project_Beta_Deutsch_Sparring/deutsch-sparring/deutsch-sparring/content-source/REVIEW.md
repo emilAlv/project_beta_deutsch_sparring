@@ -1,3 +1,5 @@
+> **Note (R25, 2026-10-31):** the `content/wortschatz-*.md` files named below were removed from the app. Vocabulary now lives in `vocab/` (see `vocab/README.md`). The file names below are kept as history.
+
 # Review – things for Emilio to check
 
 ## Corrections made

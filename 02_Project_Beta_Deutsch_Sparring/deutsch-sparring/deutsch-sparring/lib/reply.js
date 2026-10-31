@@ -26,12 +26,10 @@ export const ERROR_TYPE = {
 };
 const WORD_ERROR_KEYS = [ERROR_TYPE.Artikel, ERROR_TYPE.Wortschatz]; // 'article', 'vocab'
 export const TASKS = ['flashcard', 'grammar']; // which score a word task is for (lib/scores.js)
-export const LEVELS = ['A1', 'A2', 'B1'];
+import { LEVELS, str, nullableStr, enumOf } from './schema-helpers.js';
+export { LEVELS };
 export const VIEWS = ['glance', 'progress', 'grammar'];
 
-const str = (description, extra = {}) => ({ type: 'STRING', description, ...extra });
-const nullableStr = (description) => str(description, { nullable: true });
-const enumOf = (values, extra = {}) => ({ type: 'STRING', format: 'enum', enum: values, ...extra });
 
 // Gemini responseSchema (OpenAPI subset).
 export const RESPONSE_SCHEMA = {

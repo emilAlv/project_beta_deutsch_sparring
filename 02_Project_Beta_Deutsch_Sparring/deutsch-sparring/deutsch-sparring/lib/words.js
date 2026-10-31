@@ -9,7 +9,8 @@ import path from 'path';
 import { matchesFilter } from './scores.js';
 
 const VOCAB_DIR = path.join(process.cwd(), 'vocab');
-export const LEVELS = ['A1', 'A2', 'B1'];
+import { LEVELS } from './schema-helpers.js';
+export { LEVELS };
 export const SOURCES = ['goethe-a1', 'goethe-a2', 'goethe-b1', 'kurs'];
 const GOETHE = SOURCES.filter((s) => s !== 'kurs');
 const SEP = ' › ';
