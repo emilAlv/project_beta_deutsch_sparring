@@ -236,7 +236,13 @@ function cardWord(e, line, ctx) {
 }
 // words as lib/words.js gives them: { id, de, type, en, article, noun, plural, … }
 const germanOf = (w) => (w.article && w.noun ? `${w.article} ${w.noun}` : String(w.de || '').split(',')[0].trim());
-const englishOf = (w) => String(w.en || '').split(',')[0].trim();
+// the English side of a card must not contain German: "dark- (prefix for colours, e.g. dunkelblau = dark blue)"
+// → "dark- (prefix for colours, e.g. dark blue)" (word-list examples are written "German = English")
+export const noGermanExample = (text) => String(text || '')
+  .replace(/\(([^)]*=[^)]*)\)/g, (m, inner) => `(${inner.replace(/[^\s,;(]+\s*=\s*/g, '').trim()})`)
+  .replace(/;[^;()]*=[^;()]*/g, '')
+  .trim();
+const englishOf = (w) => noGermanExample(String(w.en || '').trim());
 
 // Safety net for word sessions: what the card shows must match the session's settings, whatever the AI wrote.
 // · Words only (no sentence tasks): every question is a flashcard – never an "article only" drill.
@@ -256,9 +262,11 @@ function fixWordCard(ex, e, ctx) {
   const german = germanOf(word);
   const english = englishOf(word);
   if (ex.direction === 'en-de' && english) {
-    const shows = [german, word.noun].map(lc).filter(Boolean).some((g) => lc(ex.line).includes(g));
+    const forms = [german, word.noun].map((g) => lc(g).replace(/-$/, '')).filter((g) => g.length > 1);
+    const shows = forms.some((g) => lc(ex.line).includes(g)) && !forms.some((g) => lc(english).includes(g));
     if (shows || ARTICLE.test(ex.line)) ex.line = english;
-    if (ex.hint && [german, word.noun].map(lc).filter(Boolean).some((g) => lc(ex.hint).includes(g))) ex.hint = null;
+    ex.line = noGermanExample(ex.line);
+    if (ex.hint && forms.some((g) => lc(ex.hint).includes(g))) ex.hint = null;
   } else if (ex.direction === 'de-en' && german && !lc(ex.line).includes(lc(word.noun || german))) {
     ex.line = german;
   }
@@ -267,7 +275,7 @@ function fixWordCard(ex, e, ctx) {
 
 export function normalizeReply(raw, ctx) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const message = clip(raw.message, 1200);
+  let message = clip(raw.message, 1200);
 
   let feedback = null;
   const f = raw.feedback;
@@ -331,7 +339,10 @@ export function normalizeReply(raw, ctx) {
       hint,
     };
     if (type === 'flashcard' && !exercise.direction) exercise.direction = ARTICLE.test(exercise.line) ? 'de-en' : 'en-de';
+    const shownLine = exercise.line;
     const fixed = fixWordCard(exercise, e, ctx);
+    // the tutor's message often repeats the card line: keep it in step (no German on an English → German card)
+    if (exercise.line !== shownLine && message.includes(shownLine)) message = message.split(shownLine).join(exercise.line);
     if (exercise.type === 'flashcard' && exercise.direction === 'en-de') {
       openAnswer = fixed && !lc(answer).includes(lc(fixed.noun || germanOf(fixed))) ? germanOf(fixed) : answer;
     }
