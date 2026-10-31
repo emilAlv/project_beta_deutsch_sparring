@@ -26,6 +26,7 @@ import HomePage from '../components/Home';
 import SessionSummary from '../components/SessionSummary';
 import { goalSnapshot } from '../lib/home-client';
 import { t } from '../lib/ui-text';
+import { retypeTarget, checkRetype, MAX_TRIES } from '../lib/retype';
 import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, MIXED_TOPIC, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
 import { cleanReviewPlan } from '../lib/mixed-review';
@@ -66,6 +67,7 @@ function newSession(topic = null, settings = null) {
     words: [], // … with their type: [{ id, type }]
     reviewPlan: [], // Mixed review: what each question is ({ kind: 'grammar'|'mistake'|'word', topicId, wordId … }), made by the server at the first request
     modelIds: [], // grammar: the exercise models picked for this session (by the server); the next session on this topic gets other ones
+    retype: null, // after a wrong answer: { messageId, target, tries } – the next question is held until the correct answer is typed (lib/retype.js); practice only, never scored
     started: false, // the first question has arrived
     finished: false,
     endedEarly: false,
@@ -616,6 +618,11 @@ export default function Home() {
     if (c.stage === 'name') return onName(text);
     if (c.stage === 'code') return onCode(text);
 
+    if (c.session.retype && c.session.started) {
+      const handled = handleRetype(text);
+      if (handled) return true;
+    }
+
     const msg = add({ role: 'user', text });
     const s = c.session;
     const running = s.started && !s.finished;
@@ -665,6 +672,52 @@ export default function Home() {
       return true;
     }
     askTutor(text, { msg });
+    return true;
+  }
+
+  // ---------- retype the correction (no AI): the next question is held back until the right answer is typed ----------
+  // Nothing here touches the score, the answers or /api/chat: the first answer decided.
+  function releaseRetype() {
+    const c = convoRef.current;
+    const id = c.session.retype?.messageId;
+    const done = c.session.finished && c.session.answers.length;
+    update((x) => ({
+      ...x,
+      session: { ...x.session, retype: null },
+      stage: done && x.stage === 'practice' ? 'summary' : x.stage,
+      messages: x.messages.map((m) => (m.id === id ? { ...m, held: false } : m)),
+    }));
+  }
+
+  // true = handled here; false = let the normal router handle it (e.g. "stop")
+  function handleRetype(text) {
+    const s = convoRef.current.session;
+    const rt = s.retype;
+    const intent = detectIntent(text, { open: true });
+    if (text === t('retypeContinue')) {
+      if (rt.tries >= MAX_TRIES) releaseRetype();
+      return true;
+    }
+    if (intent?.type === 'skip') {
+      add({ role: 'user', text });
+      releaseRetype();
+      return true;
+    }
+    if (intent?.type === 'stop') {
+      releaseRetype(); // the held question is dropped by the normal "stop" below
+      return s.finished; // already finished: releasing shows the summary
+    }
+    if (intent && intent.type !== 'again') return false; // view / settings commands keep working
+    add({ role: 'user', text });
+    const res = checkRetype(rt.target, text);
+    if (res.ok) {
+      addSystem('retype', t('retypeRight'));
+      releaseRetype();
+      return true;
+    }
+    const tries = rt.tries + 1;
+    updateSession((x) => ({ ...x, retype: { ...x.retype, tries } }));
+    addSystem('retype', res.missing.length ? t('retypeDiff', { words: res.missing.map((w) => `«${w}»`).join(' ') }) : t('retypeAgain'));
     return true;
   }
 
@@ -854,10 +907,17 @@ export default function Home() {
     if (justFinished) s.endedAt = Date.now();
     const shown = { ...reply, feedback, exercise };
     const message = { id: uid(), at: Date.now(), role: 'tutor', reply: shown, modelText, summary: justFinished ? summaryOf(s) : null };
+    // a wrong answer: the next question (or the summary) waits until the student has typed the correct answer
+    const target = feedback && feedback.correct === false && !s.endedEarly && (exercise || justFinished)
+      ? retypeTarget({ exercise: before.exercise, feedback }) : null;
+    if (target) {
+      message.held = true;
+      s.retype = { messageId: message.id, target, tries: 0 };
+    }
     update((c) => ({
       ...c,
       session: s,
-      stage: justFinished && s.answers.length ? 'summary' : c.stage,
+      stage: justFinished && s.answers.length && !target ? 'summary' : c.stage,
       modelOptions: s.finished ? [] : reply.options,
       messages: [...c.messages, message],
     }));
@@ -872,8 +932,12 @@ export default function Home() {
 
   // chips above the chat input: the tutor's answer choices, then hint / rule / skip / mistakes
   const quick = useMemo(() => {
-    if (stage !== 'practice' || !session.started || session.finished) return [];
+    if (stage !== 'practice' || !session.started || (session.finished && !session.retype)) return [];
     const taken = new Set();
+    if (session.retype) {
+      // the next question must not show yet: only Continue (after two failed tries) and Skip
+      return [session.retype.tries >= MAX_TRIES ? { text: t('retypeContinue'), style: 'primary' } : null, { text: t('chipSkip') }].filter(Boolean);
+    }
     const list = [
       ...modelOptions.map((text) => ({ text, style: 'outline' })),
       { text: t('chipHint') },
@@ -983,6 +1047,8 @@ export default function Home() {
             onSend={handleSend}
             inputRef={inputRef}
             quick={quick}
+            retype={session.retype ? { messageId: session.retype.messageId, canContinue: session.retype.tries >= MAX_TRIES } : null}
+            onContinue={releaseRetype}
             summaryActions={summaryActions}
           />
           <SessionPanel
