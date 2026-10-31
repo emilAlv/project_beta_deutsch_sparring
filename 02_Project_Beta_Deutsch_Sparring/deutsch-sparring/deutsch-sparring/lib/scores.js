@@ -27,6 +27,7 @@ export const LEARNT_FROM = 8; // "learnt" = Meaning >= 8 and, for a noun, Articl
 // score table (points added or taken away). v = Meaning, a = Article, p = Plural, g = Sentence.
 // A flashcard only changes the scores it TESTED on its level (see testedChecks); the same numbers apply to each.
 export const FLASHCARD_RIGHT = { v: +2, a: +2, p: +2 };
+export const KNOWN_AT_FIRST = 6; // a NEW part answered right at the first try (no hint): you already knew it → straight to 6 (one more right = learnt)
 export const FLASHCARD_WRONG = { v: -3, a: -3, p: -3 };
 export const GRAMMAR_RIGHT = { v: +1, a: +1, g: +2 }; // the word (and its article) was used correctly in the sentence
 export const GRAMMAR_WRONG_WORD = { v: -3, a: -3, g: -3 }; // mistake in the word (v) or its article (a); g in both cases
@@ -291,7 +292,10 @@ export function applyAnswer(rec, answer, now = Date.now()) {
     const parts = resolveParts(answer.parts, answer);
     for (const part of checks) {
       const kind = PART_KIND[part];
-      if (parts[part] === true) up(kind, FLASHCARD_RIGHT);
+      if (parts[part] === true) {
+        up(kind, FLASHCARD_RIGHT);
+        if (!hinted && !kindOf(rec, kind)) plan[kind].delta = KNOWN_AT_FIRST - SCORE_NEW;
+      }
       else if (parts[part] === false) down(kind, FLASHCARD_WRONG);
     }
   }
