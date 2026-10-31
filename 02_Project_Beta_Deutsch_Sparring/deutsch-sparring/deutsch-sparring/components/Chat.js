@@ -34,13 +34,9 @@ export default function Chat({ status, messages, busy, waiting, onCancel, slow, 
 
   return (
     <section className="card chat" aria-label={t('chatLabel')}>
-      <header className="chat-head">
-        <div>
-          <h1 className="chat-title">{t('chatTitle')}</h1>
-          <p className="chat-sub">{t('chatSubtitle')}</p>
-        </div>
-        <p className="live-status"><span className="dot" aria-hidden="true" />{status}</p>
-      </header>
+      {/* no visible header: the session ribbon above already says what is going on, so the chat keeps the space */}
+      <h1 className="sr-only">{t('chatTitle')}</h1>
+      <p className="sr-only" role="status">{status}</p>
 
       <div className="chat-scroll" ref={scrollRef} onScroll={onScroll}>
         <div className="chat-log" role="log" aria-live="polite" aria-relevant="additions">
