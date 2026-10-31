@@ -18,7 +18,7 @@ const DIFFICULTY_GUIDE = {
   Leicht:
     'exercise.hint = one strong structural clue, but never the fully inflected target phrase or a completed reference sentence. Put 2–3 answer choices in "options" (multiple choice). Grammar task types: Auswahl, or ONE gap. Short answers are enough.',
   Mittel:
-    'exercise.hint = a small hint, e.g. the base form "(der Tisch)" or "mit Artikel". Never name the case and never give the answer. Grammar task types: a gap with no word-class hint, or a transformation (Aktiv → Passiv, join two sentences with obwohl / weil / dass).',
+    'exercise.hint = a small content hint, e.g. the base form "(der Tisch)" (the app already shows what to type). Never name the case and never give the answer. Grammar task types: a gap with no word-class hint, or a transformation (Aktiv → Passiv, join two sentences with obwohl / weil / dass).',
   Schwer:
     'exercise.hint = null. Answers in full sentences, less frequent words. Grammar task types: translate a whole sentence, find the mistake (no hint where it is), or write a free sentence on a situation using the rule (B1: 12–20 words with a Nebensatz).',
 };
@@ -51,11 +51,11 @@ const CARD_LEVELS = {
     '- feedback.parts: { meaning } only (article and plural null).',
   ],
   medium: [
-    '- CARD LEVEL (Mittel): a noun card asks for ARTICLE + NOUN. English → German: "die Lampe"; a wrong or missing article = wrong card, errorType "Artikel", rule "" – say that the noun itself was right. German → English: the noun is shown without article and the student gives article AND meaning ("die – lamp"); wrong or missing article = wrong card (errorType "Artikel"), a wrong meaning = errorType "Wortschatz". The plural is NOT asked; show it in feedback.corrected as information. Hint for a noun card: "mit Artikel" (no hint for other word types).',
+    '- CARD LEVEL (Mittel): a noun card asks for ARTICLE + NOUN. English → German: "die Lampe"; a wrong or missing article = wrong card, errorType "Artikel", rule "" – say that the noun itself was right. German → English: the noun is shown without article and the student gives article AND meaning ("die – lamp"); wrong or missing article = wrong card (errorType "Artikel"), a wrong meaning = errorType "Wortschatz". The plural is NOT asked; show it in feedback.corrected as information. Flashcard hint = null: the app itself shows what to type ("Type the article and the English meaning …").',
     '- feedback.parts: { meaning, article } (plural null). Wrong article but right noun: meaning true, article false.',
   ],
   hard: [
-    '- CARD LEVEL (Schwer): a noun card asks for ARTICLE + NOUN + PLURAL. English → German: "die Lampe, die Lampen" (nouns without a plural: article + noun only). A wrong or missing article = wrong card (errorType "Artikel"); a wrong or missing plural = wrong card (errorType "Wortschatz", rule "Plural"). German → English: the noun is shown without article; the student gives article AND meaning ("die – lamp"), no plural. Hint for a noun card: "mit Artikel und Plural" (German → English: "mit Artikel") – this overrides "exercise.hint = null" for noun flashcards; other word types get no hint.',
+    '- CARD LEVEL (Schwer): a noun card asks for ARTICLE + NOUN + PLURAL. English → German: "die Lampe, die Lampen" (nouns without a plural: article + noun only). A wrong or missing article = wrong card (errorType "Artikel"); a wrong or missing plural = wrong card (errorType "Wortschatz", rule "Plural"). German → English: the noun is shown without article; the student gives article AND meaning ("die – lamp"), no plural. Flashcard hint = null: the app itself shows what to type.',
     '- feedback.parts: { meaning, article, plural } (plural only for English → German cards with a plural). Say which part was wrong and set the others true: wrong plural only = meaning true, article true, plural false.',
   ],
 };
@@ -213,7 +213,7 @@ VOCABULARY TOPICS = FLASHCARDS (reference language: English)
 ${CARD_LEVELS[level].join('\n')}
 - Accept the Swiss and the German word (der Kasten / der Schrank, die Stube / das Wohnzimmer), but write the card in the chosen variant. German → English: accept any fitting English meaning; ignore "the".
 - feedback.corrected = the full card: English → German "der Schrank, die Schränke" (a noun without plural: "der Schrank"); German → English with a bare noun "der Schrank – wardrobe", otherwise the English meaning. Show the article and the plural of a noun here on EVERY level, as information. feedback.explanation = one short line (the other variant's word or a memory tip); a wrong card also gets feedback.why (see JSON FIELDS).
-- Hints: Leicht = first letters + answer choices in options; Mittel = "mit Artikel" (noun) / "auf Englisch"; Schwer = "mit Artikel und Plural" for a noun card in English → German, otherwise null.
+- Hints: the app already tells the student WHAT to type (word, article, plural, meaning), so a hint never repeats that. Leicht = first letters + answer choices in options; Mittel and Schwer = null for flashcards.
 - Noun drill: use it when ${name} asks for it or as the safe fallback when no natural contextual noun sentence is available; practise the article, case and adjective ending without inventing an arbitrary predicate.
 - Phrases (and other word types without grammar task): English → German, a close answer is fine (same meaning, small differences in small words); errorType Wortschatz if wrong.
 
