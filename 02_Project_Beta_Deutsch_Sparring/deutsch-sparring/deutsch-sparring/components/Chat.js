@@ -28,24 +28,11 @@ export default function Chat({ status, messages, busy, waiting, onCancel, slow, 
   };
   useLayoutEffect(() => {
     const el = scrollRef.current;
-    if (messages[messages.length - 1]?.role === 'user') stick.current = true; // own message: always follow
+    const last = messages[messages.length - 1];
+    // own message, or the next question released after a retype: always follow
+    if (last?.role === 'user' || (last?.role === 'tutor' && !last.modelText && (last.reply?.exercise || last.summary))) stick.current = true;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [messages, busy, error, slow]);
-
-  // the retype is done: the held question appears inside the earlier tutor message (above the retype lines),
-  // so bring it into view instead of leaving it scrolled away above
-  const heldId = useRef(null);
-  useLayoutEffect(() => {
-    const was = heldId.current;
-    heldId.current = retype?.messageId || null;
-    if (!was || retype) return;
-    const el = scrollRef.current;
-    const next = el?.querySelector(`[data-msg="${was}"] .next-line`);
-    if (el && next) {
-      el.scrollTop = Math.max(0, next.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - 16);
-      stick.current = false;
-    }
-  }, [retype, messages]);
 
   return (
     <section className="card chat" aria-label={t('chatLabel')}>
@@ -122,14 +109,14 @@ function TutorMessage({ m, actions, retype, onContinue }) {
   const r = m.reply;
   const text = r ? r.message : m.text;
   return (
-    <div className="msg-tutor" data-msg={m.id}>
+    <div className="msg-tutor">
       <div className="avatar-w" aria-hidden="true">w</div>
       <div className="tutor-body">
         <p className="tutor-label"><strong>{t('tutorName')}</strong> · {t('tutorRole')}</p>
         {text && <p className="tutor-text" lang="de"><Rich text={text} /></p>}
         {r?.feedback && <FeedbackCard f={r.feedback} />}
         {m.held && retype && <RetypeLine canContinue={retype.canContinue} onContinue={onContinue} />}
-        {!m.held && r?.exercise && (r.feedback ? <NextLine ex={r.exercise} /> : <ExerciseCard ex={r.exercise} />)}
+        {!m.held && !m.moved && r?.exercise && (r.feedback ? <NextLine ex={r.exercise} /> : <ExerciseCard ex={r.exercise} />)}
         {m.summary && !m.held && <SummaryCard s={m.summary} actions={actions} />}
       </div>
     </div>
