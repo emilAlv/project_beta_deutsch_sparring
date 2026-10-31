@@ -37,6 +37,7 @@ export const RULES = {
   akkIn: 'Akkusativ nach in (Wohin?)',
   datMit: 'Dativ nach mit',
   datIn: 'Dativ nach in (Wo?)',
+  praeteritumModal: 'Präteritum Modalverben',
   genWegen: 'Genitiv nach wegen',
   genTrotz: 'Genitiv nach trotz',
   endingDefinite: 'Adjektivendung nach der/die/das',

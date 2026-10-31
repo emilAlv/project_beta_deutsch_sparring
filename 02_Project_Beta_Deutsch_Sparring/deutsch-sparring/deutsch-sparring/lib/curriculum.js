@@ -500,9 +500,9 @@ export const CURRICULUM = [
     examples: [
       'Das Brot *wird|werden* jeden Morgen gebacken.',
       'Das Haus *wurde|werden* 1990 gebaut.',
-      'In der Schweiz *werden|werden* viele Sprachen gesprochen.',
+      'In der Schweiz *werden|werden, Plural, Präsens* viele Sprachen gesprochen.',
       'Der Brief wurde von der Sekretärin *geschrieben|schreiben*.',
-      'Das Fenster muss geöffnet *werden|werden*.',
+      'Das Fenster muss geöffnet *werden|Infinitiv*.',
     ],
     exerciseIdeas: ['Lückentext: werden oder wurde und das Partizip II.', 'Satzbau: einen Aktivsatz ins Passiv umformen.', 'Übersetzung: «The house was built in 1990.»'],
     ruleNames: ['Passiv Präsens', 'Passiv Präteritum'],

@@ -32,7 +32,7 @@ Vorgangspassiv im Präsens: werden + Partizip II; Vergangenheit: wurde + Partizi
 | # | Übung | Lösung | Typ |
 |---|---|---|---|
 | 1 | Das Fahrrad ___ heute repariert. (werden) | wird | Lückentext |
-| 2 | Die Pakete ___ morgen geliefert. (werden) | werden | Lückentext |
+| 2 | Die Pakete ___ morgen geliefert. (werden, Plural, Präsens) | werden | Lückentext |
 | 3 | Der Termin ___ gestern verschoben. (werden, Präteritum) | wurde | Lückentext |
 | 4 | Die Rechnung wird per E-Mail ___. (schicken) | geschickt | Lückentext |
 | 5 | Die Strasse wird heute ___. (sperren) | gesperrt | Lückentext |
