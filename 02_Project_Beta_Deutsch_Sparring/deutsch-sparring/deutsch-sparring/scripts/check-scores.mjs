@@ -29,7 +29,9 @@ for (let i = 0; i < 4; i += 1) {
   r = flash(r, {}, T0 + i * DAY);
   path.push(r.v.s);
 }
-eq('new word: 4 right in a row = 3, 5, 7, 10', path, [3, 5, 7, 10]);
+eq('new word known at first sight: 4 right in a row = 6, 8, 9, 10', path, [6, 8, 9, 10]);
+eq('a new word with a hint: +1 only (no first-sight jump)', flash(undefined, { hinted: true }, T0).v.s, 2);
+eq('a word not known at first: wrong, then right = 1, 3 (+2 steps)', flash(flash(undefined, { correct: false, errorType: 'Wortschatz' }, T0), {}, T0 + DAY).v.s, 3);
 eq('streak after 4 right', r.v.k, 4);
 
 r = days(4);
@@ -57,7 +59,7 @@ eq('12 hint answers in a row never reach 10', r.v.s, 9);
 eq('hint answers do not count toward the streak', r.v.k, 0);
 r = days(3);
 r = flash(r, { hinted: true }, T0 + 3 * DAY);
-eq('hint answer keeps the streak (3) and adds 1', [r.v.s, r.v.k], [8, 3]);
+eq('hint answer keeps the streak (3) and adds 1 (capped at 9)', [r.v.s, r.v.k], [9, 3]);
 
 check('score never goes below 1', flash({ v: { s: 1, k: 0, due: null } }, { correct: false }).v.s === 1);
 eq('flashcard wrong: -3', flash({ v: { s: 6, k: 2, due: null } }, { correct: false }).v.s, 3);
@@ -88,7 +90,7 @@ for (const [score, days] of [[1, 1], [3, 1], [4, 3], [6, 3], [7, 7], [9, 7], [10
   eq(`score ${score} comes back after ${days} day(s)`, S.dueDays(score), days);
 }
 r = flash(undefined, {}, T0);
-eq('due date is set from the new score (3 -> 1 day)', r.v.due, T0 + DAY);
+eq('due date is set from the new score (6 -> 3 days)', r.v.due, T0 + 3 * DAY);
 const ten = { v: { s: 10, k: 4, due: T0 } };
 eq('a due 10 (old record, no gap stored) answered right stays 10 and its gap doubles: 21 -> 42 days', [flash(ten, {}, T0 + DAY).v.s, flash(ten, {}, T0 + DAY).v.due], [10, T0 + DAY + 42 * DAY]);
 eq('a due 10 answered wrong drops to 7 and is due tomorrow (R21.1)', [flash(ten, { correct: false }, T0 + DAY).v.s, flash(ten, { correct: false }, T0 + DAY).v.due], [7, T0 + 2 * DAY]);
@@ -165,11 +167,11 @@ eq('sentence task with a verb: meaning', S.testedChecks({ task: 'grammar', word:
 
 // ---- each answer changes only the scores it tested ----
 let q = card(undefined, 'easy', {});
-eq('Easy noun right: m up, a and p untouched', [sc(q, 'v'), q.a, q.p], [3, undefined, undefined]);
+eq('Easy noun right: m up, a and p untouched', [sc(q, 'v'), q.a, q.p], [6, undefined, undefined]);
 q = card(undefined, 'medium');
-eq('Medium right: m and a up, p untouched', [sc(q, 'v'), sc(q, 'a'), q.p], [3, 3, undefined]);
+eq('Medium right: m and a up, p untouched', [sc(q, 'v'), sc(q, 'a'), q.p], [6, 6, undefined]);
 q = card(undefined, 'hard');
-eq('Hard right: m, a and p up', [sc(q, 'v'), sc(q, 'a'), sc(q, 'p')], [3, 3, 3]);
+eq('Hard right: m, a and p up', [sc(q, 'v'), sc(q, 'a'), sc(q, 'p')], [6, 6, 6]);
 const base = { v: { s: 5, k: 2, due: null }, a: { s: 5, k: 2, due: null }, p: { s: 5, k: 2, due: null } };
 q = card(base, 'medium', { correct: false, errorType: 'Artikel' });
 eq('Medium, wrong article (noun right): a down (-3), m UP (+2) because the word was right', [sc(q, 'v'), sc(q, 'a')], [7, 2]);
@@ -416,12 +418,12 @@ eq('parts line: nothing for sentence tasks', CP.partsView({ corrected: 'x' }), [
   const m1 = flash(undefined, {}, D(0) + 1000);
   const m2 = flash(m1, {}, D(0) + 5 * 3_600_000);
   eq('R21.5 second right answer on the same day: Meaning unchanged', [m2.v.s, m2.v.k, m2.v.due], [m1.v.s, m1.v.k, m1.v.due]);
-  eq('R21.5 …next day it rises again', flash(m2, {}, D(1) + 1000).v.s, 5);
+  eq('R21.5 …next day it rises again', flash(m2, {}, D(1) + 1000).v.s, 8);
   const m3 = flash(m1, { correct: false, errorType: 'Wortschatz' }, D(0) + 6 * 3_600_000);
-  eq('R21.5 a wrong answer the same day still lowers it', m3.v.s, 1);
+  eq('R21.5 a wrong answer the same day still lowers it', m3.v.s, 3);
   eq('R21.5 a grammar task that lifts Meaning counts as the day\'s rise', gram(m1, {}, D(0) + 7 * 3_600_000).v.s, m1.v.s);
   eq('R21.5 …but the Sentence score still rises', gram(m1, {}, D(0) + 7 * 3_600_000).g.s, 3);
-  eq('R21.5 Article and Plural are not limited', [card(card(undefined, 'hard', {}), 'hard', {}).a.s], [5]);
+  eq('R21.5 Article and Plural are not limited', [card(card(undefined, 'hard', {}), 'hard', {}).a.s], [8]);
   eq('R21.5 a hint answer is a rise too (only once a day)', flash(flash(undefined, { hinted: true }, D(0)), { hinted: true }, D(0) + 1000).v.s, 2);
   eq('R21.5 a 10 checked twice on one day: the gap doubles once', flash(flash(days(4), {}, D(20)), {}, D(20) + 1000).v.iv, 42);
 

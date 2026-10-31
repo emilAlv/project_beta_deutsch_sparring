@@ -95,6 +95,10 @@ A flashcard only changes the scores it **tested** on its level. Each tested part
 - **Formats:** record `{ v, g, a, p, last }` (each `{ s, k, due }`, plus `iv` = gap in days of a 10, and `up` = when Meaning last rose, on `v` only); compact copy for Home `{ id: [m, g, a, p] }` (null = none); database `word_scores` columns `v g a p` (+ `_streak`, `_due`, and since migration step 6 `v_iv a_iv p_iv g_iv`, `v_up`).
 - One place in the code (`lib/scores.js`) does all of this, so the rules can be changed later in one file. Without an account the scores are kept in the browser; with an account they are in the database (Task 8).
 
+**Known on first sight (decided by Emilio, 31 Oct 2026):** a NEW part (Meaning, Article or Plural never scored before)
+answered right at the first try on a flashcard, without a hint, goes straight to 6 (`KNOWN_AT_FIRST` in lib/scores.js);
+one more right answer in a later session makes it learnt (8). Words not known at first still climb +2 per right answer.
+
 ## Common rules (every task prompt points here)
 - Read `CLAUDE.md` (repo root) first and follow it: plain-English explanations for Emilio, ask before any new package, database or login, never print or commit keys or passwords.
 - The app folder is `02_Project_Beta_Deutsch_Sparring/deutsch-sparring/deutsch-sparring`. Read its `README.md` and `AGENTS.md` (this Next.js version differs from training data – check `node_modules/next/dist/docs/` before using Next.js APIs).
