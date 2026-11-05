@@ -134,7 +134,7 @@ const scores = {
   [ids[4]]: { v: { s: 10, k: 4, due: T0 - DAY } }, // a 10 (check)
 };
 const picked = S.pickWords({ words, scores, section: 'Home & living', count: 13, now: T0 });
-eq('due words come first, lowest score first (new words sit in the middle)', picked.filter((w) => scores[w.id]).slice(0, 3).map((w) => w.id), [ids[2], ids[0], ids[1]]);
+eq('the due words are all picked (in a random order; new words sit in the middle)', picked.filter((w) => scores[w.id]).slice(0, 3).map((w) => w.id).sort(), [ids[2], ids[0], ids[1]].sort());
 check('a word with 10 is used as a check', picked.some((w) => w.id === ids[4]));
 check('the not-yet-due word is left out while new words exist', !picked.some((w) => w.id === ids[3]));
 const newOnes = picked.filter((w) => !scores[w.id]);
@@ -264,11 +264,15 @@ check('garbage compact → nothing', S.recordFromCompact(['x', 3]) === null && S
   // n1: meaning weak · n2: article weak · n3: plural weak · v1: meaning middling
   const scores2 = { n1: rec2(2, 9, 9), n2: rec2(9, 3, 9), n3: rec2(9, 9, 4), v1: rec2(5) };
   const fixed = () => 0.5; // a fixed "random" order: words with equal scores (n2, n3 on Easy) keep the same order in both calls
-  const order = (difficulty) => S.pickWords({ words: pool, scores: scores2, count: 4, difficulty, now: T0, rand: fixed }).map((w) => w.id);
-  eq('Easy picks by Meaning: weakest m first (n1 2, v1 5, then the 9s)', order('easy').slice(0, 2), ['n1', 'v1']);
-  eq('Medium picks by min(m, a): n1 (2), n2 (3), v1 (5)', order('medium').slice(0, 3), ['n1', 'n2', 'v1']);
-  eq('Hard picks by min(m, a, p): n1 (2), n2 (3), n3 (4), v1 (5)', order('hard'), ['n1', 'n2', 'n3', 'v1']);
-  eq('default level = Easy (old behaviour)', S.pickWords({ words: pool, scores: scores2, count: 4, now: T0, rand: fixed }).map((w) => w.id), order('easy'));
+  const picked = (difficulty, count) => S.pickWords({ words: pool, scores: scores2, count, difficulty, now: T0, rand: fixed }).map((w) => w.id).sort();
+  eq('Easy picks by Meaning: the 2 weakest are n1 (2) and v1 (5)', picked('easy', 2), ['n1', 'v1']);
+  eq('Medium picks by min(m, a): n1 (2), n2 (3), v1 (5)', picked('medium', 3), ['n1', 'n2', 'v1']);
+  eq('Hard picks by min(m, a, p): n1 (2), n2 (3), n3 (4), v1 (5)', picked('hard', 4), ['n1', 'n2', 'n3', 'v1']);
+  // the ORDER is random: the weakest word must not open every session
+  const firsts = new Set();
+  for (let i = 0; i < 40; i += 1) firsts.add(S.pickWords({ words: pool, scores: scores2, count: 4, difficulty: 'hard', now: T0 }).at(0).id);
+  check('the weakest word does not always come first (random order every session)', firsts.size > 1, [...firsts].join(','));
+  eq('default level = Easy (old behaviour)', S.pickWords({ words: pool, scores: scores2, count: 4, now: T0, rand: fixed }).map((w) => w.id), S.pickWords({ words: pool, scores: scores2, count: 4, difficulty: 'easy', now: T0, rand: fixed }).map((w) => w.id));
   // due: the Article score is due later than Meaning; it only matters from Medium
   const later = { n2: { v: { s: 9, k: 0, due: T0 + 9 * DAY }, a: { s: 9, k: 0, due: T0 - DAY } } };
   const pickOne = (difficulty) => S.pickWords({ words: [noun('n2')], scores: later, count: 1, difficulty, now: T0 })[0].id;
