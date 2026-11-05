@@ -91,11 +91,13 @@ function sanitizePrefs(p) {
 }
 
 class UiError extends Error {
-  constructor(message, retry = true) {
+  constructor(message, retry = true, code = null) {
     super(message);
     this.retry = retry;
+    this.code = code;
   }
 }
+const AUTO_RETRY_MS = 5000; // Google busy (ai-503 …): the browser tries once more by itself after this pause
 
 async function postJson(url, body, timeoutMs, signal) {
   // own timeout + the caller's cancel signal (AbortSignal.any is not in every browser yet)
@@ -736,7 +738,7 @@ export default function Home() {
       .slice(-40);
   }
 
-  async function askTutor(text, { msg, start = false } = {}) {
+  async function askTutor(text, { msg, start = false, autoRetried = false } = {}) {
     // mark the student's message as part of the AI conversation
     if (msg && !msg.ai) update((c) => ({ ...c, messages: c.messages.map((m) => (m.id === msg.id ? { ...m, ai: true } : m)) }));
 
@@ -820,7 +822,7 @@ export default function Home() {
         }
         // the server sends a fixed code (and a short reason such as "db"); the text comes from lib/ui-text.js
         const msg = data.code && t(`tutorErr_${data.code}`) !== `tutorErr_${data.code}` ? t(`tutorErr_${data.code}`) : t('errorUnexpected', { status: res.status });
-        throw new UiError(data.detail ? `${msg} (${data.detail})` : msg, !['limit', 'code_tries', 'config', 'too_big'].includes(data.code));
+        throw new UiError(data.detail ? `${msg} (${data.detail})` : msg, !['limit', 'code_tries', 'config', 'too_big'].includes(data.code), data.code || null);
       }
       if (!data.reply) {
         // not valid JSON: show the text, keep the session and the panel as they are
@@ -837,6 +839,17 @@ export default function Home() {
       if (convoRef.current.session.id !== sent.sessionId) return;
       const text2 = e instanceof UiError ? e.message : e?.name === 'TimeoutError' ? t('errorTimeout') : t('errorNetwork');
       const canRetry = !(e instanceof UiError) || e.retry;
+      // Google's AI busy or slow: try once more by itself after a short pause (failed calls cost nothing)
+      if (!autoRetried && e instanceof UiError && ['model', 'server', 'timeout'].includes(e.code)) {
+        setError({ text: t('tutorBusyRetrying'), retry: null });
+        const sessionId = sent.sessionId;
+        setTimeout(() => {
+          if (convoRef.current.session.id !== sessionId) return;
+          setError(null);
+          askTutor(text, { start, autoRetried: true });
+        }, AUTO_RETRY_MS);
+        return;
+      }
       setError({ text: text2, retry: canRetry ? () => { setError(null); askTutor(text, { start }); } : null });
     } finally {
       if (requestRef.current === request) {

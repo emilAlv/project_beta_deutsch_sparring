@@ -7,6 +7,7 @@
 
 const CALL_TIMEOUT_MS = 25_000;
 const FALLBACK_ON = [429, 500, 502, 503, 504];
+const BUSY_RETRY_MS = 2000; // Google busy: pause before the second try on the main model
 export const CONFIG_TEXT = 'The AI key or model name on the server is wrong.';
 
 export class ModelError extends Error {
@@ -176,7 +177,15 @@ export async function generate({ system, contents, schema, deadline, model, fall
     throw e;
   };
   try {
-    return await callModel(primary, opts);
+    try {
+      return await callModel(primary, opts);
+    } catch (e) {
+      // Google busy (500 / 503): wait a moment and ask the main model once more before the backup model
+      if (![500, 503].includes(e.status) || e.reason === 'timeout' || msLeft(deadline) < 12_000) throw e;
+      console.log(`gemini: ${e.status}, one more try on the main model`);
+      await new Promise((r) => setTimeout(r, BUSY_RETRY_MS));
+      return await callModel(primary, opts);
+    }
   } catch (e) {
     // a model name that does not exist (404) may still be rescued by the fallback model
     const usable = FALLBACK_ON.includes(e.status) || (e.status === 'config' && e.httpStatus === 404);
