@@ -741,6 +741,11 @@ export default function Home() {
       .slice(-40);
   }
 
+  // the distinct word ids of some answers / questions, at most 60, each at most 120 characters
+  function wordIdsOf(list) {
+    return [...new Set(list.map((x) => String(x.wordId || '').slice(0, 120)).filter(Boolean))].slice(0, 60);
+  }
+
   async function askTutor(text, { msg, start = false, autoRetried = false } = {}) {
     // mark the student's message as part of the AI conversation
     if (msg && !msg.ai) update((c) => ({ ...c, messages: c.messages.map((m) => (m.id === msg.id ? { ...m, ai: true } : m)) }));
@@ -780,6 +785,9 @@ export default function Home() {
       },
       // vocabulary: the words picked at the start stay the same; without them the server picks, using our scores
       wordIds: s.wordIds,
+      // a word answered right as a flashcard is never asked again in this session (the server enforces it, lib/reply.js)
+      rightWordIds: wordIdsOf(s.answers.filter((a) => a.task === 'flashcard' && a.correct && !a.skipped)),
+      askedWordIds: wordIdsOf([...s.answers.filter((a) => a.task === 'flashcard'), ...(s.exercise?.task === 'flashcard' ? [s.exercise] : [])]),
       newWordIds: (s.words || []).filter((w) => w.fresh).map((w) => w.id), // never practised before: the tutor shows them first
       modelIds: s.modelIds || [],
       seenModels: seenModelIds(s, historyRef.current.sessions),
