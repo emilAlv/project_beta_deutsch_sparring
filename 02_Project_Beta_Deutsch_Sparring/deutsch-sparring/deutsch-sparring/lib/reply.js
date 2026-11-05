@@ -133,6 +133,7 @@ export const RESPONSE_SCHEMA = {
 
 import { cleanRule } from './rules.js';
 import { resolveParts, testedChecks, PARTS } from './scores.js';
+import { sameAnswer } from './variants.js';
 
 const ARTICLE = /^(der|die|das)\s/i;
 const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
@@ -285,6 +286,47 @@ function fixWordCard(ex, e, ctx) {
   return word;
 }
 
+// ---------- the app decides the MEANING of an English → German flashcard ----------
+// The AI judges each time on its own («der Name» for "the first name": right once, wrong the next time). So the app compares the
+// student's word with the list word. null = the app cannot tell (keep the AI's verdict): not an English → German card, an unknown
+// word, a card whose English lists several meanings ("small, short": another German word may be right for the other meaning),
+// or text that is not a single short answer.
+const STUDENT_ARTICLE = /^(der|die|das)\s+/i;
+function judgeMeaning(ctx, word, studentText) {
+  if (!word || ctx.openDirection !== 'en-de') return null;
+  if (/[,/;]/.test(String(word.en || '').replace(/\([^)]*\)/g, ''))) return null;
+  const raw = clip(studentText, 200).replace(/[.!]+$/, '').split(',')[0].trim(); // «der Vorname, die Vornamen» → «der Vorname»
+  if (!raw || /[?]/.test(raw) || raw.split(/\s+/).length > 4) return null;
+  const typed = raw.replace(STUDENT_ARTICLE, '').trim();
+  if (!typed) return null;
+  const listed = (word.noun ? [word.noun] : String(word.de || '').split(',')[0].split('/')).map((x) => x.replace(STUDENT_ARTICLE, '').trim()).filter(Boolean);
+  if (!listed.length) return null;
+  const art = word.noun ? word.article || 'der' : '';
+  return listed.some((l) => sameAnswer(`${art} ${typed}`.trim(), `${art} ${l}`.trim()));
+}
+const PRAISE = /\b(richtig|korrekt|genau|stimmt|super|sehr gut|perfekt|correct|right)\b/i;
+
+// A word answered correctly in this session is never asked again as a flashcard. If the new card repeats a right word
+// (ctx.rightWordIds), or the word just answered right (ctx.openWordId, flashcard, feedback.correct), it becomes another word of
+// the session: first a word never asked yet (ctx.askedWordIds), in the list's order, else one answered wrong before.
+// Nothing left → null (the card stays). Built like fixWordCard builds it for that direction.
+function swapRepeatedCard(ex, e, ctx, word, feedback) {
+  if (ex.type !== 'flashcard' || !word) return null;
+  const right = ctx.rightWordIds || new Set();
+  const openRight = ctx.openTask === 'flashcard' && feedback?.correct === true ? ctx.openWordId : '';
+  if (!right.has(word.id) && word.id !== openRight) return null;
+  const asked = ctx.askedWordIds || new Set();
+  const usable = [...(ctx.wordById?.values() || [])].filter((w) => w.id !== word.id && w.id !== openRight && !right.has(w.id)
+    && (ex.direction === 'en-de' ? englishOf(w) : germanOf(w)));
+  const next = usable.find((w) => !asked.has(w.id)) || usable[0];
+  if (!next) return null;
+  ex.line = ex.direction === 'en-de' ? englishOf(next) : germanOf(next);
+  ex.hint = null;
+  e.wordId = next.id;
+  e.answer = germanOf(next);
+  return next;
+}
+
 export function normalizeReply(raw, ctx) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   let message = clip(raw.message, 1200);
@@ -315,6 +357,18 @@ export function normalizeReply(raw, ctx) {
     // booleans are used when they are there; else it is worked out from errorType / rule (lib/scores.js resolveParts).
     if (ctx.openTask === 'flashcard') {
       const all = resolveParts(f.parts, feedback);
+      // the app decides the meaning of an English → German card (see judgeMeaning): the same word is right, another word is wrong
+      const openWord = ctx.wordById?.get(ctx.openWordId) || null;
+      const same = judgeMeaning(ctx, openWord, ctx.studentText || f.studentAnswer);
+      let overridden = false;
+      if (same === true && all.meaning !== true) {
+        all.meaning = true;
+        const typedArticle = clip(ctx.studentText || f.studentAnswer, 200).match(STUDENT_ARTICLE)?.[1]?.toLowerCase();
+        if (all.article === null && typedArticle && openWord.article) all.article = typedArticle === lc(openWord.article);
+      } else if (same === false && all.meaning !== false) {
+        overridden = feedback.correct;
+        Object.assign(all, { meaning: false, article: null, plural: null });
+      }
       const tested = Array.isArray(ctx.openChecks) && ctx.openChecks.length ? ctx.openChecks : ['meaning'];
       feedback.parts = Object.fromEntries(PARTS.filter((p) => tested.includes(p)).map((p) => [p, all[p]]));
       // the verdict follows EXACTLY what the card asked (its instruction is built from the same parts, lib/instructions.js):
@@ -329,11 +383,22 @@ export function normalizeReply(raw, ctx) {
         feedback.correct = false;
         feedback.errorType = feedback.parts.meaning === false ? 'vocab' : feedback.parts.article === false ? 'article' : 'vocab';
       }
+      if (overridden && !feedback.correct) {
+        // the AI said "correct" for another word: the answer shown is the list word, without praise
+        const form = `${germanOf(openWord)}${openWord.noun && openWord.plural ? `, ${openWord.plural}` : ''}`;
+        const neutral = `Gesucht ist «${germanOf(openWord)}».`;
+        feedback.corrected = form;
+        feedback.changedWords = [];
+        if (PRAISE.test(feedback.explanation)) feedback.explanation = neutral;
+        if (PRAISE.test(message)) message = neutral;
+        feedback.why = { mistake: `«${feedback.studentAnswer}» ist ein anderes Wort.`, rule: '', here: neutral };
+      }
     }
   }
 
   // the number is only a hint: the app counts the questions itself
   let exercise = null;
+  let swappedCard = false; // the card was replaced by another word: the old answer choices belong to the old word
   let openAnswer = ''; // private: only used to keep the grammar focus from giving it away
   const e = raw.exercise;
   if (e && typeof e === 'object' && clip(e.line, 500)) {
@@ -354,9 +419,17 @@ export function normalizeReply(raw, ctx) {
     const rawLine = clip(e.line, 500).replace(/^[„"“»«]+|[“"”«»]+$/g, '');
     if (rawLine !== exercise.line && message.includes(rawLine)) message = message.split(rawLine).join(exercise.line);
     const shownLine = exercise.line;
-    const fixed = fixWordCard(exercise, e, ctx);
+    let fixed = fixWordCard(exercise, e, ctx);
     // the tutor's message often repeats the card line: keep it in step (no German on an English → German card)
     if (exercise.line !== shownLine && message.includes(shownLine)) message = message.split(shownLine).join(exercise.line);
+    // never ask a word again that was answered right in this session
+    const oldLine = exercise.line;
+    const swapped = swapRepeatedCard(exercise, e, ctx, fixed || (exercise.type === 'flashcard' ? cardWord(e, exercise.line, ctx) : null), feedback);
+    if (swapped) {
+      if (message.includes(oldLine)) message = message.split(oldLine).join(exercise.line);
+      fixed = swapped;
+      swappedCard = true;
+    }
     if (exercise.type === 'flashcard' && exercise.direction === 'en-de') {
       openAnswer = fixed && !lc(answer).includes(lc(fixed.noun || germanOf(fixed))) ? germanOf(fixed) : answer;
     }
@@ -371,7 +444,7 @@ export function normalizeReply(raw, ctx) {
     }
   }
 
-  const options = Array.isArray(raw.options)
+  const options = Array.isArray(raw.options) && !swappedCard
     ? [...new Set(raw.options.map((o) => clip(o, 60)).filter(Boolean))].slice(0, 6)
     : [];
 

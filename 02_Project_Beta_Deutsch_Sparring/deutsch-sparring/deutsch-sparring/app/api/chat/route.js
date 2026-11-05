@@ -236,7 +236,11 @@ async function handle(req) {
   const openChecks = session.openTask
     ? testedChecks({ task: session.openTask, word: wordById.get(session.openWordId) || getWord(session.openWordId), difficulty: settings.difficulty, direction: session.openDirection || 'en-de' })
     : null;
-  const ctx = { level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), wordById, openTask: session.openTask, openChecks, focus: body.grammarFocus,
+  // words answered right / already asked as a flashcard in this session (only ids of this session's words)
+  const idSet = (v) => new Set((Array.isArray(v) ? v : []).slice(0, 60).map((x) => String(x || '').slice(0, 120)).filter((x) => wordById.has(x)));
+  const rightWordIds = idSet(body.rightWordIds);
+  const askedWordIds = idSet(body.askedWordIds);
+  const ctx = { rightWordIds, askedWordIds, openWordId: session.openWordId, openDirection: session.openDirection, studentText: lastUser, level: settings.level, difficulty: settings.difficulty, topicIds, topicId, wordIds: new Set(words.map((w) => w.id)), wordById, openTask: session.openTask, openChecks, focus: body.grammarFocus,
     // word sessions: the app enforces the chosen card direction and, without sentence tasks, flashcards only (lib/reply.js)
     direction: filter || reviewPlan ? settings.direction : null, wordsOnly: Boolean(filter) && !settings.sentences };
 
@@ -298,7 +302,7 @@ async function handle(req) {
       knownGrammar: getKnownGrammar() || knownGrammarText(settings.level),
       catalog,
       settings: { ...settings, difficulty: DIFFICULTY_DE[settings.difficulty] },
-      session,
+      session: { ...session, rightWordIds: [...rightWordIds] },
       progress,
       mistakes,
       repeat,
