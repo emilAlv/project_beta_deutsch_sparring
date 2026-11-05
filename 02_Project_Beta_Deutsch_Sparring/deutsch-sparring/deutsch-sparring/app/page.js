@@ -26,7 +26,7 @@ import HomePage from '../components/Home';
 import SessionSummary from '../components/SessionSummary';
 import { goalSnapshot } from '../lib/home-client';
 import { t } from '../lib/ui-text';
-import { retypeTarget, checkRetype, MAX_TRIES } from '../lib/retype';
+import { retypeTarget, checkRetype, retypeShow, retypeIsShort, MAX_TRIES } from '../lib/retype';
 import { detectIntent, detectTopicWish, extractName } from '../lib/intents';
 import { DEFAULT_SETUP, MIXED_TOPIC, sanitizeSetup, setupFrom, withSentences } from '../lib/session-settings';
 import { cleanReviewPlan } from '../lib/mixed-review';
@@ -726,7 +726,10 @@ export default function Home() {
     }
     const tries = rt.tries + 1;
     updateSession((x) => ({ ...x, retype: { ...x.retype, tries } }));
-    addSystem('retype', res.missing.length ? t('retypeDiff', { words: res.missing.map((w) => `«${w}»`).join(' ') }) : t('retypeAgain'));
+    // short target: name it («der Pass»); long sentence: the existing lines
+    const again = retypeIsShort(rt.target) ? t('retypeAgainAnswer', { answer: retypeShow(rt.target) })
+      : res.missing.length ? t('retypeDiff', { words: res.missing.map((w) => `«${w}»`).join(' ') }) : t('retypeAgain');
+    addSystem('retype', again);
     return true;
   }
 
@@ -1075,7 +1078,7 @@ export default function Home() {
             onSend={handleSend}
             inputRef={inputRef}
             quick={quick}
-            retype={session.retype ? { messageId: session.retype.messageId, canContinue: session.retype.tries >= MAX_TRIES } : null}
+            retype={session.retype ? { messageId: session.retype.messageId, target: session.retype.target, canContinue: session.retype.tries >= MAX_TRIES } : null}
             onContinue={releaseRetype}
             summaryActions={summaryActions}
           />

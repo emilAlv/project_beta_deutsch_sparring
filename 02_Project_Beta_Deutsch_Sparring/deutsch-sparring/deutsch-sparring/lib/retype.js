@@ -1,12 +1,15 @@
 // "Retype the correction": after a WRONG answer the student types the right answer before the next question appears.
 // The APP checks it (no AI call). The retype is practice only – it never changes a score, an answer or a count.
 // Pure functions, no React, no browser APIs.
-//   retypeTarget({ exercise, feedback }) → { accept: [string, …], deEn } | null   what counts as right (null = nothing to retype)
+//   retypeTarget({ exercise, feedback }) → { accept: [string, …], show, extras, deEn } | null   what counts as right (null = nothing to retype)
 //   checkRetype(target, text)            → { ok, missing: [word], extra: [word] }
+//   retypeShow(target)                   → the text the student is asked to type, e.g. «der Pass»
+//   retypeIsShort(target)                → true when that text is short enough to be named in the instruction line
 
 import { sameAnswer } from './variants.js';
 
 export const MAX_TRIES = 2; // after this many failed retypes the «Continue» button appears
+export const SHORT_TARGET = 60; // longer targets (whole sentences) are not named in the instruction line
 
 const ARTICLE = /^(der|die|das)$/i;
 const OPEN_QUOTES = /^[«»„“”"'‹›]+/;
@@ -34,16 +37,17 @@ const stripArticle = (s) => normalize(s).replace(/^(der|die|das)\s+/i, '');
 
 // ---------- what is expected ----------
 // German card (English → German). feedback.corrected is "die Lampe, die Lampen" (possibly "… – lamp" as information).
+// Returns the accepted answers and the text to show ("die Lampe, die Lampen" when the plural is part of the check).
 function germanCard(corrected, checks) {
   const parts = String(corrected || '').split(/\s*,\s*|\s[–—-]\s/).map((x) => x.trim()).filter(Boolean);
   const single = parts[0] || '';
   const plural = parts[1] && ARTICLE.test(parts[1].split(' ')[0]) ? parts[1] : '';
   const noun = stripArticle(single);
   if (checks.includes('plural') && plural) {
-    return dedupe([`${single} ${plural}`, `${single} ${stripArticle(plural)}`]);
+    return { accept: dedupe([`${single} ${plural}`, `${single} ${stripArticle(plural)}`]), show: `${single}, ${plural}` };
   }
-  if (checks.includes('article')) return dedupe([single]);
-  return dedupe([noun, single]); // the word only: the article is shown but does not count
+  if (checks.includes('article')) return { accept: dedupe([single]), show: single };
+  return { accept: dedupe([noun, single]), show: single }; // the word only: the article is shown but does not count
 }
 
 // English meaning (German → English). corrected is "lamp" or "die Lampe – lamp"; several meanings: "a / b".
@@ -55,31 +59,54 @@ function englishCard(corrected) {
 }
 
 // Gap fill: the missing word(s) = what stands where the "___" is in the corrected sentence.
+// show = the missing word(s) when there is a gap, else the whole sentence.
 function gapFill(line, corrected) {
   const pieces = String(line || '').replace(/\([^)]*\)/g, ' ').split(/_{2,}/); // a hint like "(sein)" is not part of the sentence
   const full = normalize(corrected);
-  if (pieces.length < 2) return [full];
+  if (pieces.length < 2) return { accept: [full], show: full };
   const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = pieces.map((p) => esc(p.trim()).replace(/\s+/g, '\\s+')).join('\\s*(.+?)\\s*');
   const m = new RegExp(`^\\s*${pattern}\\s*$`, 'iu').exec(String(corrected || '').trim());
   const fill = m ? m.slice(1).map((x) => normalize(x)).filter(Boolean).join(' ') : '';
-  return dedupe([full, fill]);
+  return { accept: dedupe([full, fill]), show: fill || full };
 }
 
 export function retypeTarget({ exercise, feedback } = {}) {
   const corrected = String(feedback?.corrected || '').trim();
   if (!corrected || !feedback || feedback.correct !== false) return null;
   let accept;
+  let show;
+  let extras = []; // words of the correction that may be added to the expected answer (see withShownExtras)
   if (exercise?.type === 'flashcard') {
     const checks = Array.isArray(exercise.checks) && exercise.checks.length ? exercise.checks : ['meaning'];
-    accept = exercise.direction === 'de-en' ? englishCard(corrected) : germanCard(corrected, checks);
+    if (exercise.direction === 'de-en') {
+      accept = englishCard(corrected);
+      show = accept[0];
+    } else {
+      ({ accept, show } = germanCard(corrected, checks));
+      extras = words(corrected).map(key); // «die Pässe» next to «der Pass», as shown in the correction
+    }
   } else if (exercise?.type === 'gapfill') {
-    accept = gapFill(exercise.line, corrected);
+    ({ accept, show } = gapFill(exercise.line, corrected));
   } else {
     accept = dedupe([normalize(corrected)]);
+    show = accept[0];
   }
   accept = accept.filter(Boolean);
-  return accept.length ? { accept, deEn: exercise?.type === 'flashcard' && exercise.direction === 'de-en' } : null;
+  return accept.length
+    ? { accept, show: show || accept[0], extras, deEn: exercise?.type === 'flashcard' && exercise.direction === 'de-en' }
+    : null;
+}
+
+// The text the student is asked to type (the first accepted answer, e.g. «der Pass»).
+export function retypeShow(target) {
+  return String(target?.show || target?.accept?.[0] || '');
+}
+
+// Short targets are named in the instruction line ("Type «der Pass» to continue."); long ones get a generic line.
+export function retypeIsShort(target) {
+  const text = retypeShow(target);
+  return Boolean(text) && text.length <= SHORT_TARGET;
 }
 
 // ---------- the check ----------
@@ -89,10 +116,26 @@ const prepare = (text, target) => {
   return target.deEn ? n.replace(/^(der|die|das)\s+/i, '').replace(/^(the|a|an|to)\s+/i, '') : n;
 };
 
+// The expected answer plus words that are part of the correction shown ("der Pass" + "die Pässe"): accepted.
+// Any other extra word still fails, and so does a wrong spelling of the extra part ("die Passe").
+function withShownExtras(mine, target) {
+  if (!target.extras?.length) return false;
+  const allowed = new Set(target.extras);
+  return target.accept.some((a) => {
+    const pool = words(mine).map(key);
+    for (const w of words(a)) {
+      const at = pool.indexOf(key(w));
+      if (at < 0) return false;
+      pool.splice(at, 1);
+    }
+    return pool.length > 0 && pool.every((k) => allowed.has(k));
+  });
+}
+
 export function checkRetype(target, text) {
   const mine = prepare(text, target);
   if (!mine) return { ok: false, missing: [], extra: [] };
-  if (target.accept.some((a) => sameAnswer(mine, a))) return { ok: true, missing: [], extra: [] };
+  if (target.accept.some((a) => sameAnswer(mine, a)) || withShownExtras(mine, target)) return { ok: true, missing: [], extra: [] };
   // what is still different: against the closest accepted answer
   const mineWords = words(mine);
   let best = null;
