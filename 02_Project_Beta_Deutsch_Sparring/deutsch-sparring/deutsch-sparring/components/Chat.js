@@ -3,6 +3,7 @@
 import { instructionFor } from '../lib/instructions';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { t, LOCALE, dirKey } from '../lib/ui-text';
+import { retypeShow, retypeIsShort } from '../lib/retype';
 import { scoreLine } from '../lib/stats';
 import { compareAnswer } from '../lib/diff';
 import { partsView } from '../lib/card-parts';
@@ -115,7 +116,7 @@ function TutorMessage({ m, actions, retype, onContinue }) {
         <p className="tutor-label"><strong>{t('tutorName')}</strong> · {t('tutorRole')}</p>
         {text && <p className="tutor-text" lang="de"><Rich text={text} /></p>}
         {r?.feedback && <FeedbackCard f={r.feedback} />}
-        {m.held && retype && <RetypeLine canContinue={retype.canContinue} onContinue={onContinue} />}
+        {m.held && retype && <RetypeLine target={retype.target} canContinue={retype.canContinue} onContinue={onContinue} />}
         {!m.held && !m.moved && r?.exercise && (r.feedback ? <NextLine ex={r.exercise} /> : <ExerciseCard ex={r.exercise} />)}
         {m.summary && !m.held && <SummaryCard s={m.summary} actions={actions} />}
       </div>
@@ -148,10 +149,11 @@ function ExerciseCard({ ex }) {
 }
 
 // after a wrong answer: the next question is held back until the correct answer has been typed (lib/retype.js)
-function RetypeLine({ canContinue, onContinue }) {
+function RetypeLine({ target, canContinue, onContinue }) {
+  const answer = retypeIsShort(target) ? retypeShow(target) : null; // long sentences: the generic line
   return (
     <div className="next-line retype-line">
-      <p className="exercise-do">{t('retypeDo')}</p>
+      <p className="exercise-do">{answer ? t('retypeDoAnswer', { answer }) : t('retypeDoLong')}</p>
       {canContinue && <button type="button" className="button-primary small retype-continue" onClick={onContinue}>{t('retypeContinue')}</button>}
     </div>
   );
